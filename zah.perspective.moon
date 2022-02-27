@@ -1,5 +1,5 @@
 script_name="Perspective"
-script_description="Zeght's perspective.py but in moonscript by Alendt, with a few tweak from Zahuczky"
+script_description="Zeght's perspective.py but in moonscript by Alendt, with a few tweaks from Zahuczky"
 script_author=""
 script_version="1.1"
 
