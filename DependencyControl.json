@@ -1,0 +1,49 @@
+{
+  "dependencyControlFeedFormatVersion": "0.3.0",
+  "name": "Zahuczky's Automation Scripts",
+  "description": "Main repository for all of Zahuczky's automation scripts.",
+  "baseUrl": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+  "url": "@{baseUrl}",
+  "fileBaseUrl": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+  "maintainer": "Zahuczky",
+  "knownFeeds": {
+    "line0scripts": "https://raw.githubusercontent.com/TypesettingTools/line0-Aegisub-Scripts/master/DependencyControl.json",
+    "a-mo": "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json",
+    "SubInspector": "https://raw.githubusercontent.com/TypesettingTools/SubInspector/master/DependencyControl.json",
+    "ASSFoundation": "https://raw.githubusercontent.com/TypesettingTools/ASSFoundation/master/DependencyControl.json",
+    "ffi-experiments": "https://raw.githubusercontent.com/torque/ffi-experiments/master/DependencyControl.json",
+    "lyger-scripts": "https://raw.githubusercontent.com/TypesettingTools/lyger-Aegisub-Scripts/master/DependencyControl.json",
+    "unanimated-scripts": "https://raw.githubusercontent.com/TypesettingTools/unanimated-Aegisub-Scripts/master/DependencyControl.json",
+    "coffeeflux-scripts": "https://raw.githubusercontent.com/TypesettingTools/CoffeeFlux-Aegisub-Scripts/master/DependencyControl.json",
+    "myaamori-scripts": "https://raw.githubusercontent.com/TypesettingTools/Myaamori-Aegisub-Scripts/master/DependencyControl.json",
+    "petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json"
+  },
+  "macros": {
+    "zah.pers-mo": {
+      "url": "@{baseUrl}#@{namespace}",
+      "author": "Zahuczky",
+      "name": "Aegisub-Perspective-Motion BETA",
+      "description": "Applying perspective tracking",
+      "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+      "channels": {
+        "stable": {
+          "version": "0.2",
+          "released": "2022-03-05",
+          "default": true,
+          "files": [
+            {
+              "name": ".moon",
+              "url": "@{fileBaseUrl}@{fileName}",
+              "sha1": "94b73dd35516165d8bedfbf8b4b9872f49689329"
+            }
+          ],
+        }
+      },
+      "changelog": {
+        "0.2": [
+          "Initial release"
+        ]
+      }
+    }
+  }
+}
