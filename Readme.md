@@ -2,6 +2,8 @@ There are two scripts in this repo right now, zah.perspective.moon, which is jus
 
 ## Extended docs and tutorial(recommended): https://zahuczky.com/aegisub-perspective-motion/
 
+#### Pull requests, comments and issues are very welcome!
+
 #### Basic usage of Aegisub-Perspective-Motion:<br>
 
 - Right now it only works with Mocha.<br>
