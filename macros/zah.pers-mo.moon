@@ -5,6 +5,13 @@ script_version="0.2"
 github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
 tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
 
+local DependencyControl = require("l0.DependencyControl")
+local depctrl = DependencyControl{
+    feed = "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
+    {
+        "aegisub.util", "unicode"
+    }
+}
 
 
 perspmotion = (sub, sel) ->
