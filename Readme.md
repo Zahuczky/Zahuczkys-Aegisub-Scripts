@@ -11,3 +11,5 @@ There are two scripts in this repo right now, zah.perspective.moon, which is jus
 - Select all your tracked lines, and run Aegisub-Perspective-Motion, and paste After Effects POWER PIN data, that you axported from Mocha into it.<br>
 - Bam, now you got perspective tracking.<br>
 - Keep in mind, depending on the placement of your sign inside your track, you might have to do seperate tracks. One for specifying the exact position of your sign, and one for the plane from which the perspective gets calculated. 
+
+Credits: The part of this script that calculates the perspective itself, is from Alendts perspective.moon. 
