@@ -14,11 +14,18 @@ There are two scripts in this repo right now, zah.perspective.moon, which is jus
 
 Credits: The part of this script that calculates the perspective itself, is from Alendts perspective.moon. 
 
+### Caveats, bugs, problems:<br>
+- The base scale is the first frame of the tracking.<br>
+    That means, that your first frame is used for the reference \fscx100\fscy100. Planned to be fixed in v0.3.
+- Every bug from perspective.moon is present here as well. If that didn't work for you in a case, this won't work as well.
+- You can't set your base fscx/fscy beforehand for the first frame. Planned to be fixed in v0.3.
+- Your perspective is calulated fully from the track, no information is taken from your lines to be used, like base perspective.
+
 ### TODO:<br>
 - Making developer documentation.<br>
 - Fixing depctrl stuff inside my files.<br>
 - New scaling calculations(preferably that calculates the scaling for the position of the sign, not for the middle of our plane[howtomath]).<br>
-- Fixing perspective.moon so it works on more extreme angles, and highly with different fscx and fscy scalings(like \fscx120\fscy180).<br>
+- Fixing perspective.moon so it works on more extreme angles, and with different fscx and fscy scalings(like \fscx120\fscy180).<br>
 - Full video tutorial.<br>
 - Relative tracking to position in video. <br>
 - Relative perspective transformation to tags already in the line.<br>
