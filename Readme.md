@@ -17,8 +17,8 @@ Credits: The part of this script that calculates the perspective itself, is from
 ### TODO:<br>
 - Making developer documentation.<br>
 - Fixing depctrl stuff inside my files.<br>
-- New scaling calculations(preferable that calculates the scale for the position of the sign, not for the middle of our plane).<br>
-- Fixing perspective.moon so it works on more extreme angles, with different fscx and fscy scalings.<br>
+- New scaling calculations(preferably that calculates the scaling for the position of the sign, not for the middle of our plane[howtomath]).<br>
+- Fixing perspective.moon so it works on more extreme angles, and highly with different fscx and fscy scalings(like \fscx120\fscy180).<br>
 - Full video tutorial.<br>
 - Relative tracking to position in video. <br>
 - Relative perspective transformation to tags already in the line.<br>
