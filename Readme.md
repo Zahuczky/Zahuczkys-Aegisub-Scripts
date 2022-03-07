@@ -23,7 +23,7 @@ Credits: The part of this script that calculates the perspective itself, is from
 
 ### TODO:<br>
 - Making developer documentation.<br>
-- Fixing depctrl stuff inside my files.<br>
+- ~~Fixing depctrl stuff inside my files.~~ (fixed[supposedly])<br>
 - New scaling calculations(preferably that calculates the scaling for the position of the sign, not for the middle of our plane[howtomath]).<br>
 - Fixing perspective.moon so it works on more extreme angles, and with different fscx and fscy scalings(like \fscx120\fscy180).<br>
 - Full video tutorial.<br>
