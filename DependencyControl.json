@@ -34,7 +34,7 @@
             {
               "name": ".moon",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "bfe95c5abc0773fb41280f3705c893d4331924c3"
+              "sha1": "9e50e22c5ece5d0655a070ae383f16994f70275a"
             }
           ],
         }
