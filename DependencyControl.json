@@ -27,14 +27,14 @@
       "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
       "channels": {
         "main": {
-          "version": "0.2.2",
-          "released": "2022-03-05",
+          "version": "0.2.3",
+          "released": "2022-03-08",
           "default": true,
           "files": [
             {
               "name": ".moon",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "99ce57dd5cde30c9f02de4868a71cfbbd1e9ec9f"
+              "sha1": "bfe95c5abc0773fb41280f3705c893d4331924c3"
             }
           ],
         }
@@ -48,6 +48,9 @@
 		],
 		"0.2.2": [
 			"Added different perspective calculation options. (transform for target org, transforms near center of tetragon, transforms with target ratio)"
+		],
+		"0.2.3": [
+			"More fixing to DependencyControl related stuff."
 		]
       }
     }
