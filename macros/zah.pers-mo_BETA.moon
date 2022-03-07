@@ -1,17 +1,23 @@
 script_name="Aegisub-Perspective-Motion BETA"
 script_description="Applying perspective tracking"
 script_author="Zahuczky"
-script_version="0.2"
+script_version="0.2.1"
+script_namespace="zah.pers-mo"
 github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
 tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
 
-local DependencyControl = require("l0.DependencyControl")
-local depctrl = DependencyControl{
-    feed = "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
-    {
-        "aegisub.util", "unicode"
+tr = aegisub.gettext
+
+--DependencyControl = require "l0.DependencyControl"
+--depctrl = DependencyControl{
+--    feed: "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
+--		}
+
+haveDepCtrl, DependencyControl, depctrl = pcall(require, "l0.DependencyControl")
+if haveDepCtrl 
+    depctrl = DependencyControl {
+        feed: "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
     }
-}
 
 
 perspmotion = (sub, sel) ->
@@ -643,4 +649,12 @@ perspmotion = (sub, sel) ->
 	--Set undo point and maintain selection
 
 --Register macro (no validation function required)
-aegisub.register_macro(script_name,script_description,perspmotion)
+
+if haveDepCtrl
+    -- configuration support for depctrl only
+	depctrl\registerMacro perspmotion 
+else
+	aegisub.register_macro(script_name, script_description, perspmotion)
+		
+		
+--aegisub.register_macro(script_name,script_description,perspmotion)

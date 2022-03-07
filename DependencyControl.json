@@ -26,8 +26,8 @@
       "description": "Applying perspective tracking",
       "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
       "channels": {
-        "stable": {
-          "version": "0.2",
+        "main": {
+          "version": "0.2.1",
           "released": "2022-03-05",
           "default": true,
           "files": [
@@ -40,9 +40,12 @@
         }
       },
       "changelog": {
-        "0.2": [
+        "0.2.0": [
           "Initial release"
-        ]
+        ],
+		"0.2.1": [
+			"Fixed DependencyControl stuffs inside my script, added conditinal use. "
+		]
       }
     }
   }
