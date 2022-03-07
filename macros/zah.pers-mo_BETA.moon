@@ -1,7 +1,7 @@
 script_name="Aegisub-Perspective-Motion BETA"
 script_description="Applying perspective tracking"
 script_author="Zahuczky"
-script_version="0.2.1"
+script_version="0.2.2"
 script_namespace="zah.pers-mo"
 github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
 tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
@@ -31,6 +31,10 @@ perspmotion = (sub, sel) ->
 			{class: "textbox", name: "data",  x: 0, y: 2, width: 1, height: 7, },
 			{class: "checkbox", name: "includeclip",  x: 0, y: 9, width: 1, height: 1, 
 				label: "Include \\clip for debugging", value: true}, 
+			{class: "label",  x: 0, y: 11, width: 1, height: 1, 
+				label: "Choose an option for calculating perspective:"},
+			{class: "dropdown", name: "option",  x: 0, y: 12, width: 1, height: 1, 
+				items: {"Transform for target org","Transforms near center of tetragon","Transforms with target ratio"}, value: "Transform for target org"}, 
 		}
 
 	buttons = {"Apply","Cancel"}
@@ -566,7 +570,13 @@ perspmotion = (sub, sel) ->
 			return line.text
 
 		line = sub[li]
-		result = perspective(line, true, false, false)
+		result = ""
+		if results.option == "Transform for target org"
+			result = perspective(line, true, false, false)
+		elseif results.option == "Transforms near center of tetragon"
+			result = perspective(line, false, true, false)
+		elseif results.option == "Transforms with target ratio"
+			result = perspective(line, false, false, true)			
 		line.text = delete_old_tag(line)
 		if results.includeclip
 			line.text = line.text\gsub("\\pos", "\\"..clipArray[si]..result..scales[si].."\\pos")
@@ -578,7 +588,7 @@ perspmotion = (sub, sel) ->
 --		for i=1,#sel
 --			aegisub.debug.out(clipArray[si])
 --			aegisub.debug.out("\n")
---	aegisub.debug.out(tostring(LMidPointX[1]))
+--	aegisub.debug.out(results.option)
 --	aegisub.debug.out("\n")
 --	aegisub.debug.out(tostring(LMidPointY[1]))
 --	aegisub.debug.out("\n")
