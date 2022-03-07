@@ -27,14 +27,14 @@
       "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
       "channels": {
         "main": {
-          "version": "0.2.1",
+          "version": "0.2.2",
           "released": "2022-03-05",
           "default": true,
           "files": [
             {
               "name": ".moon",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "11c0f63556cfbf1cd35595d2e882b966e4783e91"
+              "sha1": "2af02aa31aa98328b2ecf142cef934098901935c"
             }
           ],
         }
@@ -45,6 +45,9 @@
         ],
 		"0.2.1": [
 			"Fixed DependencyControl stuffs inside my script, added conditinal use. "
+		],
+		"0.2.2": [
+			"Added different perspective calculation options. (transform for target org, transforms near center of tetragon, transforms with target ratio)"
 		]
       }
     }
