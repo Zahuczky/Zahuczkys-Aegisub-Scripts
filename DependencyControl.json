@@ -19,7 +19,7 @@
     "petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json"
   },
   "macros": {
-    "zah.pers-mo": {
+    "zah.pers-mo_BETA": {
       "url": "@{baseUrl}#@{namespace}",
       "author": "Zahuczky",
       "name": "Aegisub-Perspective-Motion BETA",
