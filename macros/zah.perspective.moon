@@ -101,21 +101,21 @@ unrot = (coord_in, org, diag, get_rot) -> --diag=true, get_rot=false
 
 	fry = math.atan(n.x/n.z)
 	s = ""
-	s = s.."\\fry"..round((-fry / math.pi * 180), 2)
 	export debfry = round((-fry / math.pi * 180), 2)
+	s = s.."\\fry"..debfry
 	rot_n = n\rot_y(fry)
 	frx = -math.atan(rot_n.y/rot_n.z)
 	if n0.z < 0
 		frx += math.pi
-	s = s.."\\frx"..round((-frx / math.pi * 180), 2)
 	export debfrx = round((-frx / math.pi * 180), 2)
+	s = s.."\\frx"..debfrx
 	n = vector(a, b)
 	ab_unrot = vector(a, b)\rot_y(fry)\rot_x(frx)
 	ac_unrot = vector(a, c)\rot_y(fry)\rot_x(frx)
 	ad_unrot = vector(a, d)\rot_y(fry)\rot_x(frx)
 	frz = math.atan2(ab_unrot.y, ab_unrot.x)
-	s = s.."\\frz"..round((-frz / math.pi * 180), 2)
 	export debfrz = round((-frz / math.pi * 180), 2)
+	s = s.."\\frz"..debfrz
 	ad_unrot = ad_unrot\rot_z(frz)
 	fax = ad_unrot.x/ad_unrot.y
 	if math.abs(fax) > 0.01
