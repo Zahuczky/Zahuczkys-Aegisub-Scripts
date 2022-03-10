@@ -361,32 +361,27 @@ warn_for_large_transforms = (frx, fry, frz) ->
 	elseif frx > -270 and frx < -90 aegisub.debug.out(WARN_MIRRORED)
 	elseif frz > 90 or frz < -90    aegisub.debug.out(WARN_ROTATED)
 
-aegi1 = (sub, sel) ->
+-- wrapper/factory function to bake in boolean flags
+_perspective = (tr_org, tr_center, tr_ratio) -> (line) ->
+	perspective line, tr_org, tr_center, tr_ratio
+
+_main = (sub, sel, pers) ->
 	for si, li in ipairs(sel)
 		line = sub[li]
-		result = perspective(line, true, false, false)
+		result = pers(line)
 		line.text = delete_old_tag(line)
 		line.text = line.text\gsub("\\clip", result.."\\clip")
 		sub[li] = line
 		warn_for_large_transforms debfrx, debfry, debfrz
+
+aegi1 = (sub, sel) ->
+	_main sub, sel, _perspective(true, false, false)
 
 aegi2 = (sub, sel) ->
-	for si, li in ipairs(sel)
-		line = sub[li]
-		result = perspective(line, false, true, false)
-		line.text = delete_old_tag(line)
-		line.text = line.text\gsub("\\clip", result.."\\clip")
-		sub[li] = line
-		warn_for_large_transforms debfrx, debfry, debfrz
+	_main sub, sel, _perspective(false, true, false)
 
 aegi3 = (sub, sel) ->
-	for si, li in ipairs(sel)
-		line = sub[li]
-		result = perspective(line, false, false, true)
-		line.text = delete_old_tag(line)
-		line.text = line.text\gsub("\\clip", result.."\\clip")
-		sub[li] = line
-		warn_for_large_transforms debfrx, debfry, debfrz
+	_main sub, sel, _perspective(false, false, true)
 
 aegisub.register_macro("Perspective/Transform for target org", "Transform for target org", aegi1)
 aegisub.register_macro("Perspective/Transforms near center of tetragon", "Transforms near center of tetragon", aegi2)
