@@ -352,6 +352,15 @@ delete_old_tag = (line) ->
 	line.text = line.text\gsub("\\frx([-%d.]+)", "")\gsub("\\fry([-%d.]+)", "")\gsub("\\frz([-%d.]+)", "")\gsub("\\org%b()", "")\gsub("\\fax([-%d.]+)", "")\gsub("\\fay([-%d.]+)", "")
 	return line.text
 
+warn_for_large_transforms = (frx, fry, frz) ->
+	WARN_MIRRORED = "Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there."
+	WARN_ROTATED = "Uh-oh! Seems like your text was rotated a lot! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there."
+	if fry > 90 and fry < 270       aegisub.debug.out(WARN_MIRRORED)
+	elseif fry > -270 and fry < -90 aegisub.debug.out(WARN_MIRRORED)
+	elseif frx > 90 and frx < 270   aegisub.debug.out(WARN_MIRRORED)
+	elseif frx > -270 and frx < -90 aegisub.debug.out(WARN_MIRRORED)
+	elseif frz > 90 or frz < -90    aegisub.debug.out(WARN_ROTATED)
+
 aegi1 = (sub, sel) ->
 	for si, li in ipairs(sel)
 		line = sub[li]
@@ -359,11 +368,7 @@ aegi1 = (sub, sel) ->
 		line.text = delete_old_tag(line)
 		line.text = line.text\gsub("\\clip", result.."\\clip")
 		sub[li] = line
-	if debfry > 90 and debfry < 270 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfry > -270 and debfry < -90 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfrx > 90 and debfrx < 270 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfrx > -270 and debfrx < -90 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfrz > 90 or debfrz < -90 aegisub.debug.out("Uh-oh! Seems like your text was rotated a lot! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
+		warn_for_large_transforms debfrx, debfry, debfrz
 
 aegi2 = (sub, sel) ->
 	for si, li in ipairs(sel)
@@ -372,11 +377,7 @@ aegi2 = (sub, sel) ->
 		line.text = delete_old_tag(line)
 		line.text = line.text\gsub("\\clip", result.."\\clip")
 		sub[li] = line
-	if debfry > 90 and debfry < 270 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfry > -270 and debfry < -90 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfrx > 90 and debfrx < 270 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfrx > -270 and debfrx < -90 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfrz > 90 or debfrz < -90 aegisub.debug.out("Uh-oh! Seems like your text was rotated a lot! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
+		warn_for_large_transforms debfrx, debfry, debfrz
 
 aegi3 = (sub, sel) ->
 	for si, li in ipairs(sel)
@@ -385,11 +386,7 @@ aegi3 = (sub, sel) ->
 		line.text = delete_old_tag(line)
 		line.text = line.text\gsub("\\clip", result.."\\clip")
 		sub[li] = line
-	if debfry > 90 and debfry < 270 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfry > -270 and debfry < -90 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfrx > 90 and debfrx < 270 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfrx > -270 and debfrx < -90 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
-	elseif debfrz > 90 or debfrz < -90 aegisub.debug.out("Uh-oh! Seems like your text was rotated a lot! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
+		warn_for_large_transforms debfrx, debfry, debfrz
 
 aegisub.register_macro("Perspective/Transform for target org", "Transform for target org", aegi1)
 aegisub.register_macro("Perspective/Transforms near center of tetragon", "Transforms near center of tetragon", aegi2)
