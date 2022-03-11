@@ -1,7 +1,7 @@
 script_name="Perspective"
 script_description="Zeght's perspective.py but in moonscript by Alendt, with a few tweaks from Zahuczky"
 script_author=""
-script_version="1.1"
+script_version="1.1.1"
 
 class Point
 	new: (@x, @y, @z) =>
