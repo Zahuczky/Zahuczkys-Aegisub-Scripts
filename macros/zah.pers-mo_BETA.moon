@@ -1,8 +1,8 @@
-script_name="Aegisub-Perspective-Motion BETA"
-script_description="Applying perspective tracking"
-script_author="Zahuczky"
-script_version="0.2.3"
-script_namespace="zah.pers-mo_BETA"
+export script_name="Aegisub-Perspective-Motion BETA"
+export script_description="Applying perspective tracking"
+export script_author="Zahuczky"
+export script_version="0.2.3"
+export script_namespace="zah.pers-mo_BETA"
 github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
 tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
 
@@ -480,7 +480,7 @@ perspmotion = (sub, sel) ->
 			return e
 			
 -- Getting clip() from clipArray, instead of matching from line
-		perspective = (line, tr_org, tr_center, tr_ratio) ->
+		perspective = (line, tr_org, tr_centorg, tr_center, tr_ratio) ->
 			clip = clipArray[si]
 			if clip == nil
 				aegisub.log("\\clip missing")
@@ -521,7 +521,6 @@ perspmotion = (sub, sel) ->
 					p, ratio = zero[1], zero[2]
 					table.insert(rots, {ratio, p, a})
 					
-
 			if tr_org
 				if line.text\match("org%b()")
 					export pos_org = line.text\match("org%b()")
@@ -530,13 +529,29 @@ perspmotion = (sub, sel) ->
 				else
 					aegisub.log("\\org or \\pos missing")
 					aegisub.cancel!
+
+				px, py = pos_org\match("([-%d.]+).([-%d.]+)")
+				target_org = Point(px, py)
+
+				tf_tags = unrot(coord, target_org, true, true)
+
+				if tf_tags == nil
+					aegisub.log(tf_tags)
+				else
+					return ""..tf_tags
+
+
+			if tr_centorg
+				if line.text\match("org%b()")
+					export pos_org = line.text\match("org%b()")
+				elseif line.text\match("pos%b()")
+					export pos_org = line.text\match("pos%b()")
+				else
+					aegisub.log("\\org or \\pos missing")
+					aegisub.cancel!
 					
-				if results.option == "Transform with center org"
-					px, py = midPointOrg[si]\match("([-%d.]+).([-%d.]+)")
-					target_org = Point(px, py)
-				elseif results.option == "Transform for target org"
-					px, py = pos_org\match("([-%d.]+).([-%d.]+)")
-					target_org = Point(px, py)
+				px, py = midPointOrg[si]\match("([-%d.]+).([-%d.]+)")
+				target_org = Point(px, py)
 
 				tf_tags = unrot(coord, target_org, true, true)
 
@@ -625,13 +640,13 @@ perspmotion = (sub, sel) ->
 		line = sub[li]
 		result = ""
 		if results.option == "Transform for target org"
-			result = perspective(line, true, false, false)
+			result = perspective(line, true, false, false, false)
 		if results.option == "Transform with center org"
-			result = perspective(line, true, false, false)..midPointOrg[si]
+			result = perspective(line, false, true, false, false)
 		elseif results.option == "Transforms near center of tetragon"
-			result = perspective(line, false, true, false)
+			result = perspective(line, false, false, true, false)
 		elseif results.option == "Transforms with target ratio"
-			result = perspective(line, false, false, true)			
+			result = perspective(line, false, false, false, true)			
 		line.text = delete_old_tag(line)
 		if results.includeclip
 			line.text = line.text\gsub("\\pos", "\\"..clipArray[si]..result..scales[si].."\\pos")
