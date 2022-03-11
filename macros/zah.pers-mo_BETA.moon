@@ -34,7 +34,7 @@ perspmotion = (sub, sel) ->
 			{class: "label",  x: 0, y: 11, width: 1, height: 1, 
 				label: "Choose an option for calculating perspective:"},
 			{class: "dropdown", name: "option",  x: 0, y: 12, width: 1, height: 1, 
-				items: {"Transform for target org","Transforms near center of tetragon","Transforms with target ratio"}, value: "Transform for target org"}, 
+				items: {"Transform for target org","Transform with center org","Transforms near center of tetragon","Transforms with target ratio"}, value: "Transform for target org"}, 
 		}
 
 	buttons = {"Apply","Cancel"}
@@ -42,6 +42,14 @@ perspmotion = (sub, sel) ->
 	pressed, results = aegisub.dialog.display(GUI, buttons)
 
 	if pressed=="Cancel" aegisub.cancel()
+	
+	
+	round = (val, n) ->
+			if n
+				return math.floor((val * 10^n) + 0.5) / (10^n)
+			else
+				return math.floor(val+0.5)
+	
 	
 -- Putting the user input into a table
 	dataArray = { }
@@ -209,9 +217,33 @@ perspmotion = (sub, sel) ->
 
 	scales = { }
 	for i=1,#x1
-		scales[i] = "\\fscx"..scaleX[i].."\\fscy"..scaleY[i]
+		scales[i] = "\\fscx"..round(scaleX[i],2).."\\fscy"..round(scaleY[i],2)
 
 
+
+
+-- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+--Calculate org from center of plane
+--This probably doesn't work if any diagonal of the plane is perfectly vertical or horizontal.
+	intersectX = { }
+	intersectY = { }
+	me = { }
+	mf = { }
+	for i=1,#x1
+--iHateMyself = (4x
+--		intersectY[i] = ((x4[i]-x2[i])*y2[i]-(y4[i]-y2[i])*x2[i]-(y2[i]-y4[i])*(((x3[i]-x1[i])*y1[i]-(y3[i]-y1[i])*x1[i]-(x3[i]-x1[i]))/y1[i]-y3[i]))/x4[i]-x2[i]
+--		intersectX[i] =(((x3[i]-x1[i])*y1[i]-(y3[i]-y1[i])*x1[i]-(x3[i]-x1[i]))*intersectY[i])/y1[i]-y3[i]
+-- fuckthis
+
+		me[i] = (y3[i]-y1[i])/(x3[i]-x1[i])
+		mf[i] = (y4[i]-y2[i])/(x4[i]-x2[i])
+		intersectX[i] = (me[i]*x1[i]-mf[i]*x2[i]-y1[i]+y2[i])/(me[i]-mf[i])
+		intersectY[i] = me[i]*(intersectX[i]-x1[i])+y1[i]
+		
+	midPointOrg = { }
+	for i=1,#x1
+		midPointOrg[i] = "\\org("..round(intersectX[i],2)..","..round(intersectY[i],2)..")"
 
 
 -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -252,7 +284,7 @@ perspmotion = (sub, sel) ->
 
 			mul: (m) =>
 				return Point @x * m, @y * m, @z * m
-
+				
 		vector = (a, b) ->
 			return Point b.x - a.x, b.y - a.y, b.z - a.z
 
@@ -265,11 +297,7 @@ perspmotion = (sub, sel) ->
 		dist = (a, b) ->
 			return a\sub(b)\length!
 
-		round = (val, n) ->
-			if n
-				return math.floor((val * 10^n) + 0.5) / (10^n)
-			else
-				return math.floor(val+0.5)
+		
 
 		intersect = (l1, l2) ->
 			if vec_pr(vector(l1[1], l1[2]), vector(l2[1], l2[2]))\length! == 0
@@ -492,6 +520,7 @@ perspmotion = (sub, sel) ->
 				if zero[1] != nil
 					p, ratio = zero[1], zero[2]
 					table.insert(rots, {ratio, p, a})
+					
 
 			if tr_org
 				if line.text\match("org%b()")
@@ -501,16 +530,40 @@ perspmotion = (sub, sel) ->
 				else
 					aegisub.log("\\org or \\pos missing")
 					aegisub.cancel!
-
-				px, py = pos_org\match("([-%d.]+).([-%d.]+)")
-				target_org = Point(px, py)
+					
+				if results.option == "Transform with center org"
+					px, py = midPointOrg[si]\match("([-%d.]+).([-%d.]+)")
+					target_org = Point(px, py)
+				elseif results.option == "Transform for target org"
+					px, py = pos_org\match("([-%d.]+).([-%d.]+)")
+					target_org = Point(px, py)
 
 				tf_tags = unrot(coord, target_org, true, true)
 
 				if tf_tags == nil
 					aegisub.log(tf_tags)
 				else
-					return ""..tf_tags
+					return "\\org("..target_org.x..","..target_org.y..")"..tf_tags
+						
+--			if results.option = "Transform for target org"
+--				if tr_org
+--					if line.text\match("org%b()")
+--						export pos_org = line.text\match("org%b()")
+--					elseif line.text\match("pos%b()")
+--						export pos_org = line.text\match("pos%b()")
+--					else
+--						aegisub.log("\\org or \\pos missing")
+--						aegisub.cancel!
+
+--					px, py = pos_org\match("([-%d.]+).([-%d.]+)")
+--					target_org = Point(px, py)
+--
+--					tf_tags = unrot(coord, target_org, true, true)
+
+--					if tf_tags == nil
+--						aegisub.log(tf_tags)
+--					else
+--						return ""..tf_tags
 					
 			if count_e(rots) == 0
 				aegisub.log("No proper perspective found.")
@@ -573,6 +626,8 @@ perspmotion = (sub, sel) ->
 		result = ""
 		if results.option == "Transform for target org"
 			result = perspective(line, true, false, false)
+		if results.option == "Transform with center org"
+			result = perspective(line, true, false, false)..midPointOrg[si]
 		elseif results.option == "Transforms near center of tetragon"
 			result = perspective(line, false, true, false)
 		elseif results.option == "Transforms with target ratio"
@@ -603,6 +658,7 @@ perspmotion = (sub, sel) ->
 --	aegisub.debug.out("Scale[2]: "..tostring(scaleX[2]))
 --	aegisub.debug.out("\n")
 --	aegisub.debug.out("- Zahuczky")
+	aegisub.debug.out(midPointOrg[1])
 	aegisub.set_undo_point(script_name)
 	return sel
 --		if debfry > 90 and debfry < 270 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
@@ -652,7 +708,7 @@ perspmotion = (sub, sel) ->
 --		sub[li]=line
 		
 --	aegisub.debug.out(tostring(fuckme))
---	aegisub.debug.out(tagArray[i])
+--	aegisub.debug.out(midPointOrg[i])
 	
 --		aegisub.debug.out(clipArray[8])
 
