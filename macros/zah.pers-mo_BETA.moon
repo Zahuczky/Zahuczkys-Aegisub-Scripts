@@ -1,10 +1,12 @@
 export script_name="Aegisub-Perspective-Motion BETA"
 export script_description="Applying perspective tracking"
 export script_author="Zahuczky"
-export script_version="0.2.3"
+export script_version="0.2.4"
 export script_namespace="zah.pers-mo_BETA"
 github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
 tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
+
+export helptext = "Thank you for using my script!\n\nKeep in mind, that it's still in beta, so it might not perform as expected in every situation.\n\nYou can find instructions and a tutorial at\n\thttps://zahuczky.com/aegisub-perspective-motion/\n\nOr you can contribute to the project at my GitHub page\n\thttps://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts\n\nPull requests, issues and feature requests are very welcome!"
 
 tr = aegisub.gettext
 
@@ -20,10 +22,12 @@ if haveDepCtrl
     }
 
 
+
+
 perspmotion = (sub, sel) ->
 
 	GUI = {
-
+		main: {
 			{class: "label",  x: 0, y: 0, width: 1, height: 1, 
 				label: "Only paste here After Effects CC POWER PIN "}, 
 			{class: "label",  x: 0, y: 1, width: 1, height: 1, 
@@ -35,13 +39,20 @@ perspmotion = (sub, sel) ->
 				label: "Choose an option for calculating perspective:"},
 			{class: "dropdown", name: "option",  x: 0, y: 12, width: 1, height: 1, 
 				items: {"Transform for target org","Transform with center org","Transforms near center of tetragon","Transforms with target ratio"}, value: "Transform for target org"}, 
+			}
+		
+		help: {
+			{class: "textbox", x: 0, y: 0, width: 45, height: 15, value: helptext}
 		}
+	}
 
-	buttons = {"Apply","Cancel"}
+	buttons = {"Apply","Cancel","HELP"}
 
-	pressed, results = aegisub.dialog.display(GUI, buttons)
-
+	pressed, results = aegisub.dialog.display(GUI.main, {"Apply","Cancel","HELP"})
 	if pressed=="Cancel" aegisub.cancel()
+	if pressed=="HELP" pressed, results = aegisub.dialog.display(GUI.help, {"Close"})
+	if pressed=="Close" aegisub.cancel()
+	
 	
 	
 	round = (val, n) ->
@@ -57,6 +68,11 @@ perspmotion = (sub, sel) ->
 	for i in string.gmatch(results.data, "([^\n]*)\n?")
 		dataArray[j] = i
 		j=j+1
+		
+	if results.data == ""
+		aegisub.debug.out("You forgot to give me any data, so I quit.\n\n")
+	elseif dataArray[9] != "Effects	CC Power Pin #1	CC Power Pin-0002"
+		aegisub.debug.out("I have no idea what kind of data you pasted in, but I'm sure it's not what I wanted.\n\nI need After Effects CC Power Pin data.\n\nPress the HELP button in the script if you don't know what you're doing.\n\n")
 
 -- Filtering out everything other than the data, and putting them into their own tables.
 -- Power Pin data goes like this: TopLeft=0002, TopRight=0003, BottomRight=0005,  BottomLeft=0004
@@ -653,6 +669,8 @@ perspmotion = (sub, sel) ->
 		else
 			line.text = line.text\gsub("\\pos", result..scales[si].."\\pos")
 		sub[li] = line
+		
+		
 --		aegisub.debug.out(clipArray[si])
 --		aegisub.debug.out("\n")
 --		for i=1,#sel
@@ -673,7 +691,7 @@ perspmotion = (sub, sel) ->
 --	aegisub.debug.out("Scale[2]: "..tostring(scaleX[2]))
 --	aegisub.debug.out("\n")
 --	aegisub.debug.out("- Zahuczky")
-	aegisub.debug.out(midPointOrg[1])
+--	aegisub.debug.out(midPointOrg[1])
 	aegisub.set_undo_point(script_name)
 	return sel
 --		if debfry > 90 and debfry < 270 aegisub.debug.out("Uh-oh! Seems like your text was mirrored! Are you sure that's what you wanted? Here's a reminder: You need to draw your clip in a manner, where the first point of your clip is the upper left, then going clockwise from there.")
