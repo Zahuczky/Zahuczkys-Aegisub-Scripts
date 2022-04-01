@@ -208,7 +208,10 @@ unrot = (coord_in, org, diag, get_rot) -> --diag=true, get_rot=false
 	if math.abs(fax) > 0.01
 		s = s.."\\fax"..round(fax, 2)
 		export debfax = round(fax, 2)
-	return s
+
+	sizeX = dist(a, b)
+	sizeY = dist(a, d)
+	return s, { sizeX, sizeY }
 
 binary_search = (f, l, r, eps) ->
 	fl = f(l)
@@ -376,12 +379,12 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 		px, py = pos_org\match("([-%d.]+).([-%d.]+)")
 		target_org = Point(px, py)
 
-		tf_tags = unrot(coord, target_org, true, true)
+		tf_tags, sizes = unrot(coord, target_org, true, true)
 
 		if tf_tags == nil
 			aegisub.log(tf_tags)
 		else
-			return ""..tf_tags
+			return ""..tf_tags, sizes
 
 
 	if tr_centorg
@@ -393,15 +396,15 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 			aegisub.log("\\org or \\pos missing")
 			aegisub.cancel!
 
-		px, py = midPointOrg[si]\match("([-%d.]+).([-%d.]+)")
+		px, py = midPointOrg\match("([-%d.]+).([-%d.]+)")
 		target_org = Point(px, py)
 
-		tf_tags = unrot(coord, target_org, true, true)
+		tf_tags, sizes = unrot(coord, target_org, true, true)
 
 		if tf_tags == nil
 			aegisub.log(tf_tags)
 		else
-			return "\\org("..target_org.x..","..target_org.y..")"..tf_tags
+			return "\\org("..target_org.x..","..target_org.y..")"..tf_tags, sizes
 
 --	if results.option = "Transform for target org"
 --		if tr_org
@@ -430,11 +433,11 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 	if tr_center
 		t_center = coord[1]\add(coord[2])\add(coord[3])\add(coord[4])\mul(0.25)
 		ratio, p, a = find_rot(rots, count_e(rots), t_center)
-		tf_tags = unrot(coord, p, true, true)
+		tf_tags, sizes = unrot(coord, p, true, true)
 		if tf_tags == nil
 			aegisub.log(tf_tags)
 		else
-			return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags
+			return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags, sizes
 
 	if tr_ratio
 		segs = {}
@@ -471,10 +474,10 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 				a = seg[1]
 
 			p, ratio = zero_on_ray(coord, center, v, a, 1e-05)
-			tf_tags = unrot(coord, p, true, true)
+			tf_tags, sizes = unrot(coord, p, true, true)
 
 			if tf_tags != nil
-				return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags
+				return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags, sizes
 
 
 -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -636,12 +639,16 @@ datahandling = (sub, sel, results, pressed) ->
 
 -- END OF PERSPECTIVE.MOON CODE
 
+-- fundamental computations:
 -- takes corners of a quad in the usual ordering
 -- returns {q1, q2, q3, q4}, where:
 -- 	- {q1, q2, q3, q4} form a rectangle in 3d space
 --  - after the camera projection, the qi map to some translation of the given quad
 -- such that these vertices make a rectangle in 3d space
-find3Drect = (coord) ->
+
+-- returns {z1, z2, z3, z4}, {a, bx, by, c}
+-- where the latter array is the coefficients cutting out the focal point in screen coordinates
+get3DRectParameterSpace = (coord) ->
 	-- translate to origin
 	v1 = vector(coord[1], coord[2])
 	v2 = vector(coord[1], coord[4])
@@ -653,61 +660,140 @@ find3Drect = (coord) ->
 	h1 = v12\sub(v1)
 	h2 = v12\sub(v2)
 	z1, z2 = solve2x2(h1.x, h2.x, h1.y, h2.y, v12.x, v12.y)
-	-- Remaining equation is a conic in xt and yt of the form:
-	--  a (xt^2 + yt^2) + b1 xt + b2 yt + c
-	-- i.e. always a circle
-	cona = (1 - z1) * (1 - z2)
-	conbx = z1 * z2 * (v1.x + v2.x) - z1 * v1.x - z2 * v2.x
-	conby = z1 * z2 * (v1.y + v2.y) - z1 * v1.y - z2 * v2.y
-	conc = z1 * z2 * sc_pr(v1, v2) + cona
-	t = nil
-	if cona ~= 0 and math.max(math.abs(conc / cona), math.abs(conbx * conbx + conby * conby / cona)) <= 1000000000000 -- 10^12
-		-- complete the square and find the parameters of the circle
-		centerx = -conbx / (2 * cona)
-		centery = -conby / (2 * cona)
-		sqradius = (conbx * conbx + conby * conby) / (4 * cona * cona) - conc / cona
-		-- I don't really know what's numerically best here... just pick the rightmost point for now.
-		t = Point(centerx + math.sqrt(sqradius), centery)
-	else
-		-- The conic is very close to degenerate and we just assume it's a line.
-		-- Here, just picking x or y intercepts is probably the easiest - it's just a constant factor off of equal x and y.
-		if math.abs(conbx) > math.abs(conby)
-			t = Point(-conc / conbx, 0)
-		else
-			t = Point(0, -conc / conby)
 
 	z = {1, z1, z1 + z2 - 1, z2}
 
+	-- aegisub.log("v1x = #{v1.x}, v1y = #{v1.y}\n")
+	-- aegisub.log("v2x = #{v2.x}, v2y = #{v2.y}\n")
+	-- aegisub.log("v12x = #{v12.x}, v12y = #{v12.y}\n")
+	-- aegisub.log("h1x = #{h1.x}, h1y = #{h1.y}\n")
+	-- aegisub.log("h2x = #{h2.x}, h2y = #{h2.y}\n")
+	-- aegisub.log("z1 = #{z1}, z2 = #{z2}\n")
+
+	-- Remaining equation is a conic in xt and yt of the form:
+	--  a (xt^2 + yt^2) + b1 xt + b2 yt + c
+	-- i.e. always a circle
+	-- cona = (1 - z1) * (1 - z2)
+	-- conbx = z1 * z2 * (v1.x + v2.x) - z1 * v1.x - z2 * v2.x
+	-- conby = z1 * z2 * (v1.y + v2.y) - z1 * v1.y - z2 * v2.y
+	-- conc = z1 * z2 * sc_pr(v1, v2)
+	-- conw = cona
+	-- aegisub.log("#{cona}((#{coord[1].x} - x)^2 + (#{coord[1].y} - y)^2) + #{conbx}(#{coord[1].x} - x) + #{conby}(#{coord[1].y} - y) + #{conc} = 0\n")
+
+	-- This is the conic cutting out all t such that translating coord[1] to 0 and then by t (i.e. by t - coord[1]),
+	-- a rectangle projects to the resulting quad.
+	-- Then, the focal point in screen coordinates is f = coord[1] - t <=> t = coord[1] - f
+	-- So substitute (coord[1] - f) for t in this equation:
+	-- confa = cona
+	-- confbx = -conbx - 2 * cona * coord[1].x
+	-- confby = -conby - 2 * cona * coord[1].y
+	-- confc = conc + conbx * coord[1].x + conby * coord[1].y + cona * (coord[1].x * coord[1].x + coord[1].y * coord[1].y)
+	-- confw = conw
+
+	-- return z, {confa, confbx, confby, confc, confw}
+
+	fla = (1 - z1) * (1 - z2)
+	flc = (z1 * coord[2].x - coord[1].x) * (z2 * coord[4].x - coord[1].x) + (z1 * coord[2].y - coord[1].y) * (z2 * coord[4].y - coord[1].y)
+	return z, {fla, flc}
+
+
+get3DRect = (coord, focallength) ->
+	z, c = get3DRectParameterSpace(coord)
+	cona = c[1]
+	conbx = c[2]
+	conby = c[3]
+	conc = c[4]
+
+	-- f = nil
+	-- if cona ~= 0 and math.max(math.abs(conc / cona), math.abs(conbx * conbx + conby * conby / cona)) <= 1000000000000 -- 10^12
+	-- 	-- complete the square and find the parameters of the circle
+	-- 	centerx = -conbx / (2 * cona)
+	-- 	centery = -conby / (2 * cona)
+	-- 	sqradius = (conbx * conbx + conby * conby) / (4 * cona * cona) - conc / cona
+	-- 	f = Point(centerx + math.cos(phi) * math.sqrt(sqradius), centery + math.sin(phi) * math.sqrt(sqradius))
+	-- else
+	-- 	-- The conic is very close to degenerate and we just assume it's a line.
+	-- 	-- Here, just picking x or y intercepts is probably the easiest - it's just a constant factor off of equal x and y.
+	-- 	if math.abs(conbx) > math.abs(conby)
+	-- 		f = Point(-conc / conbx, 0)
+	-- 	else
+	-- 		f = Point(0, -conc / conby)
+	f = Point(0, 0)
+
 	coord3d = {}
 	for i=1,4
-		coord3d[i] = Point(coord[i].x - coord[1].x, coord[i].y - coord[1].y, 1)\add(t)\mul(z[i])
+		coord3d[i] = Point(coord[i].x, coord[i].y, focallength)\sub(f)\mul(z[i])
 
 	-- some tests - can be disabled.
-	qdiff = coord3d[1]\add(coord3d[3])\sub(coord3d[2])\sub(coord3d[4]) 	-- quad should be a parallelogram
+	qdiff = coord3d[1]\add(coord3d[3])\sub(coord3d[2])\sub(coord3d[4])	-- quad should be a parallelogram
 	qdot = sc_pr(vector(coord3d[1], coord3d[2]), vector(coord3d[1], coord3d[4])) 		-- sides of quad should be perpendicular
-	qerror = qdiff\length() + math.abs(qdot)
+	qerror = qdiff\length() + math.sqrt(math.abs(qdot))
 	-- if these values get too large (larger than 1), bug arch1t3cht until he fixes it.
---	aegisub.debug.out("Largest absolute error in finding projection: #{qerror}\n")
+	-- aegisub.debug.out("Largest absolute error in finding projection: #{qerror}\n")
 
 	return coord3d
 
 
+coord3dRatio = (coord3d) ->
+	return dist(coord3d[1], coord3d[2]) / dist(coord3d[1], coord3d[4])
+
+
 -- New new scaling algorithm: Derived from explicit formulas
-newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4) ->
-	scales = { }
+newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4, perspSizes) ->
+	-- this should be a gui option later on
+	xres, yres, ar, artype = aegisub.video_size()
+	if xres == nil or yres == nil
+		aegisub.log("Could not determine video size!")
+		aegisub.cancel()
+	focalpoint = Point(xres / 2, yres / 2)
+
+	-- the deviation from being a rectangle (scalar product of the sides) is a quadratic polynomial in the focal length
+	-- for a fixed focal point. Use the method of least squares to find the best focal length.
+	lsq_a = 0
+	lsq_c = 0
+
+	-- also track the error function itself for debugging
+	sqe_a = 0
+	sqe_c = 0
+	sqe_e = 0
+
 	for i=1,#lines
+		-- aegisub.log("quad = [#{x1[i]}, #{y1[i]}; #{x2[i]}, #{y2[i]}; #{x3[i]}, #{y3[i]}; #{x4[i]}, #{y4[i]}];\n")
+		-- aegisub.log("#{params[1]}(x^2 + y^2) + #{params[2]}x + #{params[3]}y + #{params[4]} = 0\n")
+		coord = [p\sub(focalpoint) for p in *{ Point(x1[i], y1[i]), Point(x2[i], y2[i]), Point(x3[i], y3[i]), Point(x4[i], y4[i]) }]
+
+		zs, flcoeff = get3DRectParameterSpace(coord)
+		lsq_a += flcoeff[1] * flcoeff[1]
+		lsq_c += flcoeff[1] * flcoeff[2]
+
+		sqe_a += flcoeff[1] * flcoeff[1]
+		sqe_c += 2 * flcoeff[1] * flcoeff[2]
+		sqe_e += flcoeff[2] * flcoeff[2]
+
+	focallength = 1
+	if lsq_a ~= 0
+		focallength = math.sqrt(-lsq_c / lsq_a)
+
+	-- aegisub.debug.out("Scaling: Found ratio range #{minratio} - #{maxratio}. Choosing #{target_ratio}.")
+	-- aegisub.debug.out("Square error function for focal length: #{sqe_a}x^4 + #{sqe_c}x^2 + #{sqe_e}\n")
+	aegisub.debug.out("Found focal length #{focallength} with square error #{sqe_a * focallength ^ 4 + sqe_c * focallength ^ 2 + sqe_e}.\n")
+
+	rectAreas = { }
+	pointZs = { }
+	for i=1,#lines
+		coord = [p\sub(focalpoint) for p in *{ Point(x1[i], y1[i]), Point(x2[i], y2[i]), Point(x3[i], y3[i]), Point(x4[i], y4[i]) }]
+
+		coord3d = get3DRect(coord, focallength)
+
+		rectAreas[i] = dist(coord3d[1], coord3d[2]) * dist(coord3d[1], coord3d[4])
+		ratio = dist(coord3d[1], coord3d[2]) / dist(coord3d[1], coord3d[4])
+		-- aegisub.log("Ratio at frame #{i}: #{ratio}\n")
+
 		position = lines[i].text\match("pos%b()")
 		posX, posY = position\match("([-%d.]+).([-%d.]+)")
 
-		-- find a rectangle projecting to (a translation of) the perspective quad
-		coord = { Point(x1[i], y1[i]), Point(x2[i], y2[i]), Point(x3[i], y3[i]), Point(x4[i], y4[i]) }
-		coord3d = find3Drect(coord)
-
-		-- translate the subtitle line into the projected rectangle
-		p1t = coord3d[1]\mul(1 / coord3d[1].z)
-		p1t.z = 0
-		posTransl = Point(posX, posY)\add(vector(coord[1], p1t))
-		posTransl.z = 1
+		posTransl = Point(posX, posY)\sub(focalpoint)
+		posTransl.z = focallength
 
 		-- find the point on the 3d rectangle projecting to the translated point
 		-- i.e. intersect the ray through the point with the plane through the quad
@@ -719,17 +805,25 @@ newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4) ->
 			{posTransl.z, -v1.z, -v2.z},
 			}, {coord3d[1].x, coord3d[1].y, coord3d[1].z})
 		pos3d = posTransl\mul(sol[1])
+		-- aegisub.log("Z at frame #{i}: #{pos3d.z / focallength} | #{(focallength + coord3d[3].z) / (2 * focallength)}\n")
 
-		rectCenter = coord3d[1]\add(coord3d[3])\mul(0.5)
-		quadArea = 0.5 * (vec_pr(vector(coord[1], coord[2]), vector(coord[1], coord[4]))\length() + vec_pr(vector(coord[3], coord[2]), vector(coord[3], coord[4]))\length())
+		pointZs[i] = pos3d.z
 
-		scales[i] = math.sqrt(quadArea) * rectCenter.z * rectCenter.z / (pos3d.z * pos3d.z)
-
-	relScales = { }
+	scales = { }
+	ars = { }
 	for i=1,#lines
-		relScales[i] = 100 * scales[i] / scales[27]
+		factor = math.sqrt(rectAreas[1] / rectAreas[i])
+		pointZ = pointZs[i] * factor
+		scales[i] = focallength / pointZ
+		ars[i] = perspSizes[i][1] / perspSizes[i][2]
+	
+	relScalesX = { }
+	relScalesY = { }
+	for i=1,#lines
+		relScalesX[i] = 100 * scales[i] * ars[i] / scales[27]
+		relScalesY[i] = 100 * scales[i] / scales[27]
 
-	return relScales, relScales
+	return relScalesX, relScalesY
 
 -- New scaling algorithm
 newScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4) ->
@@ -877,7 +971,25 @@ perspmotion = (sub, sel) ->
 	-- else
 	-- 	scaleX, scaleY = newScale(lines, x1, x2, x3, x4, y1, y2, y3, y4)
 
-	scaleX, scaleY = newNewScale(lines, x1, x2, x3, x4, y1, y2, y3, y4)
+	perspResults = {}
+	perspSizes = {}
+	for i=1,#lines
+		result = ""
+		sizes = {}
+		if results.option == "Transform for target org"
+			result, sizes = perspective(clipArray[i], midPointOrg[i], lines[i], true, false, false, false)
+		if results.option == "Transform with center org"
+			result, sizes = perspective(clipArray[i], midPointOrg[i], lines[i], false, true, false, false)
+		elseif results.option == "Transforms near center of tetragon"
+			result, sizes = perspective(clipArray[i], midPointOrg[i], lines[i], false, false, true, false)
+		elseif results.option == "Transforms with target ratio"
+			result, sizes = perspective(clipArray[i], midPointOrg[i], lines[i], false, false, false, true)
+
+		perspResults[i] = result
+		perspSizes[i] = sizes
+
+
+	scaleX, scaleY = newNewScale(lines, x1, x2, x3, x4, y1, y2, y3, y4, perspSizes)
 
 	export scales = { }
 	for i=1,#lines
@@ -917,16 +1029,8 @@ perspmotion = (sub, sel) ->
 
 --		if 	debfax != nil
 --			fayFix = (debfax*(scaleY[si]/100))/(scaleX[si]/100)
-
-		result = ""
-		if results.option == "Transform for target org"
-			result = perspective(clipArray[si], midPointOrg, line, true, false, false, false)
-		if results.option == "Transform with center org"
-			result = perspective(clipArray[si], midPointOrg, line, false, true, false, false)
-		elseif results.option == "Transforms near center of tetragon"
-			result = perspective(clipArray[si], midPointOrg, line, false, false, true, false)
-		elseif results.option == "Transforms with target ratio"
-			result = perspective(clipArray[si], midPointOrg, line, false, false, false, true)
+		result = perspResults[si]
+		
 		line.text = delete_old_tag(line)
 		if results.includeclip
 			line.text = line.text\gsub("\\pos", "\\"..clipArray[si]..result..scales[si]..bords[si].."\\pos")
