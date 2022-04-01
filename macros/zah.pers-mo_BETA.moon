@@ -779,6 +779,7 @@ newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4, perspSizes) ->
 	aegisub.debug.out("Found focal length #{focallength} with square error #{sqe_a * focallength ^ 4 + sqe_c * focallength ^ 2 + sqe_e}.\n")
 
 	rectAreas = { }
+	rectARs = { }
 	pointZs = { }
 	for i=1,#lines
 		coord = [p\sub(focalpoint) for p in *{ Point(x1[i], y1[i]), Point(x2[i], y2[i]), Point(x3[i], y3[i]), Point(x4[i], y4[i]) }]
@@ -786,6 +787,7 @@ newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4, perspSizes) ->
 		coord3d = get3DRect(coord, focallength)
 
 		rectAreas[i] = dist(coord3d[1], coord3d[2]) * dist(coord3d[1], coord3d[4])
+		rectARs[i] = dist(coord3d[1], coord3d[2]) / dist(coord3d[1], coord3d[4])
 		ratio = dist(coord3d[1], coord3d[2]) / dist(coord3d[1], coord3d[4])
 		-- aegisub.log("Ratio at frame #{i}: #{ratio}\n")
 
@@ -810,17 +812,17 @@ newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4, perspSizes) ->
 		pointZs[i] = pos3d.z
 
 	scales = { }
-	ars = { }
+	perspARs = { }
 	for i=1,#lines
 		factor = math.sqrt(rectAreas[1] / rectAreas[i])
 		pointZ = pointZs[i] * factor
 		scales[i] = focallength / pointZ
-		ars[i] = perspSizes[i][1] / perspSizes[i][2]
+		perspARs[i] = perspSizes[i][1] / perspSizes[i][2]
 	
 	relScalesX = { }
 	relScalesY = { }
 	for i=1,#lines
-		relScalesX[i] = 100 * scales[i] * ars[i] / scales[27]
+		relScalesX[i] = 100 * (scales[i] / scales[27]) * (perspARs[i] / rectARs[i])
 		relScalesY[i] = 100 * scales[i] / scales[27]
 
 	return relScalesX, relScalesY
