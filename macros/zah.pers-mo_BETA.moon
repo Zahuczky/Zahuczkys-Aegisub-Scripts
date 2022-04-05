@@ -186,32 +186,34 @@ unrot = (coord_in, org, diag, get_rot) -> --diag=true, get_rot=false
 	if flip < 0
 		return nil
 
+	info = {}
 	fry = math.atan(n.x/n.z)
 	s = ""
 	s = s.."\\fry"..round((-fry / math.pi * 180), 2)
-	export debfry = round((-fry / math.pi * 180), 2)
+	info["debfry"] = round((-fry / math.pi * 180), 2)
 	rot_n = n\rot_y(fry)
 	frx = -math.atan(rot_n.y/rot_n.z)
 	if n0.z < 0
 		frx += math.pi
 	s = s.."\\frx"..round((-frx / math.pi * 180), 2)
-	export debfrx = round((-frx / math.pi * 180), 2)
+	info["debfrx"] = round((-frx / math.pi * 180), 2)
 	n = vector(a, b)
 	ab_unrot = vector(a, b)\rot_y(fry)\rot_x(frx)
 	ac_unrot = vector(a, c)\rot_y(fry)\rot_x(frx)
 	ad_unrot = vector(a, d)\rot_y(fry)\rot_x(frx)
 	frz = math.atan2(ab_unrot.y, ab_unrot.x)
 	s = s.."\\frz"..round((-frz / math.pi * 180), 2)
-	export debfrz = round((-frz / math.pi * 180), 2)
+	info["debfrz"] = round((-frz / math.pi * 180), 2)
 	ad_unrot = ad_unrot\rot_z(frz)
 	fax = ad_unrot.x/ad_unrot.y
 	if math.abs(fax) > 0.01
 		s = s.."\\fax"..round(fax, 2)
-		export debfax = round(fax, 2)
+		info["debfax"] = round(fax, 2)
 
 	sizeX = dist(a, b)
 	sizeY = dist(a, d)
-	return s, { sizeX, sizeY }
+	info["sizes"] = { sizeX, sizeY }
+	return s, info
 
 binary_search = (f, l, r, eps) ->
 	fl = f(l)
@@ -379,12 +381,12 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 		px, py = pos_org\match("([-%d.]+).([-%d.]+)")
 		target_org = Point(px, py)
 
-		tf_tags, sizes = unrot(coord, target_org, true, true)
+		tf_tags, info = unrot(coord, target_org, true, true)
 
 		if tf_tags == nil
 			aegisub.log(tf_tags)
 		else
-			return ""..tf_tags, sizes
+			return ""..tf_tags, info
 
 
 	if tr_centorg
@@ -399,12 +401,12 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 		px, py = midPointOrg\match("([-%d.]+).([-%d.]+)")
 		target_org = Point(px, py)
 
-		tf_tags, sizes = unrot(coord, target_org, true, true)
+		tf_tags, info = unrot(coord, target_org, true, true)
 
 		if tf_tags == nil
 			aegisub.log(tf_tags)
 		else
-			return "\\org("..target_org.x..","..target_org.y..")"..tf_tags, sizes
+			return "\\org("..target_org.x..","..target_org.y..")"..tf_tags, info
 
 --	if results.option = "Transform for target org"
 --		if tr_org
@@ -433,11 +435,11 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 	if tr_center
 		t_center = coord[1]\add(coord[2])\add(coord[3])\add(coord[4])\mul(0.25)
 		ratio, p, a = find_rot(rots, count_e(rots), t_center)
-		tf_tags, sizes = unrot(coord, p, true, true)
+		tf_tags, info = unrot(coord, p, true, true)
 		if tf_tags == nil
 			aegisub.log(tf_tags)
 		else
-			return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags, sizes
+			return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags, info
 
 	if tr_ratio
 		segs = {}
@@ -474,10 +476,10 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 				a = seg[1]
 
 			p, ratio = zero_on_ray(coord, center, v, a, 1e-05)
-			tf_tags, sizes = unrot(coord, p, true, true)
+			tf_tags, info = unrot(coord, p, true, true)
 
 			if tf_tags != nil
-				return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags, sizes
+				return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags, info
 
 
 -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -735,7 +737,7 @@ get3DRect = (coord, focallength) ->
 
 
 -- New new scaling algorithm: Derived from explicit formulas
-newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4, perspSizes) ->
+newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4, perspInfo) ->
 	-- this should be a gui option later on
 	xres, yres, ar, artype = aegisub.video_size()
 	if xres == nil or yres == nil
@@ -813,7 +815,7 @@ newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4, perspSizes) ->
 		factor = math.sqrt(rectAreas[1] / rectAreas[i])
 		pointZ = pointZs[i] * factor
 		scales[i] = focallength / pointZ
-		perspARs[i] = perspSizes[i][1] / perspSizes[i][2]
+		perspARs[i] = perspInfo[i]["sizes"][1] / perspInfo[i]["sizes"][2]
 	
 	relScalesX = { }
 	relScalesY = { }
@@ -970,24 +972,24 @@ perspmotion = (sub, sel) ->
 	-- 	scaleX, scaleY = newScale(lines, x1, x2, x3, x4, y1, y2, y3, y4)
 
 	perspResults = {}
-	perspSizes = {}
+	perspInfo = {}
 	for i=1,#lines
 		result = ""
-		sizes = {}
+		info = {}
 		if results.option == "Transform for target org"
-			result, sizes = perspective(clipArray[i], midPointOrg[i], lines[i], true, false, false, false)
+			result, info = perspective(clipArray[i], midPointOrg[i], lines[i], true, false, false, false)
 		if results.option == "Transform with center org"
-			result, sizes = perspective(clipArray[i], midPointOrg[i], lines[i], false, true, false, false)
+			result, info = perspective(clipArray[i], midPointOrg[i], lines[i], false, true, false, false)
 		elseif results.option == "Transforms near center of tetragon"
-			result, sizes = perspective(clipArray[i], midPointOrg[i], lines[i], false, false, true, false)
+			result, info = perspective(clipArray[i], midPointOrg[i], lines[i], false, false, true, false)
 		elseif results.option == "Transforms with target ratio"
-			result, sizes = perspective(clipArray[i], midPointOrg[i], lines[i], false, false, false, true)
+			result, info = perspective(clipArray[i], midPointOrg[i], lines[i], false, false, false, true)
 
 		perspResults[i] = result
-		perspSizes[i] = sizes
+		perspInfo[i] = info
 
 
-	scaleX, scaleY = newNewScale(lines, x1, x2, x3, x4, y1, y2, y3, y4, perspSizes)
+	scaleX, scaleY = newNewScale(lines, x1, x2, x3, x4, y1, y2, y3, y4, perspInfo)
 
 	export scales = { }
 	for i=1,#lines
@@ -1034,8 +1036,8 @@ perspmotion = (sub, sel) ->
 			line.text = line.text\gsub("\\pos", "\\"..clipArray[si]..result..scales[si]..bords[si].."\\pos")
 		else
 			line.text = line.text\gsub("\\pos", result..scales[si]..bords[si].."\\pos")
-		if debfax != nil
-			line.text = line.text\gsub("\\fax([-%d.]+)", "\\fax"..(debfax*(scaleY[si]/100))/(scaleX[si]/100))
+		if perspInfo[si]["debfax"] != nil
+			line.text = line.text\gsub("\\fax([-%d.]+)", "\\fax"..(perspInfo[si]["debfax"]*(scaleY[si]/100))/(scaleX[si]/100))
 		sub[li] = line
 
 
