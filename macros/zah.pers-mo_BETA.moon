@@ -40,7 +40,7 @@ solveLU = (mat, b) ->
 		p = -1
 		for j=i,n
 			if math.abs(m[j][i]) > maxv
-				p = i
+				p = j
 				maxv = math.abs(m[j][i])
 
 		mi = m[i]
@@ -732,10 +732,6 @@ get3DRect = (coord, focallength) ->
 	-- aegisub.debug.out("Largest absolute error in finding projection: #{qerror}\n")
 
 	return coord3d
-
-
-coord3dRatio = (coord3d) ->
-	return dist(coord3d[1], coord3d[2]) / dist(coord3d[1], coord3d[4])
 
 
 -- New new scaling algorithm: Derived from explicit formulas
