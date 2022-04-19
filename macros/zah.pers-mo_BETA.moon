@@ -641,187 +641,47 @@ datahandling = (sub, sel, results, pressed) ->
 
 -- END OF PERSPECTIVE.MOON CODE
 
--- fundamental computations:
--- takes corners of a quad in the usual ordering
--- returns {q1, q2, q3, q4}, where:
--- 	- {q1, q2, q3, q4} form a rectangle in 3d space
---  - after the camera projection, the qi map to some translation of the given quad
--- such that these vertices make a rectangle in 3d space
-
--- returns {z1, z2, z3, z4}, {a, bx, by, c}
--- where the latter array is the coefficients cutting out the focal point in screen coordinates
-get3DRectParameterSpace = (coord) ->
-	-- translate to origin
-	v1 = vector(coord[1], coord[2])
-	v2 = vector(coord[1], coord[4])
-	v12 = vector(coord[1], coord[3])
-	-- want translation vector t = (xt, yt) and z-coordinates z1, z2, z3
-	-- such that qi := (vi + t, z) (for vi = v3) and q0 := (t, 1)
-	-- form a rectangle. The following is what you get when you work out the equations for that.
-	-- Equations for the zi are linear and independent of t:
-	h1 = v12\sub(v1)
-	h2 = v12\sub(v2)
-	z1, z2 = solve2x2(h1.x, h2.x, h1.y, h2.y, v12.x, v12.y)
-
-	z = {1, z1, z1 + z2 - 1, z2}
-
-	-- aegisub.log("v1x = #{v1.x}, v1y = #{v1.y}\n")
-	-- aegisub.log("v2x = #{v2.x}, v2y = #{v2.y}\n")
-	-- aegisub.log("v12x = #{v12.x}, v12y = #{v12.y}\n")
-	-- aegisub.log("h1x = #{h1.x}, h1y = #{h1.y}\n")
-	-- aegisub.log("h2x = #{h2.x}, h2y = #{h2.y}\n")
-	-- aegisub.log("z1 = #{z1}, z2 = #{z2}\n")
-
-	-- Remaining equation is a conic in xt and yt of the form:
-	--  a (xt^2 + yt^2) + b1 xt + b2 yt + c
-	-- i.e. always a circle
-	-- cona = (1 - z1) * (1 - z2)
-	-- conbx = z1 * z2 * (v1.x + v2.x) - z1 * v1.x - z2 * v2.x
-	-- conby = z1 * z2 * (v1.y + v2.y) - z1 * v1.y - z2 * v2.y
-	-- conc = z1 * z2 * sc_pr(v1, v2)
-	-- conw = cona
-	-- aegisub.log("#{cona}((#{coord[1].x} - x)^2 + (#{coord[1].y} - y)^2) + #{conbx}(#{coord[1].x} - x) + #{conby}(#{coord[1].y} - y) + #{conc} = 0\n")
-
-	-- This is the conic cutting out all t such that translating coord[1] to 0 and then by t (i.e. by t - coord[1]),
-	-- a rectangle projects to the resulting quad.
-	-- Then, the focal point in screen coordinates is f = coord[1] - t <=> t = coord[1] - f
-	-- So substitute (coord[1] - f) for t in this equation:
-	-- confa = cona
-	-- confbx = -conbx - 2 * cona * coord[1].x
-	-- confby = -conby - 2 * cona * coord[1].y
-	-- confc = conc + conbx * coord[1].x + conby * coord[1].y + cona * (coord[1].x * coord[1].x + coord[1].y * coord[1].y)
-	-- confw = conw
-
-	-- return z, {confa, confbx, confby, confc, confw}
-
-	fla = (1 - z1) * (1 - z2)
-	flc = (z1 * coord[2].x - coord[1].x) * (z2 * coord[4].x - coord[1].x) + (z1 * coord[2].y - coord[1].y) * (z2 * coord[4].y - coord[1].y)
-	return z, {fla, flc}
-
-
-get3DRect = (coord, focallength) ->
-	z, c = get3DRectParameterSpace(coord)
-	cona = c[1]
-	conbx = c[2]
-	conby = c[3]
-	conc = c[4]
-
-	-- f = nil
-	-- if cona ~= 0 and math.max(math.abs(conc / cona), math.abs(conbx * conbx + conby * conby / cona)) <= 1000000000000 -- 10^12
-	-- 	-- complete the square and find the parameters of the circle
-	-- 	centerx = -conbx / (2 * cona)
-	-- 	centery = -conby / (2 * cona)
-	-- 	sqradius = (conbx * conbx + conby * conby) / (4 * cona * cona) - conc / cona
-	-- 	f = Point(centerx + math.cos(phi) * math.sqrt(sqradius), centery + math.sin(phi) * math.sqrt(sqradius))
-	-- else
-	-- 	-- The conic is very close to degenerate and we just assume it's a line.
-	-- 	-- Here, just picking x or y intercepts is probably the easiest - it's just a constant factor off of equal x and y.
-	-- 	if math.abs(conbx) > math.abs(conby)
-	-- 		f = Point(-conc / conbx, 0)
-	-- 	else
-	-- 		f = Point(0, -conc / conby)
-	f = Point(0, 0)
-
-	coord3d = {}
-	for i=1,4
-		coord3d[i] = Point(coord[i].x, coord[i].y, focallength)\sub(f)\mul(z[i])
-
-	-- some tests - can be disabled.
-	qdiff = coord3d[1]\add(coord3d[3])\sub(coord3d[2])\sub(coord3d[4])	-- quad should be a parallelogram
-	qdot = sc_pr(vector(coord3d[1], coord3d[2]), vector(coord3d[1], coord3d[4])) 		-- sides of quad should be perpendicular
-	qerror = qdiff\length() + math.sqrt(math.abs(qdot))
-	-- if these values get too large (larger than 1), bug arch1t3cht until he fixes it.
-	-- aegisub.debug.out("Largest absolute error in finding projection: #{qerror}\n")
-
-	return coord3d
-
 
 -- New new scaling algorithm: Derived from explicit formulas
-newNewScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4, perspInfo) ->
-	-- this should be a gui option later on
-	xres, yres, ar, artype = aegisub.video_size()
-	if xres == nil or yres == nil
-		aegisub.log("Could not determine video size!")
-		aegisub.cancel()
-	focalpoint = Point(xres / 2, yres / 2)
-
-	-- the deviation from being a rectangle (scalar product of the sides) is a quadratic polynomial in the focal length
-	-- for a fixed focal point. Use the method of least squares to find the best focal length.
-	lsq_a = 0
-	lsq_c = 0
-
-	-- also track the error function itself for debugging
-	sqe_a = 0
-	sqe_c = 0
-	sqe_e = 0
-
+newNewScale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
+	scalesX = { }
+	scalesY = { }
 	for i=1,#lines
-		-- aegisub.log("quad = [#{x1[i]}, #{y1[i]}; #{x2[i]}, #{y2[i]}; #{x3[i]}, #{y3[i]}; #{x4[i]}, #{y4[i]}];\n")
-		-- aegisub.log("#{params[1]}(x^2 + y^2) + #{params[2]}x + #{params[3]}y + #{params[4]} = 0\n")
-		coord = [p\sub(focalpoint) for p in *{ Point(x1[i], y1[i]), Point(x2[i], y2[i]), Point(x3[i], y3[i]), Point(x4[i], y4[i]) }]
-
-		zs, flcoeff = get3DRectParameterSpace(coord)
-		lsq_a += flcoeff[1] * flcoeff[1]
-		lsq_c += flcoeff[1] * flcoeff[2]
-
-		sqe_a += flcoeff[1] * flcoeff[1]
-		sqe_c += 2 * flcoeff[1] * flcoeff[2]
-		sqe_e += flcoeff[2] * flcoeff[2]
-
-	focallength = 1
-	if lsq_a ~= 0
-		focallength = math.sqrt(-lsq_c / lsq_a)
-
-	-- aegisub.debug.out("Scaling: Found ratio range #{minratio} - #{maxratio}. Choosing #{target_ratio}.")
-	-- aegisub.debug.out("Square error function for focal length: #{sqe_a}x^4 + #{sqe_c}x^2 + #{sqe_e}\n")
-	aegisub.debug.out("Found focal length #{focallength} with square error #{sqe_a * focallength ^ 4 + sqe_c * focallength ^ 2 + sqe_e}.\n")
-
-	rectAreas = { }
-	rectARs = { }
-	pointZs = { }
-	for i=1,#lines
-		coord = [p\sub(focalpoint) for p in *{ Point(x1[i], y1[i]), Point(x2[i], y2[i]), Point(x3[i], y3[i]), Point(x4[i], y4[i]) }]
-
-		coord3d = get3DRect(coord, focallength)
-
-		rectAreas[i] = dist(coord3d[1], coord3d[2]) * dist(coord3d[1], coord3d[4])
-		rectARs[i] = dist(coord3d[1], coord3d[2]) / dist(coord3d[1], coord3d[4])
-		ratio = dist(coord3d[1], coord3d[2]) / dist(coord3d[1], coord3d[4])
-		-- aegisub.log("Ratio at frame #{i}: #{ratio}\n")
+		x1 = xx1[i]
+		x2 = xx2[i] - x1
+		x3 = xx3[i] - x1
+		x4 = xx4[i] - x1
+		y1 = yy1[i]
+		y2 = yy2[i] - y1
+		y3 = yy3[i] - y1
+		y4 = yy4[i] - y1
 
 		position = lines[i].text\match("pos%b()")
 		posX, posY = position\match("([-%d.]+).([-%d.]+)")
+		xp = posX - x1
+		yp = posY - y1
 
-		posTransl = Point(posX, posY)\sub(focalpoint)
-		posTransl.z = focallength
+		rx = -perspInfo[i]["debfrx"] * math.pi / 180
+		ry = perspInfo[i]["debfry"] * math.pi / 180
+		rz = -perspInfo[i]["debfrz"] * math.pi / 180
 
-		-- find the point on the 3d rectangle projecting to the translated point
-		-- i.e. intersect the ray through the point with the plane through the quad
-		v1 = vector(coord3d[1], coord3d[2])
-		v2 = vector(coord3d[1], coord3d[4])
-		sol = solveLU({
-			{posTransl.x, -v1.x, -v2.x},
-			{posTransl.y, -v1.y, -v2.y},
-			{posTransl.z, -v1.z, -v2.z},
-			}, {coord3d[1].x, coord3d[1].y, coord3d[1].z})
-		pos3d = posTransl\mul(sol[1])
-		-- aegisub.log("Z at frame #{i}: #{pos3d.z / focallength} | #{(focallength + coord3d[3].z) / (2 * focallength)}\n")
+		-- Invoke black math magic. Do not attempt to read it, for it will destroy your sanity.
+		cx = -(((x3*y2 - x2*y3)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(-(xp*y4) + x4*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp)))))
+		cy = ((-(x4*y3) + x3*y4)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(xp*y2 - x2*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp))))
+		dsx2 = (((-1 + cy)*x3^2*y2*(y2 - y4)*y4 + y3*((-1 + cy)*x4^2*y2*(y2 - y3) + cy*x2^2*(y3 - y4)*y4 + x2*x4*y2*(-y3 + y4)) + x3*y2*(2*(-1 + cy)*x4*y3*y4 - (-1 + 2*cy)*x2*(y3 - y4)*y4 + x4*y2*(y3 + y4 - 2*cy*y4)))^2 + (x2*(x4*y3 - x3*y4)*(x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4)) + (x3*y2 - x4*y2 + x2*(-y3 + y4))*(cy*x4*(x3*y2 - x2*y3) + cx*x2*(x4*y3 - x3*y4)))^2)/ (x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4))^4
+		dsy2 = ((x4*(x3*y2 - x2*y3)*(x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4)) - (x4*(y2 - y3) + (-x2 + x3)*y4)*(cy*x4*(x3*y2 - x2*y3) + cx*x2*(x4*y3 - x3*y4)))^2 + ((x3*y2 - x2*y3)*y4*(-(x4*y2) - x2*y3 + x4*y3 + x3*(y2 - y4) + x2*y4) + cx*(x4^2*y2*y3*(-y2 + y3) + 2*x3*x4*y2*(y2 - y3)*y4 + y4*(2*x2*x3*y2*(y3 - y4) + x3^2*y2*(-y2 + y4) + x2^2*y3*(-y3 + y4))))^2)/ (x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4))^4
 
-		pointZs[i] = pos3d.z
+		drx2 = math.cos(rx)^2 * math.sin(rz)^2 + (math.cos(ry) * math.cos(rz) - math.sin(rx) * math.sin(ry) * math.sin(rz))^2
+		dry2 = math.cos(rx)^2 * math.cos(rz)^2 + (math.cos(ry) * math.sin(rz) + math.sin(rx) * math.sin(ry) * math.cos(rz))^2
 
-	scales = { }
-	perspARs = { }
-	for i=1,#lines
-		factor = math.sqrt(rectAreas[1] / rectAreas[i])
-		pointZ = pointZs[i] * factor
-		scales[i] = focallength / pointZ
-		perspARs[i] = perspInfo[i]["sizes"][1] / perspInfo[i]["sizes"][2]
+		scalesX[i] = math.sqrt(dsx2 / drx2)
+		scalesY[i] = math.sqrt(dsy2 / dry2)
 	
 	relScalesX = { }
 	relScalesY = { }
 	for i=1,#lines
-		relScalesX[i] = 100 * (scales[i] / scales[27]) * (perspARs[i] / rectARs[i])
-		relScalesY[i] = 100 * scales[i] / scales[27]
+		relScalesX[i] = 100 * scalesX[i] / scalesX[27]
+		relScalesY[i] = 100 * scalesY[i] / scalesY[27]
 
 	return relScalesX, relScalesY
 
