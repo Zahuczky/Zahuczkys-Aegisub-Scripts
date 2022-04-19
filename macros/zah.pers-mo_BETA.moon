@@ -641,9 +641,7 @@ datahandling = (sub, sel, results, pressed) ->
 
 -- END OF PERSPECTIVE.MOON CODE
 
-
--- New new scaling algorithm: Derived from explicit formulas
-newNewScale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
+scale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
 	scalesX = { }
 	scalesY = { }
 	for i=1,#lines
@@ -685,105 +683,6 @@ newNewScale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
 
 	return relScalesX, relScalesY
 
--- New scaling algorithm
-newScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4) ->
-	posX = { }
-	posY = { }
-	for i=1,#lines
-		export position = lines[i].text\match("pos%b()")
-		posX[i], posY[i] = position\match("([-%d.]+).([-%d.]+)")
-
-	export dA = { }
-	export dB = { }
-	export dC = { }
-	export dD = { }
-	export A = { }
-	export B = { }
-	export C = { }
-	for i=1,#lines
-		B[i] = x2[i]-x1[i]
-		A[i] = y1[i]-y2[i]
-		C[i] = x1[i]*y2[i]-x2[i]*y1[i]
-		dA[i] = (A[i]*posX[i]+B[i]*posY[i]+C[i])/(math.sqrt(A[i]*A[i]+B[i]*B[i]))
-
-	for i=1,#lines
-		B[i] = x3[i]-x2[i]
-		A[i] = y2[i]-y3[i]
-		C[i] = x2[i]*y3[i]-x3[i]*y2[i]
-		dB[i] = (A[i]*posX[i]+B[i]*posY[i]+C[i])/(math.sqrt(A[i]*A[i]+B[i]*B[i]))
-
-	for i=1,#lines
-		B[i] = x4[i]-x3[i]
-		A[i] = y3[i]-y4[i]
-		C[i] = x3[i]*y4[i]-x4[i]*y3[i]
-		dC[i] = (A[i]*posX[i]+B[i]*posY[i]+C[i])/(math.sqrt(A[i]*A[i]+B[i]*B[i]))
-
-	for i=1,#lines
-		B[i] = x1[i]-x4[i]
-		A[i] = y4[i]-y1[i]
-		C[i] = x4[i]*y1[i]-x1[i]*y4[i]
-		dD[i] = (A[i]*posX[i]+B[i]*posY[i]+C[i])/(math.sqrt(A[i]*A[i]+B[i]*B[i]))
-
-	export distanceY = { }
-	for i=1,#lines
-		distanceY[i] = dA[i]+dC[i]
-
-	export distanceX = { }
-	for i=1,#lines
-		distanceX[i] = dB[i]+dD[i]
-
-	export scaleY = { }
-	export scaleX = { }
-	for k=1,#lines
-		scaleY[k] = (distanceY[k]/distanceY[27])*100
-		scaleX[k] = (distanceX[k]/distanceX[27])*100
-
-	aegisub.debug.out("newscale")
-
-	return scaleX, scaleY
-
--- Old scaling algorithm, better if the pos of sign is in the exact middle of the perspective plane
-oldScale = (lines, x1, x2, x3, x4, y1, y2, y3, y4) ->
-	export LMidPointX = { }
-	export LMidPointY = { }
-	export RMidPointX = { }
-	export RMidPointY = { }
-	for i=1,#x1
-		LMidPointX[i] = (x1[i]+x4[i])/2
-		LMidPointY[i] = (y1[i]+y4[i])/2
-		RMidPointX[i] = (x2[i]+x3[i])/2
-		RMidPointY[i] = (y2[i]+y3[i])/2
-
-	export distanceX = { }
-	for j=1,#x1
-		distanceX[j] = math.sqrt(((RMidPointX[j]-LMidPointX[j])*(RMidPointX[j]-LMidPointX[j]))+((RMidPointY[j]-LMidPointY[j])*(RMidPointY[j]-LMidPointY[j])))
-
-	export scaleX = { }
-	for k=1,#x1
-		scaleX[k] = (distanceX[k]/distanceX[27])*100
-
---	 XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	export TMidPointX = { }
-	export TMidPointY = { }
-	export BMidPointX = { }
-	export BMidPointY = { }
-	for i=1,#x1
-		TMidPointX[i] = (x1[i]+x2[i])/2
-		TMidPointY[i] = (y1[i]+y2[i])/2
-		BMidPointX[i] = (x4[i]+x3[i])/2
-		BMidPointY[i] = (y4[i]+y3[i])/2
-
-	export distanceY = { }
-	for j=1,#x1
-		distanceY[j] = math.sqrt(((TMidPointX[j]-BMidPointX[j])*(TMidPointX[j]-BMidPointX[j]))+((TMidPointY[j]-BMidPointY[j])*(TMidPointY[j]-BMidPointY[j])))
-
-	export scaleY = { }
-	for k=1,#x1
-		scaleY[k] = (distanceY[k]/distanceY[27])*100
-
-	aegisub.debug.out("oldscale")
-
-	return scaleX, scaleY
 
 -- main function, this get's run as 'apply' is clicked
 perspmotion = (sub, sel) ->
@@ -848,8 +747,7 @@ perspmotion = (sub, sel) ->
 		perspResults[i] = result
 		perspInfo[i] = info
 
-
-	scaleX, scaleY = newNewScale(lines, x1, x2, x3, x4, y1, y2, y3, y4, perspInfo)
+	scaleX, scaleY = scale(lines, x1, x2, x3, x4, y1, y2, y3, y4, perspInfo)
 
 	export scales = { }
 	for i=1,#lines
