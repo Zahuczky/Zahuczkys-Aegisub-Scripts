@@ -678,10 +678,31 @@ scale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
 	relScalesX = { }
 	relScalesY = { }
 	for i=1,#lines
-		relScalesX[i] = 100 * scalesX[i] / scalesX[27]
-		relScalesY[i] = 100 * scalesY[i] / scalesY[27]
+		relScalesX[i] = 100 * scalesX[i] / scalesX[1]
+		relScalesY[i] = 100 * scalesY[i] / scalesY[1]
 
 	return relScalesX, relScalesY
+
+
+-- Given a line, returns the y coordinate of the alignment point relative to the \an7 point
+-- i.e. 0 for \an7-9, half the height for \an4-6, and the full height for \an1-3.
+getFaxCompFactor = (subs, line) ->
+    stylename = line.style
+    styles = [s for i, s in ipairs(subs) when s.class == "style" and s.name == stylename]
+    style = styles[1]
+    an = tonumber(line.text\gmatch("\\an(%d)")) or style.align
+
+    if an >= 7 and an <= 9
+        return 0
+
+    -- width, height, descent, ext_lead = aegisub.text_extents(style, line.text\gsub("{[^}]+}", ""))
+	height = style.fontsize
+
+    if an >= 4 and an <= 6
+        return height / 2
+
+    if an >= 1 and an <= 3
+        return height
 
 
 -- main function, this get's run as 'apply' is clicked
@@ -765,7 +786,7 @@ perspmotion = (sub, sel) ->
 			orgBordArray[i] = "0"
 			aegisub.debug.out("Put your \\bord value in your line, if it's only in your style, it's gonna get translated to 0. \n")
 
-	baseBord = tonumber(orgBordArray[27])
+	baseBord = tonumber(orgBordArray[1])
 
 	for i=1,#lines
 		xBordArray[i] = baseBord*(scaleX[i]/100)
@@ -796,6 +817,10 @@ perspmotion = (sub, sel) ->
 			line.text = line.text\gsub("\\pos", result..scales[si]..bords[si].."\\pos")
 		if perspInfo[si]["debfax"] != nil
 			line.text = line.text\gsub("\\fax([-%d.]+)", "\\fax"..(perspInfo[si]["debfax"]*(scaleY[si]/100))/(scaleX[si]/100))
+			posX, posY = line.text\match("\\pos%(([-%d.]+).([-%d.]+)%)")
+			fax = perspInfo[si]["debfax"]
+			factor = getFaxCompFactor(sub, line)
+			line.text = line.text\gsub("\\pos", "\\pos(#{posX - fax * factor * scaleX[si] / 100},#{posY})\\org")
 		sub[li] = line
 
 
