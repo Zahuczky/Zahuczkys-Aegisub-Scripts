@@ -1,7 +1,7 @@
 export script_name="Aegisub-Perspective-Motion BETA"
 export script_description="Applying perspective tracking"
 export script_author="Zahuczky"
-export script_version="0.2.6"
+export script_version="0.2.7"
 export script_namespace="zah.pers-mo_BETA"
 github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
 tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
