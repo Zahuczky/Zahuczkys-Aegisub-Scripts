@@ -37,7 +37,7 @@ jobs:
             # Check if the file is added to DependencyControl or not and if version could be found or not
             if grep -q "${NAMESPACE}" DependencyControl.json && [[ -n "${VERSION}" ]]; then
               # Change the json file
-              jq --tab ".macros.\"${NAMESPACE}\".channels.daily_stream.files[].sha1=\"${SHA}\" | .macros.\"${NAMESPACE}\".channels.daily_stream.version=${VERSION}" DependencyControl.json >"${output_file}"
+              jq --tab ".macros.\"${NAMESPACE}\".channels.main.files[].sha1=\"${SHA}\" | .macros.\"${NAMESPACE}\".channels.main.version=${VERSION}" DependencyControl.json >"${output_file}"
 
               # If something goes wrong with jq operation, it outputs empty file. We don't want to commit it so a conditional to check it.
               if [[ -s "${output_file}" ]]; then
