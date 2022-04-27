@@ -1,12 +1,12 @@
-export script_name = "Aegisub-Perspective-Motion BETA"
-export script_description = "Applying perspective tracking"
-export script_author = "Zahuczky"
-export script_version = "0.2.7"
-export script_namespace = "zah.pers-mo_BETA"
-github_repo = "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
-tutorial_docs = "https://zahuczky.com/aegisub-perspective-motion/"
+export script_name="Aegisub-Perspective-Motion BETA"
+export script_description="Applying perspective tracking"
+export script_author="Zahuczky"
+export script_version="0.2.7"
+export script_namespace="zah.pers-mo_BETA"
+github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
+tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
 
-export helptext = "Thank you for using my script!\n\nKeep in mind, that it's still in beta, so it might not perform as expected in every situation.\n\nYou can find instructions and a tutorial at\n\t"..tutorial_docs.."\n\nOr you can contribute to the project at my GitHub page\n\t"..github_repo.."\n\nPull requests, issues and feature requests are very welcome! "
+export helptext = "Thank you for using my script!\n\nKeep in mind, that it's still in beta, so it might not perform as expected in every situation.\n\nYou can find instructions and a tutorial at\n\t"..tutorial_docs.."\n\nOr you can contribute to the project at my GitHub page\n\t"..github_repo.."\n\nPull requests, issues and feature requests are very welcome!"
 
 tr = aegisub.gettext
 
