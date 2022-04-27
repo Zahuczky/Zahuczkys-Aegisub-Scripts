@@ -690,13 +690,18 @@ getFaxCompFactor = (subs, line) ->
     stylename = line.style
     styles = [s for i, s in ipairs(subs) when s.class == "style" and s.name == stylename]
     style = styles[1]
-    an = tonumber(line.text\gmatch("\\an(%d)")) or style.align
 
+    an = tonumber(line.text\match("\\an(%d)")) or style.align
     if an >= 7 and an <= 9
         return 0
 
-    -- width, height, descent, ext_lead = aegisub.text_extents(style, line.text\gsub("{[^}]+}", ""))
-	height = style.fontsize
+    fs = tonumber(line.text\match("\\fs(%d+)"))
+    if fs ~= nil
+        style.fontsize = fs
+
+    width, height, descent, ext_lead = aegisub.text_extents(style, line.text\gsub("{[^}]+}", ""))
+	height = height * 100 / style.scale_y
+	-- height = style.fontsize
 
     if an >= 4 and an <= 6
         return height / 2
@@ -816,11 +821,12 @@ perspmotion = (sub, sel) ->
 		else
 			line.text = line.text\gsub("\\pos", result..scales[si]..bords[si].."\\pos")
 		if perspInfo[si]["debfax"] != nil
-			line.text = line.text\gsub("\\fax([-%d.]+)", "\\fax"..(perspInfo[si]["debfax"]*(scaleY[si]/100))/(scaleX[si]/100))
+			realfax = (perspInfo[si]["debfax"]*(scaleY[si]/100))/(scaleX[si]/100)
+			line.text = line.text\gsub("\\fax([-%d.]+)", "\\fax"..realfax)
+
 			posX, posY = line.text\match("\\pos%(([-%d.]+).([-%d.]+)%)")
-			fax = perspInfo[si]["debfax"]
 			factor = getFaxCompFactor(sub, line)
-			line.text = line.text\gsub("\\pos", "\\pos(#{posX - fax * factor * scaleX[si] / 100},#{posY})\\org")
+			line.text = line.text\gsub("\\pos", "\\pos(#{posX - realfax * factor * scaleX[si] / 100},#{posY})\\org")
 		sub[li] = line
 
 
