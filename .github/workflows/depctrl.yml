@@ -6,7 +6,6 @@ on:
       - 'macros/*.lua'
       - 'macros/*.moon'
     branches:
-      - main
       - daily_stream
 
 jobs:
