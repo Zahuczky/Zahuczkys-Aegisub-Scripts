@@ -206,6 +206,7 @@ unrot = (coord_in, org, diag, get_rot) -> --diag=true, get_rot=false
 	info["debfrz"] = round((-frz / math.pi * 180), 2)
 	ad_unrot = ad_unrot\rot_z(frz)
 	fax = ad_unrot.x/ad_unrot.y
+	info["debfax"] = 0
 	if math.abs(fax) > 0.01
 		s = s.."\\fax"..round(fax, 2)
 		info["debfax"] = round(fax, 2)
@@ -662,6 +663,7 @@ scale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
 		rx = -perspInfo[i]["debfrx"] * math.pi / 180
 		ry = perspInfo[i]["debfry"] * math.pi / 180
 		rz = -perspInfo[i]["debfrz"] * math.pi / 180
+		fax = perspInfo[i]["debfax"]
 
 		-- Invoke black math magic. Do not attempt to read it, for it will destroy your sanity.
 		cx = -(((x3*y2 - x2*y3)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(-(xp*y4) + x4*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp)))))
@@ -670,7 +672,7 @@ scale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
 		dsy2 = ((x4*(x3*y2 - x2*y3)*(x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4)) - (x4*(y2 - y3) + (-x2 + x3)*y4)*(cy*x4*(x3*y2 - x2*y3) + cx*x2*(x4*y3 - x3*y4)))^2 + ((x3*y2 - x2*y3)*y4*(-(x4*y2) - x2*y3 + x4*y3 + x3*(y2 - y4) + x2*y4) + cx*(x4^2*y2*y3*(-y2 + y3) + 2*x3*x4*y2*(y2 - y3)*y4 + y4*(2*x2*x3*y2*(y3 - y4) + x3^2*y2*(-y2 + y4) + x2^2*y3*(-y3 + y4))))^2)/ (x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4))^4
 
 		drx2 = math.cos(rx)^2 * math.sin(rz)^2 + (math.cos(ry) * math.cos(rz) - math.sin(rx) * math.sin(ry) * math.sin(rz))^2
-		dry2 = math.cos(rx)^2 * math.cos(rz)^2 + (math.cos(ry) * math.sin(rz) + math.sin(rx) * math.sin(ry) * math.cos(rz))^2
+		dry2 = math.cos(rx)^2 * (math.cos(rz) + fax * math.sin(rz))^2 + (math.cos(ry) * (math.sin(rz) - fax * math.cos(rz)) + math.sin(rx) * math.sin(ry) * (math.cos(rz) + fax * math.sin(rz)))^2
 
 		scalesX[i] = math.sqrt(dsx2 / drx2)
 		scalesY[i] = math.sqrt(dsy2 / dry2)
