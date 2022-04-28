@@ -36,7 +36,7 @@
               "url": "@{fileBaseUrl}@{fileName}",
               "sha1": "e45bf8aca3569c31a40cfaeda873bad2e794c24a"
             }
-          ],
+          ]
         }
       },
       "changelog": {
