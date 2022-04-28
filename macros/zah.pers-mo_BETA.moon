@@ -207,9 +207,8 @@ unrot = (coord_in, org, diag, get_rot) -> --diag=true, get_rot=false
 	ad_unrot = ad_unrot\rot_z(frz)
 	fax = ad_unrot.x/ad_unrot.y
 	info["debfax"] = 0
-	if math.abs(fax) > 0.01
-		s = s.."\\fax"..round(fax, 2)
-		info["debfax"] = round(fax, 2)
+	s = s.."\\fax"..round(fax, 5)
+	info["debfax"] = round(fax, 5)
 
 	sizeX = dist(a, b)
 	sizeY = dist(a, d)
@@ -481,21 +480,22 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 
 			if tf_tags != nil
 				return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags, info
-				
+
 -- END OF PERSPECTIVE.MOON CODE
 
 
 -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
--- function that contains everything that happens before the transforms
-datahandling = (sub, sel, results, pressed) ->
-
--- Relative stuff
+relativeStuff = (sub, sel) ->
 	startOneMS = sub[sel[1]].start_time
 	firstFrame = aegisub.frame_from_ms(startOneMS)
 	videoPos = aegisub.project_properties!.video_position
-	relFrame = videoPos-firstFrame+1
+	export relFrame = videoPos-firstFrame+1
 	aegisub.debug.out("relative frame: "..relFrame)
+
+-- function that contains everything that happens before the transforms
+datahandling = (sub, sel, results, pressed) ->
+
 
 
 	-- Putting the user input into a table
@@ -677,12 +677,12 @@ scale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
 
 		scalesX[i] = math.sqrt(dsx2 / drx2)
 		scalesY[i] = math.sqrt(dsy2 / dry2)
-	
+
 	relScalesX = { }
 	relScalesY = { }
 	for i=1,#lines
-		relScalesX[i] = 100 * scalesX[i] / scalesX[1]
-		relScalesY[i] = 100 * scalesY[i] / scalesY[1]
+		relScalesX[i] = results.xSca * scalesX[i] / scalesX[relFrame]
+		relScalesY[i] = results.ySca * scalesY[i] / scalesY[relFrame]
 
 	return relScalesX, relScalesY
 
@@ -715,25 +715,29 @@ getFaxCompFactor = (subs, line) ->
 
 -- main function, this get's run as 'apply' is clicked
 perspmotion = (sub, sel) ->
+	relativeStuff(sub,sel)
+	relsel = sel[relFrame]
+	export xScaleRel = sub[relsel].text\match("\\fscx([-%d.]+)")
+	export yScaleRel = sub[relsel].text\match("\\fscy([-%d.]+)")
+	if xScaleRel == nil
+		xScaleRel = 100
+	if yScaleRel == nil
+		yScaleRel = 100
 
 	GUI = {
 		main: {
-			{class: "label",  x: 0, y: 14, width: 1, height: 1,
-				label: "v"..script_version},
-			{class: "label",  x: 0, y: 0, width: 1, height: 1,
-				label: "Only paste After Effects CC POWER PIN data"},
-			{class: "label",  x: 0, y: 1, width: 1, height: 1,
-				label: "here, not Transform or Corner Pin data!"},
-			{class: "textbox", name: "data",  x: 0, y: 2, width: 1, height: 7, },
-			{class: "checkbox", name: "includeclip",  x: 0, y: 9, width: 1, height: 1,
-				label: "Include \\clip for debugging", value: true},
-			{class: "checkbox", name: "absolute",  x: 0, y: 10, width: 1, height: 1,
-				label: "Absolute", value: false,
-					hint: "Only tick this if you've also ticked absolute in Aegisub-Motion!"},
-			{class: "label",  x: 0, y: 12, width: 1, height: 1,
-				label: "Choose an option for calculating perspective:"},
-			{class: "dropdown", name: "option",  x: 0, y: 13, width: 1, height: 1,
-				items: {"Transform for target org","Transform with center org","Transforms near center of tetragon","Transforms with target ratio"}, value: "Transform for target org"},
+			{class: "label",  x: 0, y: 17, width: 1, height: 1, label: "v"..script_version}
+			{class: "label",  x: 0, y: 0, width: 1, height: 1, label: "Only paste After Effects CC POWER PIN data"}
+			{class: "label",  x: 0, y: 1, width: 1, height: 1, label: "here, not Transform or Corner Pin data!"}
+			{class: "textbox", name: "data",  x: 0, y: 2, width: 3, height: 7, },
+			{class: "checkbox", name: "scalebord",  x: 0, y: 10, width: 1, height: 1, label: "Scale \\bord", value: true}
+			{class: "checkbox", name: "scaleshad",  x: 0, y: 11, width: 1, height: 1, label: "Scale \\shad", value: false, hint: "Don't tick this if you're using the \"shad trick!\""}
+			{class: "intedit", name: "xSca",  x: 0, y: 13, width: 1, height: 1, value: xScaleRel}
+			{class: "label",  x: 1, y: 13, width: 1, height: 1, label: "X Scaling"}
+			{class: "intedit", name: "ySca",  x: 0, y: 14, width: 1, height: 1, value: yScaleRel}
+			{class: "label",  x: 1, y: 14, width: 1, height: 1, label: "Y Scaling"}
+			{class: "checkbox", name: "includeclip",  x: 0, y: 12, width: 1, height: 1, label: "Include \\clip for debugging", value: false}
+			{class: "dropdown", name: "setupoptions",  x: 0, y: 16, width: 3, height: 1, items: {"Perspective + Scaling","Only Perspective","Only Scaling"}, value: "Perspective + Scaling"}
 			},
 
 		help: {
@@ -741,9 +745,9 @@ perspmotion = (sub, sel) ->
 		}
 	}
 
-	buttons = {"Apply","Cancel","HELP"}
+	buttons = {"Apply","Rescale","Cancel","HELP"}
 
-	pressed, results = aegisub.dialog.display(GUI.main, {"Apply","Cancel","HELP"})
+	export pressed, results = aegisub.dialog.display(GUI.main, {"Apply","Rescale","Cancel","HELP"})
 	if pressed=="Cancel" aegisub.cancel()
 	if pressed=="HELP" pressed, results = aegisub.dialog.display(GUI.help, {"Close"})
 	if pressed=="Close" aegisub.cancel()
@@ -754,25 +758,12 @@ perspmotion = (sub, sel) ->
 	for si, li in ipairs(sel)
 		lines[si] = sub[li]
 
-	-- if results.absolute
-	-- 	scaleX, scaleY = oldScale(lines, x1, x2, x3, x4, y1, y2, y3, y4)
-	-- else
-	-- 	scaleX, scaleY = newScale(lines, x1, x2, x3, x4, y1, y2, y3, y4)
-
 	perspResults = {}
 	perspInfo = {}
 	for i=1,#lines
 		result = ""
 		info = {}
-		if results.option == "Transform for target org"
-			result, info = perspective(clipArray[i], midPointOrg[i], lines[i], true, false, false, false)
-		if results.option == "Transform with center org"
-			result, info = perspective(clipArray[i], midPointOrg[i], lines[i], false, true, false, false)
-		elseif results.option == "Transforms near center of tetragon"
-			result, info = perspective(clipArray[i], midPointOrg[i], lines[i], false, false, true, false)
-		elseif results.option == "Transforms with target ratio"
-			result, info = perspective(clipArray[i], midPointOrg[i], lines[i], false, false, false, true)
-
+		result, info = perspective(clipArray[i], midPointOrg[i], lines[i], true, false, false, false)
 		perspResults[i] = result
 		perspInfo[i] = info
 
@@ -794,7 +785,7 @@ perspmotion = (sub, sel) ->
 			orgBordArray[i] = "0"
 			aegisub.debug.out("Put your \\bord value in your line, if it's only in your style, it's gonna get translated to 0. \n")
 
-	baseBord = tonumber(orgBordArray[1])
+	baseBord = tonumber(orgBordArray[relFrame])
 
 	for i=1,#lines
 		xBordArray[i] = baseBord*(scaleX[i]/100)
@@ -817,7 +808,7 @@ perspmotion = (sub, sel) ->
 --		if 	debfax != nil
 --			fayFix = (debfax*(scaleY[si]/100))/(scaleX[si]/100)
 		result = perspResults[si]
-		
+
 		line.text = delete_old_tag(line)
 		if results.includeclip
 			line.text = line.text\gsub("\\pos", "\\"..clipArray[si]..result..scales[si]..bords[si].."\\pos")
