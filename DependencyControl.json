@@ -1,63 +1,63 @@
 {
-  "dependencyControlFeedFormatVersion": "0.3.0",
-  "name": "Zahuczky's Automation Scripts",
-  "description": "Main repository for all of Zahuczky's automation scripts.",
-  "baseUrl": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-  "url": "@{baseUrl}",
-  "fileBaseUrl": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-  "maintainer": "Zahuczky",
-  "knownFeeds": {
-    "line0scripts": "https://raw.githubusercontent.com/TypesettingTools/line0-Aegisub-Scripts/master/DependencyControl.json",
-    "a-mo": "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json",
-    "SubInspector": "https://raw.githubusercontent.com/TypesettingTools/SubInspector/master/DependencyControl.json",
-    "ASSFoundation": "https://raw.githubusercontent.com/TypesettingTools/ASSFoundation/master/DependencyControl.json",
-    "ffi-experiments": "https://raw.githubusercontent.com/torque/ffi-experiments/master/DependencyControl.json",
-    "lyger-scripts": "https://raw.githubusercontent.com/TypesettingTools/lyger-Aegisub-Scripts/master/DependencyControl.json",
-    "unanimated-scripts": "https://raw.githubusercontent.com/TypesettingTools/unanimated-Aegisub-Scripts/master/DependencyControl.json",
-    "coffeeflux-scripts": "https://raw.githubusercontent.com/TypesettingTools/CoffeeFlux-Aegisub-Scripts/master/DependencyControl.json",
-    "myaamori-scripts": "https://raw.githubusercontent.com/TypesettingTools/Myaamori-Aegisub-Scripts/master/DependencyControl.json",
-    "petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json"
-  },
-  "macros": {
-    "zah.pers-mo_BETA": {
-      "url": "@{baseUrl}#@{namespace}",
-      "author": "Zahuczky",
-      "name": "Aegisub-Perspective-Motion BETA",
-      "description": "Applying perspective tracking",
-      "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
-      "channels": {
-        "main": {
-          "version": "0.2.4",
-          "released": "2022-03-12",
-          "default": true,
-          "files": [
-            {
-              "name": ".moon",
-              "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "e45bf8aca3569c31a40cfaeda873bad2e794c24a"
-            }
-          ]
-        }
-      },
-      "changelog": {
-        "0.2.0": [
-          "Initial release"
-        ],
-		"0.2.1": [
-			"Fixed DependencyControl stuffs inside my script, added conditinal use. "
-		],
-		"0.2.2": [
-			"Added different perspective calculation options. (transform for target org, transforms near center of tetragon, transforms with target ratio)"
-		],
-		"0.2.3": [
-			"More fixing to DependencyControl related stuff."
-		],
-		"0.2.4": [
-			"Adding option to calculate perspective from org centered to the middle of the plane.(EXPERIMENTAL)",
-			"Adding HELP window.",
-			"Adding meaningful error messages."
-		]
-      }
-    }
-  }
+	"dependencyControlFeedFormatVersion": "0.3.0",
+	"name": "Zahuczky's Automation Scripts",
+	"description": "Main repository for all of Zahuczky's automation scripts.",
+	"baseUrl": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+	"url": "@{baseUrl}",
+	"fileBaseUrl": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+	"maintainer": "Zahuczky",
+	"knownFeeds": {
+		"line0scripts": "https://raw.githubusercontent.com/TypesettingTools/line0-Aegisub-Scripts/master/DependencyControl.json",
+		"a-mo": "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json",
+		"SubInspector": "https://raw.githubusercontent.com/TypesettingTools/SubInspector/master/DependencyControl.json",
+		"ASSFoundation": "https://raw.githubusercontent.com/TypesettingTools/ASSFoundation/master/DependencyControl.json",
+		"ffi-experiments": "https://raw.githubusercontent.com/torque/ffi-experiments/master/DependencyControl.json",
+		"lyger-scripts": "https://raw.githubusercontent.com/TypesettingTools/lyger-Aegisub-Scripts/master/DependencyControl.json",
+		"unanimated-scripts": "https://raw.githubusercontent.com/TypesettingTools/unanimated-Aegisub-Scripts/master/DependencyControl.json",
+		"coffeeflux-scripts": "https://raw.githubusercontent.com/TypesettingTools/CoffeeFlux-Aegisub-Scripts/master/DependencyControl.json",
+		"myaamori-scripts": "https://raw.githubusercontent.com/TypesettingTools/Myaamori-Aegisub-Scripts/master/DependencyControl.json",
+		"petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json"
+	},
+	"macros": {
+		"zah.pers-mo_BETA": {
+			"url": "@{baseUrl}#@{namespace}",
+			"author": "Zahuczky",
+			"name": "Aegisub-Perspective-Motion BETA",
+			"description": "Applying perspective tracking",
+			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+			"channels": {
+				"main": {
+					"version": "0.2.7",
+					"released": "2022-03-12",
+					"default": true,
+					"files": [
+						{
+							"name": ".moon",
+							"url": "@{fileBaseUrl}@{fileName}",
+							"sha1": "79f0d082020d3e77900bceb6370557ac227eaa67"
+						}
+					]
+				}
+			},
+			"changelog": {
+				"0.2.0": [
+					"Initial release"
+				],
+				"0.2.1": [
+					"Fixed DependencyControl stuffs inside my script, added conditinal use. "
+				],
+				"0.2.2": [
+					"Added different perspective calculation options. (transform for target org, transforms near center of tetragon, transforms with target ratio)"
+				],
+				"0.2.3": [
+					"More fixing to DependencyControl related stuff."
+				],
+				"0.2.4": [
+					"Adding option to calculate perspective from org centered to the middle of the plane.(EXPERIMENTAL)",
+					"Adding HELP window.",
+					"Adding meaningful error messages."
+				]
+			}
+		}
+	}
 }
