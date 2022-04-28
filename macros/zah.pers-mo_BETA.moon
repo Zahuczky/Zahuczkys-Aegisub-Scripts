@@ -481,6 +481,8 @@ perspective = (clip, midPointOrg, line, tr_org, tr_centorg, tr_center, tr_ratio)
 
 			if tf_tags != nil
 				return "\\org("..round(p.x, 1)..","..round(p.y, 1)..")"..tf_tags, info
+				
+-- END OF PERSPECTIVE.MOON CODE
 
 
 -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
@@ -640,7 +642,6 @@ datahandling = (sub, sel, results, pressed) ->
 		midPointOrg[i] = "\\org("..round(intersectX[i],2)..","..round(intersectY[i],2)..")"
 
 
--- END OF PERSPECTIVE.MOON CODE
 
 scale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
 	scalesX = { }
