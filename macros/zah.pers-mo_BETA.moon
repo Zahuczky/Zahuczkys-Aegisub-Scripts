@@ -202,7 +202,7 @@ datahandling = (sub, sel, results, pressed) ->
     if results.data == ""
         aegisub.debug.out("You forgot to give me any data, so I quit.\n\n")
         aegisub.cancel()
-    elseif dataArray[9] != "Effects    CC Power Pin #1    CC Power Pin-0002"
+    elseif dataArray[9] != "Effects\tCC Power Pin #1\tCC Power Pin-0002"
         aegisub.debug.out("I have no idea what kind of data you pasted in, but I'm sure it's not what I wanted.\n\nI need After Effects CC Power Pin data.\n\nPress the HELP button in the script if you don't know what you're doing.\n\n")
         aegisub.cancel()
 
@@ -213,7 +213,7 @@ datahandling = (sub, sel, results, pressed) ->
     export posPin3=0
     export posPin4=0
     for k=1,#dataArray
-        if dataArray[k] == "Effects    CC Power Pin #1    CC Power Pin-0002"
+        if dataArray[k] == "Effects\tCC Power Pin #1\tCC Power Pin-0002"
             posPin1=k+2
 
     export dataLength = ((#dataArray-26)/4)+posPin1
@@ -238,7 +238,7 @@ datahandling = (sub, sel, results, pressed) ->
         p=p+1
     -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     for k=1,#dataArray
-        if dataArray[k] == "Effects    CC Power Pin #1    CC Power Pin-0003"
+        if dataArray[k] == "Effects\tCC Power Pin #1\tCC Power Pin-0003"
             posPin1=k+2
 
     export dataLength = ((#dataArray-26)/4)+posPin1
@@ -263,7 +263,7 @@ datahandling = (sub, sel, results, pressed) ->
         p=p+1
     -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     for k=1,#dataArray
-        if dataArray[k] == "Effects    CC Power Pin #1    CC Power Pin-0004"
+        if dataArray[k] == "Effects\tCC Power Pin #1\tCC Power Pin-0004"
             posPin1=k+2
 
     export dataLength = ((#dataArray-26)/4)+posPin1
@@ -288,7 +288,7 @@ datahandling = (sub, sel, results, pressed) ->
         p=p+1
     -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     for k=1,#dataArray
-        if dataArray[k] == "Effects    CC Power Pin #1    CC Power Pin-0005"
+        if dataArray[k] == "Effects\tCC Power Pin #1\tCC Power Pin-0005"
             posPin1=k+2
 
     export dataLength = ((#dataArray-26)/4)+posPin1
@@ -465,16 +465,16 @@ perspmotion = (sub, sel) ->
     for i=1,#lines
         scales[i] = "\\fscx"..round(scaleX[i],2).."\\fscy"..round(scaleY[i],2)
 
--- Bord scaling
-    stylename = line.style
-    styles = [s for i, s in ipairs(subs) when s.class == "style" and s.name == stylename]
-    style = styles[1]
-
     orgBordArray = { }
     xBordArray = { }
     yBordArray = { }
     baseBord = 0
     for i=1,#lines
+        -- Bord scaling
+        stylename = lines[i].style
+        styles = [s for i, s in ipairs(sub) when s.class == "style" and s.name == stylename]
+        style = styles[1]
+
         if lines[i].text\match("\\bord([-%d.]+)")
             orgBordArray[i] = lines[i].text\match("\\bord([-%d.]+)")
         else
