@@ -181,17 +181,17 @@ perspective = (clip, line) ->
 -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 relativeStuff = (sub, sel) ->
-		aegisub.progress.task(string.format("Theory of relativity"))
-    startOneMS = sub[sel[1]].start_time
-    firstFrame = aegisub.frame_from_ms(startOneMS)
-    videoPos = aegisub.project_properties!.video_position
-    export relFrame = videoPos-firstFrame+1
+  aegisub.progress.task(string.format("Theory of relativity"))
+  startOneMS = sub[sel[1]].start_time
+  firstFrame = aegisub.frame_from_ms(startOneMS)
+  videoPos = aegisub.project_properties!.video_position
+  export relFrame = videoPos-firstFrame+1
 --    aegisub.debug.out("relative frame: #{relFrame}\n")
 
 
 -- function that contains everything that happens before the transforms
 datahandling = (sub, sel, results, pressed) ->
-	aegisub.progress.task(string.format("Crunching data..."))
+    aegisub.progress.task(string.format("Crunching data..."))
     -- Putting the user input into a table
     export dataArray = { }
     j=1
@@ -327,7 +327,7 @@ datahandling = (sub, sel, results, pressed) ->
 
 
 scale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
-		aegisub.progress.task(string.format("Some scaling..."))
+    aegisub.progress.task(string.format("Some scaling..."))
     scalesX = { }
     scalesY = { }
     for i=1,#lines
@@ -410,26 +410,26 @@ perspmotion = (sub, sel) ->
 
     GUI = {
         main: {
-					{class: "label",  x: 0, y: 0, width: 1, height: 1, label: "Only paste After Effects CC POWER PIN data"}
-					{class: "label",  x: 0, y: 1, width: 1, height: 1, label: "here, not Transform or Corner Pin data!"}
-					{class: "textbox", name: "data",  x: 0, y: 2, width: 3, height: 7, },
-					{class: "checkbox", name: "includeclip",  x: 0, y: 9, width: 1, height: 1, label: "Include \\clip for debugging", value: false}
-					{class: "dropdown", name: "setupoptions",  x: 0, y: 10, width: 3, height: 1, items: {"Perspective + Scaling","Only Perspective","Only Scaling"}, value: "Perspective + Scaling"}
-					{class: "label",  x: 0, y: 11, width: 1, height: 1, label: "v"..script_version}
-					{class: "intedit", name: "xSca",  x: 4, y: 2, width: 1, height: 1, value: xScaleRel}
-					{class: "label",  x: 5, y: 2, width: 1, height: 1, label: "X Scaling"}
-					{class: "intedit", name: "ySca",  x: 4, y: 3, width: 1, height: 1, value: yScaleRel}
-					{class: "label",  x: 5, y: 3, width: 1, height: 1, label: "Y Scaling"}
-					{class: "intedit", name: "xtraRot",  x: 4, y: 4, width: 1, height: 1, value: yScaleRel}
-					{class: "label",  x: 5, y: 4, width: 1, height: 1, label: "Extra Rotation"}
-					{class: "intedit", name: "xtrafax",  x: 4, y: 5, width: 1, height: 1, value: yScaleRel}
-					{class: "label",  x: 5, y: 5, width: 1, height: 1, label: "Extra Fax"}
-					{class: "intedit", name: "xtrafay",  x: 4, y: 6, width: 1, height: 1, value: yScaleRel}
-					{class: "label",  x: 5, y: 6, width: 1, height: 1, label: "Extra Fay"}
-					{class: "checkbox", name: "scalebord",  x: 4, y: 7, width: 1, height: 1, label: "Scale \\bord", value: true}
-					{class: "checkbox", name: "scaleshad",  x: 4, y: 8, width: 1, height: 1, label: "Scale \\shad", value: false, hint: "Don't tick this if you're using the \"shad trick!\""}
+          {class: "label",  x: 0, y: 0, width: 1, height: 1, label: "Only paste After Effects CC POWER PIN data"}
+          {class: "label",  x: 0, y: 1, width: 1, height: 1, label: "here, not Transform or Corner Pin data!"}
+          {class: "textbox", name: "data",  x: 0, y: 2, width: 3, height: 7, },
+          {class: "checkbox", name: "includeclip",  x: 0, y: 9, width: 1, height: 1, label: "Include \\clip for debugging", value: false}
+          {class: "dropdown", name: "setupoptions",  x: 0, y: 10, width: 3, height: 1, items: {"Perspective + Scaling","Only Perspective","Only Scaling"}, value: "Perspective + Scaling"}
+          {class: "label",  x: 0, y: 11, width: 1, height: 1, label: "v"..script_version}
+          {class: "intedit", name: "xSca",  x: 4, y: 2, width: 1, height: 1, value: xScaleRel}
+          {class: "label",  x: 5, y: 2, width: 1, height: 1, label: "X Scaling"}
+          {class: "intedit", name: "ySca",  x: 4, y: 3, width: 1, height: 1, value: yScaleRel}
+          {class: "label",  x: 5, y: 3, width: 1, height: 1, label: "Y Scaling"}
+          {class: "intedit", name: "xtraRot",  x: 4, y: 4, width: 1, height: 1, value: yScaleRel}
+          {class: "label",  x: 5, y: 4, width: 1, height: 1, label: "Extra Rotation"}
+          {class: "intedit", name: "xtrafax",  x: 4, y: 5, width: 1, height: 1, value: yScaleRel}
+          {class: "label",  x: 5, y: 5, width: 1, height: 1, label: "Extra Fax"}
+          {class: "intedit", name: "xtrafay",  x: 4, y: 6, width: 1, height: 1, value: yScaleRel}
+          {class: "label",  x: 5, y: 6, width: 1, height: 1, label: "Extra Fay"}
+          {class: "checkbox", name: "scalebord",  x: 4, y: 7, width: 1, height: 1, label: "Scale \\bord", value: true}
+          {class: "checkbox", name: "scaleshad",  x: 4, y: 8, width: 1, height: 1, label: "Scale \\shad", value: false, hint: "Don't tick this if you're using the \"shad trick!\""}
 
-					},
+          },
 
         help: {
             {class: "textbox", x: 0, y: 0, width: 45, height: 15, value: helptext}
@@ -445,7 +445,7 @@ perspmotion = (sub, sel) ->
 
     datahandling(sub, sel, results, pressed)
 
-		aegisub.progress.task(string.format("Faxing...(ur mom)"))
+    aegisub.progress.task(string.format("Faxing...(ur mom)"))
     lines = {}
     for si, li in ipairs(sel)
         lines[si] = sub[li]
@@ -466,6 +466,10 @@ perspmotion = (sub, sel) ->
         scales[i] = "\\fscx"..round(scaleX[i],2).."\\fscy"..round(scaleY[i],2)
 
 -- Bord scaling
+    stylename = line.style
+    styles = [s for i, s in ipairs(subs) when s.class == "style" and s.name == stylename]
+    style = styles[1]
+
     orgBordArray = { }
     xBordArray = { }
     yBordArray = { }
@@ -474,8 +478,8 @@ perspmotion = (sub, sel) ->
         if lines[i].text\match("\\bord([-%d.]+)")
             orgBordArray[i] = lines[i].text\match("\\bord([-%d.]+)")
         else
-            orgBordArray[i] = "0"
-            aegisub.debug.out("Put your \\bord value in your line, if it's only in your style, it's gonna get translated to 0. \n")
+            orgBordArray[i] = style.outline
+            aegisub.debug.out("Bord in style is: "..orgBordArray[i])
 
     baseBord = tonumber(orgBordArray[relFrame])
 
@@ -514,7 +518,7 @@ perspmotion = (sub, sel) ->
             line.text = line.text\gsub("\\pos", "\\pos(#{newPosX},#{posY})\\org")
         sub[li] = line
 
-		aegisub.progress.task(string.format("Magiccing it together"))
+    aegisub.progress.task(string.format("Magiccing it together"))
     aegisub.set_undo_point(script_name)
     return sel
 
