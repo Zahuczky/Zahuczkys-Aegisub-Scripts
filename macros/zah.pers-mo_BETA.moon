@@ -1,7 +1,7 @@
 export script_name="Aegisub-Perspective-Motion BETA"
 export script_description="Applying perspective tracking"
 export script_author="Zahuczky"
-export script_version = "0.2.9"
+export script_version = "0.2.7"
 export script_namespace="zah.pers-mo_BETA"
 github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
 tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
@@ -184,10 +184,37 @@ relativeStuff = (sub, sel) ->
   aegisub.progress.task(string.format("Theory of relativity"))
   startOneMS = sub[sel[1]].start_time
   firstFrame = aegisub.frame_from_ms(startOneMS)
+  if firstFrame == nil
+    -- not sure what you're doing without a video loaded, but sure
+    return 1
+
   videoPos = aegisub.project_properties!.video_position
-  export relFrame = videoPos-firstFrame+1
+  return videoPos-firstFrame+1
 --    aegisub.debug.out("relative frame: #{relFrame}\n")
 
+
+parsePin = (dataArray, n) ->
+    local posPin
+    for k=1,#dataArray
+        if dataArray[k]\match("^Effects[\t ]CC Power Pin #1[\t ]CC Power Pin%-#{n}$")
+            posPin=k+2
+
+    if posPin == nil
+        aegisub.log("Invalid tracking data!\n")
+        aegisub.cancel()
+
+    dataLength = (#dataArray-22)/4
+
+    x = {}
+    y = {}
+
+    for i=1,dataLength
+        values = [t for t in string.gmatch(dataArray[posPin + i - 1], "%S+")]
+
+        x[i] = values[2]
+        y[i] = values[3]
+
+    return x, y
 
 -- function that contains everything that happens before the transforms
 datahandling = (sub, sel, results, pressed) ->
@@ -208,110 +235,10 @@ datahandling = (sub, sel, results, pressed) ->
 
     -- Filtering out everything other than the data, and putting them into their own tables.
     -- Power Pin data goes like this: TopLeft=0002, TopRight=0003, BottomRight=0005,  BottomLeft=0004
-    export posPin1=0
-    export posPin2=0
-    export posPin3=0
-    export posPin4=0
-    for k=1,#dataArray
-        if dataArray[k] == "Effects\tCC Power Pin #1\tCC Power Pin-0002"
-            posPin1=k+2
-
-    export dataLength = ((#dataArray-26)/4)+posPin1
-
-    export p=1
-    export helpArray = { }
-    export x1 = { }
-    export y1 = { }
-    --    for l=posPin1,dataLength
-    --        for m in string.gmatch(dataArray[l], "([^\t]*)\t?")
-    --            helpArray[o] = m
-    --            x1[o] = helpArray[2]
-    --            o+1
-
-    for l=posPin1,dataLength
-        export o=1
-        for token in string.gmatch(dataArray[l], "%S+")
-            helpArray[o] = token
-            o=o+1
-        x1[p] = helpArray[2]
-        y1[p] = helpArray[3]
-        p=p+1
-    -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    for k=1,#dataArray
-        if dataArray[k] == "Effects\tCC Power Pin #1\tCC Power Pin-0003"
-            posPin1=k+2
-
-    export dataLength = ((#dataArray-26)/4)+posPin1
-
-    export p=1
-    export helpArray = { }
-    export x2 = { }
-    export y2 = { }
-    --    for l=posPin1,dataLength
-    --        for m in string.gmatch(dataArray[l], "([^\t]*)\t?")
-    --            helpArray[o] = m
-    --            x1[o] = helpArray[2]
-    --            o+1
-
-    for l=posPin1,dataLength
-        o=1
-        for token in string.gmatch(dataArray[l], "%S+")
-            helpArray[o] = token
-            o=o+1
-        x2[p] = helpArray[2]
-        y2[p] = helpArray[3]
-        p=p+1
-    -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    for k=1,#dataArray
-        if dataArray[k] == "Effects\tCC Power Pin #1\tCC Power Pin-0004"
-            posPin1=k+2
-
-    export dataLength = ((#dataArray-26)/4)+posPin1
-
-    export p=1
-    export helpArray = { }
-    export x4 = { }
-    export y4 = { }
-    --    for l=posPin1,dataLength
-    --        for m in string.gmatch(dataArray[l], "([^\t]*)\t?")
-    --            helpArray[o] = m
-    --            x1[o] = helpArray[2]
-    --            o+1
-
-    for l=posPin1,dataLength
-        export o=1
-        for token in string.gmatch(dataArray[l], "%S+")
-            helpArray[o] = token
-            o=o+1
-        x4[p] = helpArray[2]
-        y4[p] = helpArray[3]
-        p=p+1
-    -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    for k=1,#dataArray
-        if dataArray[k] == "Effects\tCC Power Pin #1\tCC Power Pin-0005"
-            posPin1=k+2
-
-    export dataLength = ((#dataArray-26)/4)+posPin1
-
-    export p=1
-    export helpArray = { }
-    export x3 = { }
-    export y3 = { }
-    --    for l=posPin1,dataLength
-    --        for m in string.gmatch(dataArray[l], "([^\t]*)\t?")
-    --            helpArray[o] = m
-    --            x1[o] = helpArray[2]
-    --            o+1
-
-    for l=posPin1,dataLength
-        export o=1
-        for token in string.gmatch(dataArray[l], "%S+")
-            helpArray[o] = token
-            o=o+1
-        x3[p] = helpArray[2]
-        y3[p] = helpArray[3]
-        p=p+1
-    -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    export x1, y1 = parsePin(dataArray, "0002")
+    export x2, y2 = parsePin(dataArray, "0003")
+    export x3, y3 = parsePin(dataArray, "0005")
+    export x4, y4 = parsePin(dataArray, "0004")
 
     -- Turning the coordinates into a clip() (for the sake of not having to modify too much in the original code of perspective.moon)
     export clipArray = { }
@@ -399,7 +326,7 @@ getFaxCompFactor = (subs, line) ->
 
 -- main function, this get's run as 'apply' is clicked
 perspmotion = (sub, sel) ->
-    relativeStuff(sub,sel)
+    export relFrame = relativeStuff(sub,sel)
     relsel = sel[relFrame]
     export xScaleRel = sub[relsel].text\match("\\fscx([-%d.]+)")
     export yScaleRel = sub[relsel].text\match("\\fscy([-%d.]+)")
