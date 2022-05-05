@@ -59,7 +59,7 @@
 			"Adding meaningful error messages."
 		]
       }
-    }
+    },
      "zah.aegi-color-track": {
       "url": "@{baseUrl}#@{namespace}",
       "author": "Zahuczky",
