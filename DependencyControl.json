@@ -37,7 +37,7 @@
               "url": "@{fileBaseUrl}@{fileName}",
               "sha1": "e45bf8aca3569c31a40cfaeda873bad2e794c24a"
             }
-          ]
+          ],
         }
       },
       "changelog": {
@@ -98,10 +98,10 @@
         ]
       }
     }
-  },
+  }
   "modules": {
     "zah.png": {
-      "fileBaseUrl": "@{fileBaseUrl}/@{namespace}-v@{version}/modules/@{namespacePath}",
+      "fileBaseUrl": "@{fileBaseUrl}/modules/@{namespacePath}",
       "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
       "author": "Zahuczky",
       "name": "png",
@@ -127,7 +127,7 @@
       }
     },
     "zah.deflatelua": {
-      "fileBaseUrl": "@{fileBaseUrl}/@{namespace}-v@{version}/modules/@{namespacePath}",
+      "fileBaseUrl": "@{fileBaseUrl}/modules/@{namespacePath}",
       "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
       "author": "Zahuczky",
       "name": "deflatelua",
