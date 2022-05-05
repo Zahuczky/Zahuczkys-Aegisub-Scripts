@@ -115,7 +115,7 @@
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "65c231fe7d21d83621155585cb727247768e5181"
+              "sha1": "42ec1178ffd50690561d8affde6d0ae5da98c9b6"
             }
           ]
         }
@@ -141,7 +141,7 @@
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "7b7b5328d31941fefd8ee3baba8a61f0eb7334d7"
+              "sha1": "9fc84ac9f93ca1b91089c671eb2198277ab36d61"
             }
           ]
         }
