@@ -16,7 +16,8 @@
     "unanimated-scripts": "https://raw.githubusercontent.com/TypesettingTools/unanimated-Aegisub-Scripts/master/DependencyControl.json",
     "coffeeflux-scripts": "https://raw.githubusercontent.com/TypesettingTools/CoffeeFlux-Aegisub-Scripts/master/DependencyControl.json",
     "myaamori-scripts": "https://raw.githubusercontent.com/TypesettingTools/Myaamori-Aegisub-Scripts/master/DependencyControl.json",
-    "petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json"
+    "petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json",
+	"zahuczky-scripts": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"
   },
   "macros": {
     "zah.pers-mo_BETA": {
@@ -57,6 +58,44 @@
 			"Adding HELP window.",
 			"Adding meaningful error messages."
 		]
+      }
+    }
+	 "zah.aegi-color-track": {
+      "url": "@{baseUrl}#@{namespace}",
+      "author": "Zahuczky",
+      "name": "Aegisub-Color-Tracking",
+      "description": "Tracking the color from a given pixel or tracking data",
+      "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+      "channels": {
+        "main": {
+          "version": "1.0.0",
+          "released": "2022-05-06",
+          "default": true,
+          "files": [
+            {
+              "name": ".lua",
+              "url": "@{fileBaseUrl}@{fileName}",
+              "sha1": "bc00a22283dbc36652901d6939b711081d0500f9"
+            }
+          ],
+		  "requiredModules": [
+            {
+              "moduleName": "zah.png",
+              "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+              "version": "1.0.0"
+            },
+			{
+              "moduleName": "zah.deflatelua",
+              "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+              "version": "1.0.0"
+            }
+          ]
+        }
+      },
+      "changelog": {
+        "1.0.0": [
+          "Initial release"
+        ]
       }
     }
   }
