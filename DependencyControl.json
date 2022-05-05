@@ -99,4 +99,58 @@
       }
     }
   }
+  "modules": {
+    "zah.png": {
+      "fileBaseUrl": "@{fileBaseUrl}/@{namespace}-v@{version}/modules/@{namespacePath}",
+      "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+      "author": "Zahuczky",
+      "name": "png",
+      "description": "Pure lua png implementation",
+      "channels": {
+        "main": {
+          "version": "1.0.0",
+          "released": "2022-05-06",
+          "default": true,
+          "files": [
+            {
+              "name": ".lua",
+              "url": "@{fileBaseUrl}@{fileName}",
+              "sha1": "65c231fe7d21d83621155585cb727247768e5181"
+            }
+          ]
+        }
+      },
+      "changelog": {
+        "1.0.0": [
+          "Initial release"
+        ]
+      }
+    },
+    "zah.deflatelua": {
+      "fileBaseUrl": "@{fileBaseUrl}/@{namespace}-v@{version}/modules/@{namespacePath}",
+      "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+      "author": "Zahuczky",
+      "name": "deflatelua",
+      "description": "Module for png",
+      "channels": {
+        "main": {
+          "version": "1.0.0",
+          "released": "2022-05-06",
+          "default": true,
+          "files": [
+            {
+              "name": ".lua",
+              "url": "@{fileBaseUrl}@{fileName}",
+              "sha1": "7b7b5328d31941fefd8ee3baba8a61f0eb7334d7"
+            }
+          ]
+        }
+      },
+      "changelog": {
+        "1.0.0": [
+          "Initial release"
+        ]
+      }
+    }
+  }
 }
