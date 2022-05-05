@@ -8,7 +8,7 @@ script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
 local haveDepCtrl, DependencyControl, depCtrl = pcall(require, "l0.DependencyControl")
-local ConfigHandler, config, petzku, pngImage, pngdeflatelua
+local ConfigHandler, config, petzku
 if haveDepCtrl then
     depCtrl = DependencyControl {
         feed="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/blob/main/DependencyControl.json",
@@ -23,7 +23,7 @@ if haveDepCtrl then
              feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"}
         }
     }
-    petzku, ConfigHandler, pngImage, pngdeflatelua = depCtrl:requireModules()
+    petzku, ConfigHandler = depCtrl:requireModules()
 else
     petzku = require 'petzku.util'
     ConfigHandler = require 'a-mo.ConfigHandler'
