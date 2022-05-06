@@ -197,7 +197,7 @@ function colortrack(subtitles, selected_lines, active_line)
     fileNames[i] = "pixel"..i..".png"
   end
 
-	local pngImage = require 'zah.png'
+	-- local pngImage = require 'zah.png'
 
   trackedImg = {}
 
