@@ -182,12 +182,12 @@ function colortrack(subtitles, selected_lines, active_line)
   petzku.io.run_cmd("mkdir "..tmp, true)
 
 -- Trim selected line out, to full frame PNGs
-  petzku.io.run_cmd("ffmpeg -i "..aegisub.project_properties().video_file.." -ss "..starttime.." -to "..endtime.." "..tmp..pathsep.."frame%%d.png", true)
+  petzku.io.run_cmd("ffmpeg -i \""..aegisub.project_properties().video_file.."\" -ss "..starttime.." -to "..endtime.." \""..tmp..pathsep.."frame%%d.png\"", true)
 
 -- Crop full frames into the pixel we actually want
   ffbatchstring = ""
   for i=1,numOfFrames do
-    ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i "..tmp..pathsep.."frame"..i..".png -filter:v \"crop=2:2:"..XPixArray[i]..":"..YPixArray[i].."\"".." "..tmp..pathsep.."pixel"..i..".png\n"
+    ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i \""..tmp..pathsep.."frame"..i..".png\" -filter:v \"crop=2:2:"..XPixArray[i]..":"..YPixArray[i].."\"".." \""..tmp..pathsep.."pixel"..i..".png\"\n"
   end
   petzku.io.run_cmd(ffbatchstring, true)
 
