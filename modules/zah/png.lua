@@ -19,9 +19,25 @@
 -- IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 -- CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-version = "1.0.0"
+local haveDepCtrl, DependencyControl, depCtrl = pcall(require, 'l0.DependencyControl')
+local pngImage
+if haveDepCtrl then
+  depCtrl = DependencyControl({
+    name = 'png',
+    version = '1.0.0',
+    description = [[Pure lua PNG decoder]],
+    author = "Zahuczky",
+    url = "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+    moduleName = 'zah.png',
+    {
+      "zah.deflatelua"
+    }
+  })
+  deflate = depCtrl:requireModules()
+else
+  deflate = require 'zah.deflatelua'
+end
 
-local deflate = require 'zah.deflatelua'
 local requiredDeflateVersion = "0.3.20111128"
 
 if (deflate._VERSION ~= requiredDeflateVersion) then
@@ -133,7 +149,7 @@ local function makePixel(stream, depth, colorType, palette)
     local pixelData = { R = 0, G = 0, B = 0, A = 0 }
     local grey
     local index
-    local color 
+    local color
 
     if colorType == 0 then
         grey = readInt(stream, bps)
@@ -184,10 +200,10 @@ local function paethPredict(a, b, c)
     local varB = math.abs(p - b)
     local varC = math.abs(p - c)
 
-    if varA <= varB and varA <= varC then 
-        return a 
-    elseif varB <= varC then 
-        return b 
+    if varA <= varB and varA <= varC then
+        return a
+    elseif varB <= varC then
+        return b
     else
         return c
     end
@@ -255,7 +271,7 @@ local function pngImage(path, progCallback, verbose, memSave)
         end
     end
 
-    if readChar(stream, 8) ~= "\137\080\078\071\013\010\026\010" then 
+    if readChar(stream, 8) ~= "\137\080\078\071\013\010\026\010" then
         error "Not a png"
     end
 
@@ -269,10 +285,10 @@ local function pngImage(path, progCallback, verbose, memSave)
 
     printV("Deflating...")
     deflate.inflate_zlib {
-        input = chunkData.IDAT.data, 
-        output = function(byte) 
-            output[#output+1] = string.char(byte) 
-        end, 
+        input = chunkData.IDAT.data,
+        output = function(byte)
+            output[#output+1] = string.char(byte)
+        end,
         disable_crc = true
     }
     StringStream = {
@@ -281,13 +297,13 @@ local function pngImage(path, progCallback, verbose, memSave)
             local toreturn = self.str:sub(1, num)
             self.str = self.str:sub(num + 1, self.str:len())
             return toreturn
-        end  
+        end
     }
 
     printV("Creating pixelmap...")
     for i = 1, height do
         local pixelRow = getPixelRow(StringStream, depth, colorType, chunkData.PLTE, width)
-        if progCallback ~= nil then 
+        if progCallback ~= nil then
             progCallback(i, height, pixelRow)
         end
         if not memSave then
@@ -305,4 +321,9 @@ local function pngImage(path, progCallback, verbose, memSave)
     }
 end
 
-return pngImage
+if haveDepCtrl then
+  pngImage.version = depctrl
+  return depctrl:register(pngImage)
+else
+  return pngImage
+end

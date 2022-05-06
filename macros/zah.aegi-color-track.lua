@@ -8,22 +8,20 @@ script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
 local haveDepCtrl, DependencyControl, depCtrl = pcall(require, "l0.DependencyControl")
-local ConfigHandler, config, petzku
+local ConfigHandler, config, petzku, pngImage
 if haveDepCtrl then
     depCtrl = DependencyControl {
-        feed="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/blob/main/DependencyControl.json",
+        feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
         {
             {"petzku.util", version="0.3.0", url="https://github.com/petzku/Aegisub-Scripts",
              feed="https://raw.githubusercontent.com/petzku/Aegisub-Scripts/stable/DependencyControl.json"},
             {"a-mo.ConfigHandler", version= "1.1.4", url= "https://github.com/TypesettingTools/Aegisub-Motion",
              feed= "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json"},
             {"zah.png", version="1.0.0", url="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-             feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"},
-            {"zah.deflatelua", version="1.0.0", url="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
              feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"}
         }
     }
-    petzku, ConfigHandler = depCtrl:requireModules()
+    petzku, ConfigHandler, pngImage = depCtrl:requireModules()
 else
     petzku = require 'petzku.util'
     ConfigHandler = require 'a-mo.ConfigHandler'
@@ -31,6 +29,7 @@ else
     pngdeflatelua = require 'zah.deflatelua'
 end
 
+pathsep = package.config:sub(1, 1)
 
 local GUI = {
     main= {
@@ -73,14 +72,14 @@ function colortrack(subtitles, selected_lines, active_line)
     return aegisub.cancel()
   end
 
-  tmp = aegisub.decode_path("?temp").."\\aegisub-color-tracking"
+  tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
 
 -- Delete old temp files
 -- While the script is still running the pixel.png's can't be deleted, because they're considered open.
   j = 1
-  while (os.remove(tmp.."\\pixel"..j..".png")) ~= nil do
-    os.remove(tmp.."\\frame"..j..".png")
-    os.remove(tmp.."\\pixel"..j..".png")
+  while (os.remove(tmp..pathsep.."pixel"..j..".png")) ~= nil do
+    os.remove(tmp..pathsep.."frame"..j..".png")
+    os.remove(tmp..pathsep.."pixel"..j..".png")
     j=j+1
   end
 
@@ -166,27 +165,27 @@ function colortrack(subtitles, selected_lines, active_line)
   --       XPixArray[i] = (botY-topY)/2
   --     end
 
-    else
-      aegisub.debug.out("You don't have a rectangular clip in your line, so I quit.")
-      aegisub.cancel()
-    end
-  end
+  --   else
+  --     aegisub.debug.out("You don't have a rectangular clip in your line, so I quit.")
+  --     aegisub.cancel()
+  --   end
+  -- end
 
 
 
   --aegisub.debug.out("\n\n\n\nvideo path: "..aegisub.decode_path("?video").."\n\n\n\n"..aegisub.project_properties().video_file.."\n\n\n"..aegisub.decode_path("?temp").."\n\n\n")
 
-  tmp = aegisub.decode_path("?temp").."\\aegisub-color-tracking"
+  tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
 
   petzku.io.run_cmd("mkdir "..tmp, true)
 
 -- Trim selected line out, to full frame PNGs
-  petzku.io.run_cmd("ffmpeg -i "..aegisub.project_properties().video_file.." -ss "..starttime.." -to "..endtime.." "..tmp.."\\frame%%d.png", true)
+  petzku.io.run_cmd("ffmpeg -i "..aegisub.project_properties().video_file.." -ss "..starttime.." -to "..endtime.." "..tmp..pathsep.."frame%%d.png", true)
 
 -- Crop full frames into the pixel we actually want
   ffbatchstring = ""
   for i=1,numOfFrames do
-    ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i "..tmp.."\\frame"..i..".png -filter:v \"crop=2:2:"..XPixArray[i]..":"..YPixArray[i].."\"".." "..tmp.."\\pixel"..i..".png\n"
+    ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i "..tmp..pathsep.."frame"..i..".png -filter:v \"crop=2:2:"..XPixArray[i]..":"..YPixArray[i].."\"".." "..tmp..pathsep.."pixel"..i..".png\n"
   end
   petzku.io.run_cmd(ffbatchstring, true)
 
@@ -200,7 +199,7 @@ function colortrack(subtitles, selected_lines, active_line)
 
   trackedImg = {}
 
-	for i=1, numOfFrames do trackedImg[i] = tmp.."\\"..fileNames[i] end
+	for i=1, numOfFrames do trackedImg[i] = tmp..pathsep..fileNames[i] end
 
 -- I have no idea what this is but it doesn't work without it
 	function printProg(line, totalLine)
