@@ -20,7 +20,7 @@
 -- CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 local haveDepCtrl, DependencyControl, depCtrl = pcall(require, 'l0.DependencyControl')
-local pngImage
+local pngModule = {}
 if haveDepCtrl then
   depCtrl = DependencyControl({
     name = 'png',
@@ -321,9 +321,11 @@ local function pngImage(path, progCallback, verbose, memSave)
     }
 end
 
+pngModule.pngImage = pngImage
+
 if haveDepCtrl then
-  pngImage.version = depctrl
-  return depctrl:register(pngImage)
+  pngModule.version = depCtrl
+  return depCtrl:register(pngModule)
 else
-  return pngImage
+  return pngModule
 end
