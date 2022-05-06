@@ -8,7 +8,7 @@ script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
 local haveDepCtrl, DependencyControl, depCtrl = pcall(require, "l0.DependencyControl")
-local ConfigHandler, config, petzku, pngImage
+local ConfigHandler, config, petzku, pngModule
 if haveDepCtrl then
     depCtrl = DependencyControl {
         feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
@@ -21,13 +21,15 @@ if haveDepCtrl then
              feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"}
         }
     }
-    petzku, ConfigHandler, pngImage = depCtrl:requireModules()
+    petzku, ConfigHandler, pngModule = depCtrl:requireModules()
 else
     petzku = require 'petzku.util'
     ConfigHandler = require 'a-mo.ConfigHandler'
-    pngImage = require 'zah.png'
+    pngModule = require 'zah.png'
     pngdeflatelua = require 'zah.deflatelua'
 end
+
+pngImage = pngModule.pngImage
 
 pathsep = package.config:sub(1, 1)
 
@@ -180,12 +182,12 @@ function colortrack(subtitles, selected_lines, active_line)
   petzku.io.run_cmd("mkdir "..tmp, true)
 
 -- Trim selected line out, to full frame PNGs
-  petzku.io.run_cmd("ffmpeg -i "..aegisub.project_properties().video_file.." -ss "..starttime.." -to "..endtime.." "..tmp..pathsep.."frame%%d.png", true)
+  petzku.io.run_cmd("ffmpeg -i \""..aegisub.project_properties().video_file.."\" -ss "..starttime.." -to "..endtime.." \""..tmp..pathsep.."frame%%d.png\"", true)
 
 -- Crop full frames into the pixel we actually want
   ffbatchstring = ""
   for i=1,numOfFrames do
-    ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i "..tmp..pathsep.."frame"..i..".png -filter:v \"crop=2:2:"..XPixArray[i]..":"..YPixArray[i].."\"".." "..tmp..pathsep.."pixel"..i..".png\n"
+    ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i \""..tmp..pathsep.."frame"..i..".png\" -filter:v \"crop=2:2:"..XPixArray[i]..":"..YPixArray[i].."\"".." \""..tmp..pathsep.."pixel"..i..".png\"\n"
   end
   petzku.io.run_cmd(ffbatchstring, true)
 
@@ -195,7 +197,7 @@ function colortrack(subtitles, selected_lines, active_line)
     fileNames[i] = "pixel"..i..".png"
   end
 
-	local pngImage = require 'zah.png'
+	-- local pngImage = require 'zah.png'
 
   trackedImg = {}
 
