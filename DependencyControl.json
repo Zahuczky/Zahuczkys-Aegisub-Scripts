@@ -68,8 +68,8 @@
       "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
       "channels": {
         "main": {
-          "version": "1.0.0",
-          "released": "2022-05-06",
+          "version": "1.0.1",
+          "released": "2022-05-07",
           "default": true,
           "files": [
             {
@@ -82,12 +82,12 @@
             {
               "moduleName": "zah.png",
               "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-              "version": "1.0.0"
+              "version": "1.0.1"
             },
 			{
               "moduleName": "zah.deflatelua",
               "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-              "version": "1.0.0"
+              "version": "1.0.1"
             }
           ]
         }
@@ -108,14 +108,14 @@
       "description": "Pure lua png implementation",
       "channels": {
         "main": {
-          "version": "1.0.0",
-          "released": "2022-05-06",
+          "version": "1.0.1",
+          "released": "2022-05-07",
           "default": true,
           "files": [
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "ff2648c0e8156250fe0dfd61e26c0024edbc6cc3"
+              "sha1": "3964f452c191533d97f508d8c53834dc2416b505"
             }
           ]
         }
@@ -134,14 +134,14 @@
       "description": "Module for png",
       "channels": {
         "main": {
-          "version": "1.0.0",
-          "released": "2022-05-06",
+          "version": "1.0.1",
+          "released": "2022-05-07",
           "default": true,
           "files": [
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "9fc84ac9f93ca1b91089c671eb2198277ab36d61"
+              "sha1": "7337b8e7853dd8bc5bed2771875e495b59887a6b"
             }
           ]
         }

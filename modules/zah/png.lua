@@ -24,10 +24,10 @@ local pngModule = {}
 if haveDepCtrl then
   depCtrl = DependencyControl({
     name = 'png',
-    version = '1.0.0',
+    version = '1.0.1',
     description = [[Pure lua PNG decoder]],
-    author = "Zahuczky",
-    url = "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+    author = 'Zahuczky',
+    url = 'https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts',
     moduleName = 'zah.png',
     {
       "zah.deflatelua"

@@ -108,7 +108,18 @@ THE SOFTWARE.
 (end license)
 --]]
 
-version = "1.0.0"
+local haveDepCtrl, DependencyControl, depCtrl = pcall(require, 'l0.DependencyControl')
+local pngModule = {}
+if haveDepCtrl then
+  depCtrl = DependencyControl({
+    name = 'deflatelua',
+    version = '1.0.1',
+    description = [[Deflater for pure lua PNG decoder]],
+    author = "Zahuczky",
+    url = "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+    moduleName = 'zah.deflatelua',
+  })
+end
 
 local M = {_TYPE='module', _NAME='compress.deflatelua', _VERSION='0.3.20111128'}
 
@@ -340,7 +351,7 @@ local function bitstream_from_bytestream(bys)
       return bits
     end
   end
-  
+
   is_bitstream[o] = true
 
   return o
@@ -443,7 +454,7 @@ local function HuffmanTable(init, is_full)
     end
     return res
   end
-  
+
   local tfirstcode = memoize(
     function(bits) return pow2[minbits] + msb(bits, minbits) end)
 
@@ -547,7 +558,7 @@ local function parse_zlib_header(bs)
   local flevel = bs:read(2) -- FLaGs: FLEVEL (compression level)
   local cmf = cinfo * 16 + cm -- CMF (Compresion Method and flags)
   local flg = fcheck + fdict * 32 + flevel * 64 -- FLaGs
-  
+
   if cm ~= 8 then -- not "deflate"
     runtime_error("unrecognized zlib compression method: " .. cm)
   end
@@ -555,16 +566,16 @@ local function parse_zlib_header(bs)
     runtime_error("invalid zlib window size: cinfo=" .. cinfo)
   end
   local window_size = 2^(cinfo + 8)
-  
+
   if (cmf*256 + flg) % 31 ~= 0 then
     runtime_error("invalid zlib header (bad fcheck sum)")
   end
-  
+
   if fdict == 1 then
     runtime_error("FIX:TODO - FDICT not currently implemented")
     local dictid_ = bs:read(32)
   end
-  
+
   return window_size
 end
 
@@ -821,11 +832,11 @@ function M.inflate_zlib(t)
   local outbs = get_obytestream(t.output)
   local disable_crc = t.disable_crc
   if disable_crc == nil then disable_crc = false end
-  
+
   local window_size_ = parse_zlib_header(bs)
-  
+
   local data_adler32 = 1
-  
+
   inflate{input=bs, output=
     disable_crc and outbs or
       function(byte)
@@ -835,7 +846,7 @@ function M.inflate_zlib(t)
   }
 
   bs:read(bs:nbits_left_in_byte())
-  
+
   local b3 = bs:read(8)
   local b2 = bs:read(8)
   local b1 = bs:read(8)
