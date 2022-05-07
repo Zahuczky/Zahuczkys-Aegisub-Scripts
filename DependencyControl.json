@@ -75,7 +75,7 @@
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "bc00a22283dbc36652901d6939b711081d0500f9"
+              "sha1": "79e9a3624e9c0031136b2ec07e5920ebffedeab3"
             }
           ],
         "requiredModules": [
@@ -115,7 +115,7 @@
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "3964f452c191533d97f508d8c53834dc2416b505"
+              "sha1": "1a3c9bd1af94f38f08dac125c93eb8e921e74c0a"
             }
           ]
         }
@@ -141,7 +141,7 @@
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "7337b8e7853dd8bc5bed2771875e495b59887a6b"
+              "sha1": "f3ad12a123e03dcea51ce24fd5c8b1d679a5e186"
             }
           ]
         }

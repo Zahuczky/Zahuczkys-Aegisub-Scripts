@@ -8,7 +8,7 @@ script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
 local haveDepCtrl, DependencyControl, depCtrl = pcall(require, "l0.DependencyControl")
-local ConfigHandler, config, petzku, pngModule
+local ConfigHandler, config, petzku, pngModule, deflatelua
 if haveDepCtrl then
     depCtrl = DependencyControl {
         feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
@@ -17,15 +17,18 @@ if haveDepCtrl then
              feed="https://raw.githubusercontent.com/petzku/Aegisub-Scripts/stable/DependencyControl.json"},
             {"a-mo.ConfigHandler", version= "1.1.4", url= "https://github.com/TypesettingTools/Aegisub-Motion",
              feed= "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json"},
-            {"zah.png", version="1.0.0", url="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+            {"zah.png", version="1.0.1", url="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+             feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"},
+            {"zah.deflatelua", version="1.0.1", url="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
              feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"}
         }
     }
-    petzku, ConfigHandler, pngModule = depCtrl:requireModules()
+    petzku, ConfigHandler, pngModule, deflatelua = depCtrl:requireModules()
 else
     petzku = require 'petzku.util'
     ConfigHandler = require 'a-mo.ConfigHandler'
     pngModule = require 'zah.png'
+    deflatelua = require 'zah.deflatelua'
 end
 
 pngImage = pngModule.pngImage

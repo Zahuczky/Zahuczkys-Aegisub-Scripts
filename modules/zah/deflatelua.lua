@@ -109,7 +109,7 @@ THE SOFTWARE.
 --]]
 
 local haveDepCtrl, DependencyControl, depCtrl = pcall(require, 'l0.DependencyControl')
-local pngModule = {}
+local M = {}
 if haveDepCtrl then
   depCtrl = DependencyControl({
     name = 'deflatelua',
@@ -866,4 +866,9 @@ function M.inflate_zlib(t)
 end
 
 
-return M
+if haveDepCtrl then
+  M.version = depCtrl
+  return depCtrl:register(M)
+else
+  return M
+end
