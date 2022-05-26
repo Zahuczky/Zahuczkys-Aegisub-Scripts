@@ -27,14 +27,14 @@
 			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
 			"channels": {
 				"main": {
-					"version": "0.2.9",
-					"released": "2022-04-30",
+					"version": "0.2.7",
+					"released": "2022-05-26",
 					"default": true,
 					"files": [
 						{
 							"name": ".moon",
 							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "3c86c7ee332bc9da58f673c5ff1b66ecb3840463"
+							"sha1": "9c592bc7845560d1dc153ca6e7f75d4543b5934a"
 						}
 					]
 				}
