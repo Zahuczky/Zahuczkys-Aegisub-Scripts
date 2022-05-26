@@ -20,7 +20,14 @@ haveDepCtrl, DependencyControl, depctrl = pcall(require, "l0.DependencyControl")
 if haveDepCtrl
     depctrl = DependencyControl {
         feed: "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
+        {
+            "karaskel"
+        }
     }
+
+    depctrl\requireModules!
+else
+    require'karaskel'
 
 -- Relative stuff
 
@@ -300,10 +307,8 @@ scale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
 
 -- Given a line, returns the y coordinate of the alignment point relative to the \an7 point
 -- i.e. 0 for \an7-9, half the height for \an4-6, and the full height for \an1-3.
-getFaxCompFactor = (subs, line) ->
-    stylename = line.style
-    styles = [s for i, s in ipairs(subs) when s.class == "style" and s.name == stylename]
-    style = styles[1]
+getFaxCompFactor = (styles, line) ->
+    style = styles[line.style]
 
     an = tonumber(line.text\match("\\an(%d)")) or style.align
     if an >= 7 and an <= 9
@@ -326,6 +331,8 @@ getFaxCompFactor = (subs, line) ->
 
 -- main function, this get's run as 'apply' is clicked
 perspmotion = (sub, sel) ->
+    meta, styles = karaskel.collect_head(sub, false)
+
     export relFrame = relativeStuff(sub,sel)
     relsel = sel[relFrame]
     export xScaleRel = sub[relsel].text\match("\\fscx([-%d.]+)")
@@ -398,9 +405,7 @@ perspmotion = (sub, sel) ->
     baseBord = 0
     for i=1,#lines
         -- Bord scaling
-        stylename = lines[i].style
-        styles = [s for i, s in ipairs(sub) when s.class == "style" and s.name == stylename]
-        style = styles[1]
+        style = styles[lines[i].style]
 
         if lines[i].text\match("\\bord([-%d.]+)")
             orgBordArray[i] = lines[i].text\match("\\bord([-%d.]+)")
@@ -440,7 +445,7 @@ perspmotion = (sub, sel) ->
             line.text = line.text\gsub("\\fax([-%d.]+)", "\\fax"..realfax)
 
             posX, posY = line.text\match("\\pos%(([-%d.]+).([-%d.]+)%)")
-            factor = getFaxCompFactor(sub, line)
+            factor = getFaxCompFactor(styles, line)
             newPosX = round(posX - realfax * factor * scaleX[si] / 100, 3)
             line.text = line.text\gsub("\\pos", "\\pos(#{newPosX},#{posY})\\org")
         sub[li] = line
