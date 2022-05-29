@@ -1,4 +1,4 @@
-﻿local tr = aegisub.gettext
+local tr = aegisub.gettext
 
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
@@ -288,7 +288,7 @@ function colortrack(subtitles, selected_lines, active_line)
 -- Getting accurate times for the \t transform. Thx petzku. :*
   transformtimes = {}
   local t_start_frame = aegisub.frame_from_ms(subtitles[selected_lines[1]].start_time)
-  local t_start_time = aegisub.ms_from_frame(start_frame)
+  local t_start_time = aegisub.ms_from_frame(t_start_frame)
   for i=1, numOfFrames do
     local ft = aegisub.ms_from_frame(t_start_frame + i) - t_start_time --frame time
     transformtimes[i] = ft..","..ft..","
