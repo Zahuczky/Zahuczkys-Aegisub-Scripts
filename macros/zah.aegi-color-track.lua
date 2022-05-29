@@ -1,4 +1,4 @@
-﻿local tr = aegisub.gettext
+local tr = aegisub.gettext
 
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
@@ -318,7 +318,13 @@ function colortrack(subtitles, selected_lines, active_line)
   end
 
   -- Put the string in the line
-  line.text = line.text:gsub("\\pos", transform.."\\pos")
+  if line.text:match("\\pos") then
+    line.text = line.text:gsub("\\pos", transform.."\\pos")
+  elseif line.text:match("\\move") then
+    line.text = line.text:gsub("\\move", transform.."\\move")
+  else
+    line.text = line.text:gsub("}", transform.."}", 1)
+  end
   subtitles[selected_lines[1]] = line
 
   -- aegisub.debug.out("-----Test-----")
