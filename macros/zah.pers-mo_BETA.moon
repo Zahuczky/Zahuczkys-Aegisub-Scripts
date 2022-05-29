@@ -158,11 +158,17 @@ unrot = (coord_in, org) ->
 
 -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-relativeStuff = (sub, sel) ->
+
+get_line_group = (line, actorgroups) ->
+    return "" if not actorgroups
+    return line.actor\match("^([^ ]+)")
+
+
+relativeStuff = (sub, sel, group) ->
     aegisub.progress.task(string.format("Theory of relativity"))
     videoPos = aegisub.project_properties!.video_position
 
-    sel_lines = [sub[si] for si in *sel]
+    sel_lines = [sub[si] for si in *sel when group == nil or group == "" or get_line_group(sub[si], true) == group]
 
     if videoPos == nil
         -- not sure what you're doing without a video loaded, but sure
@@ -325,9 +331,9 @@ delete_old_tags = (text) ->
 perspmotion = (sub, sel) ->
     meta, styles = karaskel.collect_head(sub, false)
 
-    relLine, relFrame = relativeStuff(sub,sel)
-    xScaleRel = relLine.text\match("\\fscx([-%d.]+)") or 100
-    yScaleRel = relLine.text\match("\\fscy([-%d.]+)") or 100
+    mainRelLine, relFrame = relativeStuff(sub,sel)
+    xScaleRel = mainRelLine.text\match("\\fscx([-%d.]+)") or 100
+    yScaleRel = mainRelLine.text\match("\\fscy([-%d.]+)") or 100
 
     aegisub.debug.out(4, "Relative Frame: #{relFrame}\n")
 
@@ -351,7 +357,8 @@ perspmotion = (sub, sel) ->
           {class: "label",  x: 5, y: 6, width: 1, height: 1, label: "Extra Fay"}
           {class: "checkbox", name: "scalebord",  x: 4, y: 7, width: 1, height: 1, label: "Scale \\bord", value: true}
           {class: "checkbox", name: "scaleshad",  x: 4, y: 8, width: 1, height: 1, label: "Scale \\shad", value: false, hint: "Don't tick this if you're using the \"shad trick!\""}
-          {class: "checkbox", name: "followpos",  x: 4, y: 9, width: 2, height: 1, label: "Also track position", value: false, hint: "Update the positions to keep the text's relative position in the quad constant.\nThe reference point is the current frame.\nStill needs the line to be fbf'ed."}
+          {class: "checkbox", name: "followpos",  x: 4, y: 9, width: 2, height: 1, label: "Also track position", value: false, hint: "Update the positions to keep the text's relative position in the quad constant. The reference point is the current frame. Still needs the line to be fbf'ed."}
+          {class: "checkbox", name: "actorgroups",  x: 4, y: 10, width: 2, height: 1, label: "Multiple grouped tracks", value: false, hint: "Tracking multiple signs in a single run. For this, mark every sign's group of lines with a different actor (only the first word matters). For each actor group, the line at the current frame will be taken as the reference line for scaling and positioning (wherever applicable). The x and y scaling values in the dialog will be discarded."}
 
           },
 
@@ -373,15 +380,34 @@ perspmotion = (sub, sel) ->
 
     quads = datahandling(sub, sel, results)
 
-    -- first, do the rel line to get its scale
-    relLinePos = getLinePos(relLine)
-    relLineQuad = quads[relFrame]
-    relLinecx, relLinecy = quadToUnitSquare(relLineQuad, relLinePos)
-    aegisub.debug.out(4, "Internal coordinates of relative line: #{relLinecx}, #{relLinecy}\n")
-    perspRes, info = unrot(relLineQuad, relLinePos)
-    relLineScale = getScale(relLineQuad, relLinePos, info)
+    allgroups = {}
+    for i, line in ipairs(lines)
+        allgroups[get_line_group(line, results.actorgroups)] = true
 
-    aegisub.debug.out(4, "Relative line's scale: #{relLineScale.x}, #{relLineScale.y}\n")
+    -- first, do the rel lines to get their scales
+    relLines = {}
+    for group, v in pairs(allgroups)
+        aegisub.log("Group: #{group}\n")
+        relLine = relativeStuff(sub, sel, group)
+        rpos = getLinePos(relLine)
+        rquad = quads[relFrame]
+        rcx, rcy = quadToUnitSquare(rquad, rpos)
+        aegisub.debug.out(4, "Internal coordinates of relative #{group} line: #{rcx}, #{rcy}\n")
+        perspRes, info = unrot(rquad, rpos)
+        rscale = getScale(rquad, rpos, info)
+
+        orgrxscale = relLine.text\match("\\fscx([-%d.]+)") or 100
+        orgryscale = relLine.text\match("\\fscy([-%d.]+)") or 100
+
+        aegisub.debug.out(4, "Original scale of relative #{group} line: #{orgrxscale}, #{orgryscale}\n")
+        aegisub.debug.out(4, "Relative #{group} line's scale: #{rscale.x}, #{rscale.y}\n")
+
+        relLines[group] = {
+            cx: rcx,
+            cy: rcy,
+            scale: rscale,
+            orgscale: Point(orgrxscale, orgryscale),
+        }
 
     -- now loop over all lines
     for i, line in ipairs(lines)
@@ -390,19 +416,22 @@ perspmotion = (sub, sel) ->
         frame = if abs_frame != nil then abs_frame - aegisub.frame_from_ms(sub[sel[1]].start_time) + 1 else i
         quad = quads[frame]
         pos = linePos[i]
+        group = get_line_group(line, results.actorgroups)
+        relLine = relLines[group]
 
-        aegisub.debug.out(5, "Line #{i}: Relative frame #{frame}, at position #{pos.x}, #{pos.y}\n")
+        aegisub.debug.out(5, "Line #{i}: Relative frame #{frame}, in group #{group}, at position #{pos.x}, #{pos.y}\n")
 
         if quad == nil
             aegisub.debug.out("Tracking data is too short!\nTracking Data: #{#quads} frames.\nCurrent subtitle line: at frame #{frame}.\n")
             aegisub.cancel()
 
         if results.followpos
-            pos = unitSquareToQuad(quad, relLinecx, relLinecy)
+            pos = unitSquareToQuad(quad, relLine.cx, relLine.cy)
             aegisub.debug.out(5, "New coordinates: #{pos.x}, #{pos.y}\n")
 
         perspRes, perspInfo = unrot(quad, pos)
-        scale = getScale(quad, pos, perspInfo, Point(results.xSca / relLineScale.x, results.ySca / relLineScale.y))
+        relscale = if results.actorgroups then relLine.orgscale else Point(results.xSca, results.ySca)
+        scale = getScale(quad, pos, perspInfo, Point(relscale.x / relLine.scale.x, relscale.y / relLine.scale.y))
 
         scaleCmds = "\\fscx#{round(scale.x,2)}\\fscy#{round(scale.y,2)}"
 
