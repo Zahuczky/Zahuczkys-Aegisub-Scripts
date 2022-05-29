@@ -124,10 +124,6 @@ unrot = (coord_in, org) ->
     diag_diff = (dist(a, c) - dist(b, d)) / (dist(a, c) + dist(b, d))
     n = vec_pr(vector(a,b), vector(a,c))
     n0 = vec_pr(vector(rays[1], rays[2]), vector(rays[1], rays[3]))
-    if sc_pr(n, n0) > 0 export flip = 1 else export flip = -1
-
-    -- if flip < 0
-    --     return nil
 
     info = {}
     fry = math.atan(n.x/n.z)
@@ -158,46 +154,26 @@ unrot = (coord_in, org) ->
     info["sizes"] = { sizeX, sizeY }
     return s, info
 
--- Getting clip() from clipArray, instead of matching from line
-perspective = (clip, line) ->
-    if clip == nil
-        aegisub.log("Perspective missing. What the heck? How did you pull this off?")
-
-    coord = {}
-    for cx, cy in clip\gmatch("([-%d.]+).([-%d.]+)")
-        table.insert(coord, Point(cx, cy))
-
-    if line.text\match("org%b()")
-        export pos_org = line.text\match("org%b()")
-    elseif line.text\match("pos%b()")
-        export pos_org = line.text\match("pos%b()")
-    else
-        aegisub.log("\\org or \\pos missing")
-        aegisub.cancel!
-
-    px, py = pos_org\match("([-%d.]+).([-%d.]+)")
-    target_org = Point(px, py)
-
-    tf_tags, info = unrot(coord, target_org, true, true)
-
-    return tf_tags, info
-
 -- END OF PERSPECTIVE.MOON CODE
 
 
 -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 relativeStuff = (sub, sel) ->
-  aegisub.progress.task(string.format("Theory of relativity"))
-  startOneMS = sub[sel[1]].start_time
-  firstFrame = aegisub.frame_from_ms(startOneMS)
-  if firstFrame == nil
-    -- not sure what you're doing without a video loaded, but sure
-    return 1
+    aegisub.progress.task(string.format("Theory of relativity"))
+    videoPos = aegisub.project_properties!.video_position
 
-  videoPos = aegisub.project_properties!.video_position
-  return videoPos-firstFrame+1
---    aegisub.debug.out("relative frame: #{relFrame}\n")
+    sel_lines = [sub[si] for si in *sel]
+
+    if videoPos == nil
+        -- not sure what you're doing without a video loaded, but sure
+        return sel_lines[1], 1
+
+    vis_lines = [s for s in *sel_lines when aegisub.frame_from_ms(s.start_time) <= videoPos and aegisub.frame_from_ms(s.end_time) >= videoPos]
+    return sel_lines[1], 1 if #vis_lines == 0
+
+    -- TODO be smarter about this?
+    return vis_lines[1], videoPos - aegisub.frame_from_ms(sel_lines[1].start_time) + 1
 
 
 parsePin = (dataArray, n) ->
@@ -214,20 +190,18 @@ parsePin = (dataArray, n) ->
 
     x = {}
     y = {}
-
     for i=1,dataLength
         values = [t for t in string.gmatch(dataArray[posPin + i - 1], "%S+")]
-
         x[i] = values[2]
         y[i] = values[3]
 
     return x, y
 
 -- function that contains everything that happens before the transforms
-datahandling = (sub, sel, results, pressed) ->
+datahandling = (sub, sel, results) ->
     aegisub.progress.task(string.format("Crunching data..."))
     -- Putting the user input into a table
-    export dataArray = { }
+    dataArray = { }
     j=1
     for i in string.gmatch(results.data, "([^\n]*)\n?")
         dataArray[j] = i
@@ -242,68 +216,51 @@ datahandling = (sub, sel, results, pressed) ->
 
     -- Filtering out everything other than the data, and putting them into their own tables.
     -- Power Pin data goes like this: TopLeft=0002, TopRight=0003, BottomRight=0005,  BottomLeft=0004
-    export x1, y1 = parsePin(dataArray, "0002")
-    export x2, y2 = parsePin(dataArray, "0003")
-    export x3, y3 = parsePin(dataArray, "0005")
-    export x4, y4 = parsePin(dataArray, "0004")
+    x1, y1 = parsePin(dataArray, "0002")
+    x2, y2 = parsePin(dataArray, "0003")
+    x3, y3 = parsePin(dataArray, "0005")
+    x4, y4 = parsePin(dataArray, "0004")
 
-    -- Turning the coordinates into a clip() (for the sake of not having to modify too much in the original code of perspective.moon)
-    export clipArray = { }
-    for i=1,#x1
-        clipArray[i] = "clip(m "..x1[i].." "..y1[i].." l "..x2[i].." "..y2[i].." "..x3[i].." "..y3[i].." "..x4[i].." "..y4[i]..")"
-
-    -- TODO support multi-frame lines
-    if #clipArray != #sel
-        aegisub.debug.out("The number of selected lines does not match the tracking data! Aborting.")
-        aegisub.cancel()
-
-    -- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    return [{Point(x1[i], y1[i]), Point(x2[i], y2[i]), Point(x3[i], y3[i]), Point(x4[i], y4[i])} for i=1,#x1]
 
 
-scale = (lines, xx1, xx2, xx3, xx4, yy1, yy2, yy3, yy4, perspInfo) ->
-    aegisub.progress.task(string.format("Some scaling..."))
-    scalesX = { }
-    scalesY = { }
-    for i=1,#lines
-        x1 = xx1[i]
-        x2 = xx2[i] - x1
-        x3 = xx3[i] - x1
-        x4 = xx4[i] - x1
-        y1 = yy1[i]
-        y2 = yy2[i] - y1
-        y3 = yy3[i] - y1
-        y4 = yy4[i] - y1
+getScale = (quad, pos, perspInfo, relScale=Point(1, 1)) ->
+    x1 = quad[1].x
+    x2 = quad[2].x - x1
+    x3 = quad[3].x - x1
+    x4 = quad[4].x - x1
+    y1 = quad[1].y
+    y2 = quad[2].y - y1
+    y3 = quad[3].y - y1
+    y4 = quad[4].y - y1
 
-        position = lines[i].text\match("pos%b()")
-        posX, posY = position\match("([-%d.]+).([-%d.]+)")
-        xp = posX - x1
-        yp = posY - y1
+    xp = pos.x - x1
+    yp = pos.y - y1
 
-        rx = -perspInfo[i]["debfrx"] * math.pi / 180
-        ry = perspInfo[i]["debfry"] * math.pi / 180
-        rz = -perspInfo[i]["debfrz"] * math.pi / 180
-        fax = perspInfo[i]["debfax"]
+    rx = -perspInfo["debfrx"] * math.pi / 180
+    ry = perspInfo["debfry"] * math.pi / 180
+    rz = -perspInfo["debfrz"] * math.pi / 180
+    fax = perspInfo["debfax"]
 
-        -- Invoke black math magic. Do not attempt to read it, for it will destroy your sanity.
-        cx = -(((x3*y2 - x2*y3)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(-(xp*y4) + x4*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp)))))
-        cy = ((-(x4*y3) + x3*y4)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(xp*y2 - x2*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp))))
-        dsx2 = (((-1 + cy)*x3^2*y2*(y2 - y4)*y4 + y3*((-1 + cy)*x4^2*y2*(y2 - y3) + cy*x2^2*(y3 - y4)*y4 + x2*x4*y2*(-y3 + y4)) + x3*y2*(2*(-1 + cy)*x4*y3*y4 - (-1 + 2*cy)*x2*(y3 - y4)*y4 + x4*y2*(y3 + y4 - 2*cy*y4)))^2 + (x2*(x4*y3 - x3*y4)*(x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4)) + (x3*y2 - x4*y2 + x2*(-y3 + y4))*(cy*x4*(x3*y2 - x2*y3) + cx*x2*(x4*y3 - x3*y4)))^2)/ (x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4))^4
-        dsy2 = ((x4*(x3*y2 - x2*y3)*(x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4)) - (x4*(y2 - y3) + (-x2 + x3)*y4)*(cy*x4*(x3*y2 - x2*y3) + cx*x2*(x4*y3 - x3*y4)))^2 + ((x3*y2 - x2*y3)*y4*(-(x4*y2) - x2*y3 + x4*y3 + x3*(y2 - y4) + x2*y4) + cx*(x4^2*y2*y3*(-y2 + y3) + 2*x3*x4*y2*(y2 - y3)*y4 + y4*(2*x2*x3*y2*(y3 - y4) + x3^2*y2*(-y2 + y4) + x2^2*y3*(-y3 + y4))))^2)/ (x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4))^4
+    -- Invoke black math magic. Do not attempt to read it, for it will destroy your sanity.
+    cx = -(((x3*y2 - x2*y3)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(-(xp*y4) + x4*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp)))))
+    cy = ((-(x4*y3) + x3*y4)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(xp*y2 - x2*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp))))
+    dsx2 = (((-1 + cy)*x3^2*y2*(y2 - y4)*y4 + y3*((-1 + cy)*x4^2*y2*(y2 - y3) + cy*x2^2*(y3 - y4)*y4 + x2*x4*y2*(-y3 + y4)) + x3*y2*(2*(-1 + cy)*x4*y3*y4 - (-1 + 2*cy)*x2*(y3 - y4)*y4 + x4*y2*(y3 + y4 - 2*cy*y4)))^2 + (x2*(x4*y3 - x3*y4)*(x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4)) + (x3*y2 - x4*y2 + x2*(-y3 + y4))*(cy*x4*(x3*y2 - x2*y3) + cx*x2*(x4*y3 - x3*y4)))^2)/ (x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4))^4
+    dsy2 = ((x4*(x3*y2 - x2*y3)*(x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4)) - (x4*(y2 - y3) + (-x2 + x3)*y4)*(cy*x4*(x3*y2 - x2*y3) + cx*x2*(x4*y3 - x3*y4)))^2 + ((x3*y2 - x2*y3)*y4*(-(x4*y2) - x2*y3 + x4*y3 + x3*(y2 - y4) + x2*y4) + cx*(x4^2*y2*y3*(-y2 + y3) + 2*x3*x4*y2*(y2 - y3)*y4 + y4*(2*x2*x3*y2*(y3 - y4) + x3^2*y2*(-y2 + y4) + x2^2*y3*(-y3 + y4))))^2)/ (x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4))^4
 
-        drx2 = math.cos(rx)^2 * math.sin(rz)^2 + (math.cos(ry) * math.cos(rz) - math.sin(rx) * math.sin(ry) * math.sin(rz))^2
-        dry2 = math.cos(rx)^2 * (math.cos(rz) + fax * math.sin(rz))^2 + (math.cos(ry) * (math.sin(rz) - fax * math.cos(rz)) + math.sin(rx) * math.sin(ry) * (math.cos(rz) + fax * math.sin(rz)))^2
+    drx2 = math.cos(rx)^2 * math.sin(rz)^2 + (math.cos(ry) * math.cos(rz) - math.sin(rx) * math.sin(ry) * math.sin(rz))^2
+    dry2 = math.cos(rx)^2 * (math.cos(rz) + fax * math.sin(rz))^2 + (math.cos(ry) * (math.sin(rz) - fax * math.cos(rz)) + math.sin(rx) * math.sin(ry) * (math.cos(rz) + fax * math.sin(rz)))^2
 
-        scalesX[i] = math.sqrt(dsx2 / drx2)
-        scalesY[i] = math.sqrt(dsy2 / dry2)
+    scaleX = math.sqrt(dsx2 / drx2)
+    scaleY = math.sqrt(dsy2 / dry2)
 
-    relScalesX = { }
-    relScalesY = { }
-    for i=1,#lines
-        relScalesX[i] = results.xSca * scalesX[i] / scalesX[relFrame]
-        relScalesY[i] = results.ySca * scalesY[i] / scalesY[relFrame]
+    return Point(scaleX * relScale.x, scaleY * relScale.y)
 
-    return relScalesX, relScalesY
 
+getLinePos = (line) ->
+    position = line.text\match("pos%b()")
+    posX, posY = position\match("([-%d.]+).([-%d.]+)")
+    return Point(posX, posY)
 
 -- Given a line, returns the y coordinate of the alignment point relative to the \an7 point
 -- i.e. 0 for \an7-9, half the height for \an4-6, and the full height for \an1-3.
@@ -315,12 +272,10 @@ getFaxCompFactor = (styles, line) ->
         return 0
 
     fs = tonumber(line.text\match("\\fs(%d+)"))
-    if fs ~= nil
-        style.fontsize = fs
+    style.fontsize = fs if fs != nil
 
     width, height, descent, ext_lead = aegisub.text_extents(style, line.text\gsub("{[^}]+}", ""))
     height = height * 100 / style.scale_y
-    -- height = style.fontsize
 
     if an >= 4 and an <= 6
         return height / 2
@@ -329,18 +284,19 @@ getFaxCompFactor = (styles, line) ->
         return height
 
 
+delete_old_tags = (text) ->
+    return text\gsub("\\frx([-%d.]+)", "")\gsub("\\fry([-%d.]+)", "")\gsub("\\frz([-%d.]+)", "")\gsub("\\org%b()", "")\gsub("\\fax([-%d.]+)", "")\gsub("\\fay([-%d.]+)", "")\gsub("\\fscx([-%d.]+)", "")\gsub("\\fscy([-%d.]+)", "")\gsub("\\bord([-%d.]+)", "")
+
+
 -- main function, this get's run as 'apply' is clicked
 perspmotion = (sub, sel) ->
     meta, styles = karaskel.collect_head(sub, false)
 
-    export relFrame = relativeStuff(sub,sel)
-    relsel = sel[relFrame]
-    export xScaleRel = sub[relsel].text\match("\\fscx([-%d.]+)")
-    export yScaleRel = sub[relsel].text\match("\\fscy([-%d.]+)")
-    if xScaleRel == nil
-        xScaleRel = 100
-    if yScaleRel == nil
-        yScaleRel = 100
+    relLine, relFrame = relativeStuff(sub,sel)
+    xScaleRel = relLine.text\match("\\fscx([-%d.]+)") or 100
+    yScaleRel = relLine.text\match("\\fscy([-%d.]+)") or 100
+
+    aegisub.debug.out(4, "Relative Frame: #{relFrame}\n")
 
     GUI = {
         main: {
@@ -372,83 +328,68 @@ perspmotion = (sub, sel) ->
 
     buttons = {"Apply","Rescale","Cancel","HELP"}
 
-    export pressed, results = aegisub.dialog.display(GUI.main, {"Apply","Rescale","Cancel","HELP"})
-    if pressed=="Cancel" aegisub.cancel()
+    pressed, results = aegisub.dialog.display(GUI.main, {"Apply","Rescale","Cancel","HELP"})
+    aegisub.cancel() if pressed == "Cancel" or pressed == false
     if pressed=="HELP" pressed, results = aegisub.dialog.display(GUI.help, {"Close"})
-    if pressed=="Close" aegisub.cancel()
-
-    datahandling(sub, sel, results, pressed)
 
     aegisub.progress.task(string.format("Faxing...(ur mom)"))
-    lines = {}
-    for si, li in ipairs(sel)
-        lines[si] = sub[li]
 
-    perspResults = {}
-    perspInfo = {}
-    for i=1,#lines
-        result = ""
-        info = {}
-        result, info = perspective(clipArray[i], lines[i])
-        perspResults[i] = result
-        perspInfo[i] = info
+    lines = [sub[li] for li in *sel]
+    linePos = [getLinePos(line) for line in *lines]
 
-    scaleX, scaleY = scale(lines, x1, x2, x3, x4, y1, y2, y3, y4, perspInfo)
+    quads = datahandling(sub, sel, results)
 
-    export scales = { }
-    for i=1,#lines
-        scales[i] = "\\fscx"..round(scaleX[i],2).."\\fscy"..round(scaleY[i],2)
+    -- first, do the rel line to get its scale
+    relLinePos = getLinePos(relLine)
+    perspRes, info = unrot(quads[relFrame], relLinePos)
+    relLineScale = getScale(quads[relFrame], relLinePos, info)
 
-    orgBordArray = { }
-    xBordArray = { }
-    yBordArray = { }
-    baseBord = 0
-    for i=1,#lines
-        -- Bord scaling
-        style = styles[lines[i].style]
+    aegisub.debug.out(4, "Relative line's scale: #{relLineScale.x}, #{relLineScale.y}\n")
 
-        if lines[i].text\match("\\bord([-%d.]+)")
-            orgBordArray[i] = lines[i].text\match("\\bord([-%d.]+)")
-        else
-            orgBordArray[i] = style.outline
-            aegisub.debug.out("Bord in style is: "..orgBordArray[i])
+    -- now loop over all lines
+    for i, line in ipairs(lines)
+        style = styles[line.style]
+        abs_frame = aegisub.frame_from_ms(line.start_time)
+        frame = if abs_frame != nil then abs_frame - aegisub.frame_from_ms(sub[sel[1]].start_time) + 1 else i
+        quad = quads[frame]
+        pos = linePos[i]
 
-    baseBord = tonumber(orgBordArray[relFrame])
+        aegisub.debug.out(5, "Line #{i}: Relative frame #{frame}, at position #{pos.x}, #{pos.y}\n")
 
-    for i=1,#lines
-        xBordArray[i] = baseBord*(scaleX[i]/100)
-        yBordArray[i] = baseBord*(scaleY[i]/100)
+        if quad == nil
+            aegisub.debug.out("Tracking data is too short!\nTracking Data: #{#quads} frames.\nCurrent subtitle line: at frame #{frame}.\n")
+            aegisub.cancel()
 
-    bords = { }
-    for i=1,#lines
-        bords[i] = "\\xbord"..round(xBordArray[i],2).."\\ybord"..round(yBordArray[i],2)
+        perspRes, perspInfo = unrot(quad, pos)
+        scale = getScale(quad, pos, perspInfo, Point(results.xSca / relLineScale.x, results.ySca / relLineScale.y))
 
+        scaleCmds = "\\fscx#{round(scale.x,2)}\\fscy#{round(scale.y,2)}"
 
--- Main loop, this get's looped for every selected line.
-    for si, li in ipairs(sel)
-        line = sub[li]
+        -- TODO read from relFrame again? This would be inconsistent with other values though
+        -- baseBord = tonumber(orgBordArray[relFrame])
+        baseBord = tonumber(line.text\match("\\bord([-%d.]+)") or style.outline)
+        aegisub.debug.out(5, "Bord in style is: #{baseBord}\n")
+        xBord = baseBord*(scale.x/100)
+        yBord = baseBord*(scale.y/100)
 
--- Deleting old tags from the line, so nothing interferes with the new ones. TODO add clip.
-        delete_old_tag = (line) ->
-            line.text = line.text\gsub("\\frx([-%d.]+)", "")\gsub("\\fry([-%d.]+)", "")\gsub("\\frz([-%d.]+)", "")\gsub("\\org%b()", "")\gsub("\\fax([-%d.]+)", "")\gsub("\\fay([-%d.]+)", "")\gsub("\\fscx([-%d.]+)", "")\gsub("\\fscy([-%d.]+)", "")\gsub("\\bord([-%d.]+)", "")
-            return line.text
+        bordCmds = "\\xbord#{round(xBord,2)}\\ybord#{round(yBord,2)}"
 
-        result = perspResults[si]
-
-        line.text = delete_old_tag(line)
+        line.text = delete_old_tags(line.text)
         if results.includeclip
-            line.text = line.text\gsub("\\pos", "\\"..clipArray[si]..result..scales[si]..bords[si].."\\pos")
+            line.text = line.text\gsub("\\pos", "\\clip(m #{quad[1].x} #{quad[1].y} l #{quad[2].x} #{quad[2].y} l #{quad[3].x} #{quad[3].y} l #{quad[4].x} #{quad[4].y})"..perspRes..scaleCmds..bordCmds.."\\pos")
         else
-            line.text = line.text\gsub("\\pos", result..scales[si]..bords[si].."\\pos")
-        if perspInfo[si]["debfax"] != nil
-            realfax = (perspInfo[si]["debfax"]*(scaleY[si]/100))/(scaleX[si]/100)
+            line.text = line.text\gsub("\\pos", perspRes..scaleCmds..bordCmds.."\\pos")
+        if perspInfo["debfax"] != 0
+            realfax = (perspInfo["debfax"]*(scale.y/100))/(scale.x/100)
             line.text = line.text\gsub("\\fax([-%d.]+)", "\\fax"..realfax)
 
-            posX, posY = line.text\match("\\pos%(([-%d.]+).([-%d.]+)%)")
             factor = getFaxCompFactor(styles, line)
-            newPosX = round(posX - realfax * factor * scaleX[si] / 100, 3)
-            line.text = line.text\gsub("\\pos", "\\pos(#{newPosX},#{posY})\\org")
-        sub[li] = line
+            newPosX = round(pos.x - realfax * factor * scale.x / 100, 3)
+            line.text = line.text\gsub("\\pos", "\\pos(#{newPosX},#{pos.y})\\org")
+
+    -- finally, set the lines
+    for si, li in ipairs(sel)
+        sub[li] = lines[si]
 
     aegisub.progress.task(string.format("Magiccing it together"))
     aegisub.set_undo_point(script_name)
