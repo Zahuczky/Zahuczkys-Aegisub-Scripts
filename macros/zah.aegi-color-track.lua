@@ -1,4 +1,4 @@
-local tr = aegisub.gettext
+﻿local tr = aegisub.gettext
 
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
@@ -145,6 +145,7 @@ end
 
 -- Main function
 function colortrack(subtitles, selected_lines, active_line)
+  -- Assume the whole selection is the same length
   local line = subtitles[selected_lines[1]]
   -- Start gui
   local res = showDialog("main")
@@ -276,15 +277,18 @@ function colortrack(subtitles, selected_lines, active_line)
     transform = transform.."\\t("..makeTransformTimes(i-1)..makeColorTags(i)..")"
   end
 
-  -- Put the string in the line
-  if line.text:match("\\pos") then
-    line.text = line.text:gsub("\\pos", transform.."\\pos")
-  elseif line.text:match("\\move") then
-    line.text = line.text:gsub("\\move", transform.."\\move")
-  else
-    line.text = line.text:gsub("}", transform.."}", 1)
+  -- Put the string in the lines
+  for _, si in ipairs(selected_lines) do
+    local l = subtitles[si]
+    if l.text:match("\\pos") then
+      l.text = l.text:gsub("\\pos", transform.."\\pos")
+    elseif l.text:match("\\move") then
+      l.text = l.text:gsub("\\move", transform.."\\move")
+    else
+      l.text = l.text:gsub("}", transform.."}", 1)
+    end
+    subtitles[si] = l
   end
-  subtitles[selected_lines[1]] = line
 
   -- aegisub.debug.out("-----Test-----")
   -- if (testVal.width ~= img.width) then
