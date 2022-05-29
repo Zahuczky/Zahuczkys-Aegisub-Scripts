@@ -1,4 +1,4 @@
-local tr = aegisub.gettext
+﻿local tr = aegisub.gettext
 
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
@@ -174,10 +174,10 @@ function colortrack(subtitles, selected_lines, active_line)
       dataArray[j] = i
       j = j + 1
     end
-    if res.setting == "Tracking Data" and res.data == "" then
+    if res.data == "" then
       aegisub.debug.out("You forgot to give me any data, so I quit.\n\n")
       return aegisub.cancel()
-    elseif res.setting == "Tracking Data" and dataArray[9] ~= "Position" then
+    elseif dataArray[9] ~= "Position" then
       aegisub.debug.out("I have no idea what kind of data you pasted in, but I'm sure it's not what I wanted.\n\nI need After Effects Transform data.\n\nThe same thing you use for Aegisub-Motion.\n\n")
       return aegisub.cancel()
     end
@@ -234,42 +234,10 @@ function colortrack(subtitles, selected_lines, active_line)
   for i=1, numOfFrames do
     local img = pngImage(trackedImg[i], nil, true)
     local pixel = img.pixels[1][1]
-    local redpix = tostring(pixel.R)
-    local greenpix = tostring(pixel.G)
-    local bluepix = tostring(pixel.B)
-    reds[i] = tonumber(redpix)
-    greens[i] = tonumber(greenpix)
-    blues[i] = tonumber(bluepix)
+    reds[i] = pixel.R
+    greens[i] = pixel.G
+    blues[i] = pixel.B
   end
-
-  -- Turn the decimal color values into HEX numbers.
-  function DEC_HEX(IN)
-    local B,K,OUT,I,D=16,"0123456789ABCDEF","",0
-    while IN>0 do
-        I=I+1
-        IN,D=math.floor(IN/B),math.fmod(IN,B)+1
-        OUT=string.sub(K,D,D)..OUT
-    end
-    return OUT
-  end
-
-  local redHEX = {}
-  local greenHEX = {}
-  local blueHEX = {}
-
-  -- Format the numbers to the aegisub color format which is HEX \\c&HBBGGRR&
-  for i=1, numOfFrames do
-    redHEX[i] = tostring(DEC_HEX(reds[i]))
-    greenHEX[i] = tostring(DEC_HEX(greens[i]))
-    blueHEX[i] = tostring(DEC_HEX(blues[i]))
-    if #redHEX[i] == 1 then redHEX[i] = "0"..redHEX[i] end
-    if #greenHEX[i] == 1 then greenHEX[i] = "0"..greenHEX[i] end
-    if #blueHEX[i] == 1 then blueHEX[i] = "0"..blueHEX[i] end
-    if redHEX[i] == 0 or redHEX[i] == nil or redHEX[i] == "" then redHEX[i] = "00" end
-    if greenHEX[i] == 0 or greenHEX[i] == nil or greenHEX[i] == "" then greenHEX[i] = "00" end
-    if blueHEX[i] == 0 or blueHEX[i] == nil or blueHEX[i] == "" then blueHEX[i] = "00" end
-  end
-
 
   --Put the colors into every table. This is suboptimal but I'm lazy to change it and it's not like it does any harm.
   local fillHexTable = {}
@@ -277,10 +245,11 @@ function colortrack(subtitles, selected_lines, active_line)
   local bordHexTable = {}
   local shadHexTable = {}
   for i=1,numOfFrames do
-    fillHexTable[i] = "\\c&H"..blueHEX[i]..greenHEX[i]..redHEX[i].."&"
-    secoHexTable[i] = "\\2c&H"..blueHEX[i]..greenHEX[i]..redHEX[i].."&"
-    bordHexTable[i] = "\\3c&H"..blueHEX[i]..greenHEX[i]..redHEX[i].."&"
-    shadHexTable[i] = "\\4c&H"..blueHEX[i]..greenHEX[i]..redHEX[i].."&"
+    local color = string.format("&H%02X%02X%02X&", blues[i], greens[i], reds[i])
+    fillHexTable[i] = "\\c&H"..color
+    secoHexTable[i] = "\\2c&H"..color
+    bordHexTable[i] = "\\3c&H"..color
+    shadHexTable[i] = "\\4c&H"..color
   end
 
   -- Delete the colors from the tables if they're not needed. I told yo this is stupid.
