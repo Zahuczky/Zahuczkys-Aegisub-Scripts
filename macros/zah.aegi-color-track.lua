@@ -1,4 +1,4 @@
-local tr = aegisub.gettext
+﻿local tr = aegisub.gettext
 
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
@@ -31,9 +31,9 @@ else
     deflatelua = require 'zah.deflatelua'
 end
 
-pngImage = pngModule.pngImage
+local pngImage = pngModule.pngImage
 
-pathsep = package.config:sub(1, 1)
+local pathsep = package.config:sub(1, 1)
 
 local GUI = {
     main= {
@@ -54,8 +54,7 @@ local GUI = {
 }
 
 -- GUI inicialization with config
-local showDialog
-showDialog = function(macro)
+local function showDialog(macro)
   local options = ConfigHandler(GUI, depCtrl.configFile, false, script_version, depCtrl.configDir)
   options:read()
   options:updateInterface(macro)
@@ -112,11 +111,11 @@ function colortrack(subtitles, selected_lines, active_line)
     return aegisub.cancel()
   end
 
-  tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
+  local tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
 
   -- Delete old temp files
   -- While the script is still running the pixel.png's can't be deleted, because they're considered open.
-  j = 1
+  local j = 1
   while (os.remove(tmp..pathsep.."pixel"..j..".png")) ~= nil do
     os.remove(tmp..pathsep.."frame"..j..".png")
     os.remove(tmp..pathsep.."pixel"..j..".png")
@@ -124,14 +123,13 @@ function colortrack(subtitles, selected_lines, active_line)
   end
 
   -- Calculate frame perfect times for trimming
-
   local starttime, endtime, numOfFrames = getTimes(line)
 
--- Settings
-  XPixArray = { }
-  YPixArray = { }
+  -- Settings
+  local XPixArray = { }
+  local YPixArray = { }
   if res.setting == "Tracking Data" then
-    dataArray = { }
+    local dataArray = { }
     local j = 1
     for i in string.gmatch(res.data, "([^\n]*)\n?") do
       dataArray[j] = i
@@ -145,13 +143,13 @@ function colortrack(subtitles, selected_lines, active_line)
       return aegisub.cancel()
     end
 
--- Parsing tracking data
-    posPin = 11
-    dataLength = numOfFrames + 11
-    p = 1
-    helpArray = { }
+    -- Parsing tracking data
+    local posPin = 11
+    local dataLength = numOfFrames + 11
+    local p = 1
+    local helpArray = { }
     for l = posPin, dataLength do
-      o = 1
+      local o = 1
       for token in string.gmatch(dataArray[l], "%S+") do
         helpArray[o] = token
         o = o + 1
@@ -185,58 +183,56 @@ function colortrack(subtitles, selected_lines, active_line)
 
   --aegisub.debug.out("\n\n\n\nvideo path: "..aegisub.decode_path("?video").."\n\n\n\n"..aegisub.project_properties().video_file.."\n\n\n"..aegisub.decode_path("?temp").."\n\n\n")
 
-  tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
-
   petzku.io.run_cmd("mkdir "..tmp, true)
 
--- Trim selected line out, to full frame PNGs
+  -- Trim selected line out, to full frame PNGs
   petzku.io.run_cmd("ffmpeg -i \""..aegisub.project_properties().video_file.."\" -ss "..starttime.." -to "..endtime.." \""..tmp..pathsep.."frame%%d.png\"", true)
 
--- Crop full frames into the pixel we actually want
-  ffbatchstring = ""
+  -- Crop full frames into the pixel we actually want
+  local ffbatchstring = ""
   for i=1,numOfFrames do
     ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i \""..tmp..pathsep.."frame"..i..".png\" -filter:v \"crop=2:2:"..XPixArray[i]..":"..YPixArray[i].."\"".." \""..tmp..pathsep.."pixel"..i..".png\"\n"
   end
   petzku.io.run_cmd(ffbatchstring, true)
 
-  fileNames = {}
+  local fileNames = {}
 
   for i=1, numOfFrames do
     fileNames[i] = "pixel"..i..".png"
   end
 
-	-- local pngImage = require 'zah.png'
+  -- local pngImage = require 'zah.png'
 
-  trackedImg = {}
+  local trackedImg = {}
 
-	for i=1, numOfFrames do trackedImg[i] = tmp..pathsep..fileNames[i] end
+  for i=1, numOfFrames do trackedImg[i] = tmp..pathsep..fileNames[i] end
 
--- I have no idea what this is but it doesn't work without it
-	function printProg(line, totalLine)
-		-- aegisub.debug.out(line .. " of " .. totalLine)
-	end
--- use png-lua to decode the images
-	local function getPixelStr(pixel)
-		return string.format("R: %d, G: %d, B: %d, A: %d", pixel.R, pixel.G, pixel.B, pixel.A)
-	end
+  -- I have no idea what this is but it doesn't work without it
+  local function printProg(line, totalLine)
+    -- aegisub.debug.out(line .. " of " .. totalLine)
+  end
+  -- use png-lua to decode the images
+  local function getPixelStr(pixel)
+    return string.format("R: %d, G: %d, B: %d, A: %d", pixel.R, pixel.G, pixel.B, pixel.A)
+  end
 
-  reds = {}
-  greens = {}
-  blues = {}
+  local reds = {}
+  local greens = {}
+  local blues = {}
 
 
   for i=1, numOfFrames do
-  	img = pngImage(trackedImg[i], printProg, true)
-  	pixel = img.pixels[1][1]
-    redpix = tostring(pixel.R)
-    greenpix = tostring(pixel.G)
-    bluepix = tostring(pixel.B)
+    local img = pngImage(trackedImg[i], printProg, true)
+    local pixel = img.pixels[1][1]
+    local redpix = tostring(pixel.R)
+    local greenpix = tostring(pixel.G)
+    local bluepix = tostring(pixel.B)
     reds[i] = tonumber(redpix)
     greens[i] = tonumber(greenpix)
     blues[i] = tonumber(bluepix)
   end
 
--- Turn the decimal color values into HEX numbers.
+  -- Turn the decimal color values into HEX numbers.
   function DEC_HEX(IN)
     local B,K,OUT,I,D=16,"0123456789ABCDEF","",0
     while IN>0 do
@@ -247,11 +243,11 @@ function colortrack(subtitles, selected_lines, active_line)
     return OUT
   end
 
-  redHEX = {}
-  greenHEX = {}
-  blueHEX = {}
+  local redHEX = {}
+  local greenHEX = {}
+  local blueHEX = {}
 
--- Format the numbers to the aegisub color format which is HEX \\c&HBBGGRR&
+  -- Format the numbers to the aegisub color format which is HEX \\c&HBBGGRR&
   for i=1, numOfFrames do
     redHEX[i] = tostring(DEC_HEX(reds[i]))
     greenHEX[i] = tostring(DEC_HEX(greens[i]))
@@ -265,11 +261,11 @@ function colortrack(subtitles, selected_lines, active_line)
   end
 
 
---Put the colors into every table. This is suboptimal but I'm lazy to change it and it's not like it does any harm.
-  fillHexTable = {}
-  secoHexTable = {}
-  bordHexTable = {}
-  shadHexTable = {}
+  --Put the colors into every table. This is suboptimal but I'm lazy to change it and it's not like it does any harm.
+  local fillHexTable = {}
+  local secoHexTable = {}
+  local bordHexTable = {}
+  local shadHexTable = {}
   for i=1,numOfFrames do
     fillHexTable[i] = "\\c&H"..blueHEX[i]..greenHEX[i]..redHEX[i].."&"
     secoHexTable[i] = "\\2c&H"..blueHEX[i]..greenHEX[i]..redHEX[i].."&"
@@ -277,7 +273,7 @@ function colortrack(subtitles, selected_lines, active_line)
     shadHexTable[i] = "\\4c&H"..blueHEX[i]..greenHEX[i]..redHEX[i].."&"
   end
 
--- Delete the colors from the tables if they're not needed. I told yo this is stupid.
+  -- Delete the colors from the tables if they're not needed. I told yo this is stupid.
   for i=1,numOfFrames do
     if res.c == false then fillHexTable[i] = "" end
     if res.c2 == false then secoHexTable[i] = "" end
@@ -285,8 +281,8 @@ function colortrack(subtitles, selected_lines, active_line)
     if res.c4 == false then shadHexTable[i] = "" end
   end
 
--- Getting accurate times for the \t transform. Thx petzku. :*
-  transformtimes = {}
+  -- Getting accurate times for the \t transform. Thx petzku. :*
+  local transformtimes = {}
   local t_start_frame = aegisub.frame_from_ms(subtitles[selected_lines[1]].start_time)
   local t_start_time = aegisub.ms_from_frame(t_start_frame)
   for i=1, numOfFrames do
@@ -297,32 +293,32 @@ function colortrack(subtitles, selected_lines, active_line)
   --   transformtimes[i] = oneframe*i..","..oneframe*i..","
   -- end
 
--- Creating a single string from the color tables
-  transform = fillHexTable[1]..secoHexTable[1]..bordHexTable[1]..shadHexTable[1]
+  -- Creating a single string from the color tables
+  local transform = fillHexTable[1]..secoHexTable[1]..bordHexTable[1]..shadHexTable[1]
   for i=2, numOfFrames do
     transform = transform.."\\t("..transformtimes[i-1]..fillHexTable[i]..secoHexTable[i]..bordHexTable[i]..shadHexTable[i]..")"
   end
 
--- Put the string in the line
+  -- Put the string in the line
   line.text = line.text:gsub("\\pos", transform.."\\pos")
   subtitles[selected_lines[1]] = line
 
-	-- aegisub.debug.out("-----Test-----")
-	-- if (testVal.width ~= img.width) then
-		-- error("Test failed: width")
-	-- elseif (testVal.height ~= img.height) then
-		-- error("Test failed: height")
-	-- elseif (testVal.depth ~= img.depth) then
-		-- error("Test failed: depth")
-	-- elseif (testVal.pixelColor ~= getPixelStr(pixel)) then
-		-- error("Test failed: color")
-	-- else
-		-- aegisub.debug.out("Tests passed!")
-	-- end
+  -- aegisub.debug.out("-----Test-----")
+  -- if (testVal.width ~= img.width) then
+    -- error("Test failed: width")
+  -- elseif (testVal.height ~= img.height) then
+    -- error("Test failed: height")
+  -- elseif (testVal.depth ~= img.depth) then
+    -- error("Test failed: depth")
+  -- elseif (testVal.pixelColor ~= getPixelStr(pixel)) then
+    -- error("Test failed: color")
+  -- else
+    -- aegisub.debug.out("Tests passed!")
+  -- end
 
 
 
-	-- aegisub.debug.out("it works!  R:"..mypixel1.."\n G:"..mypixel2.."\n B:"..mypixel3)
+  -- aegisub.debug.out("it works!  R:"..mypixel1.."\n G:"..mypixel2.."\n B:"..mypixel3)
   -- aegisub.debug.out("\n\nstart time: "..starttime.."\n end time: "..endtime)
   -- aegisub.debug.out("\n\nstart frame: "..startframe.."\n end frame: "..endframe)
   -- aegisub.debug.out("\n\nlengthframe: "..endframe-startframe)
@@ -338,10 +334,10 @@ function colortrack(subtitles, selected_lines, active_line)
   -- aegisub.debug.out("\n\nsecond: "..reds[2].." - "..greens[2].." - "..blues[2])
   -- aegisub.debug.out("first: "..fillHexTable[1])
   -- aegisub.debug.out("\nsecond: "..fillHexTable[2])
---  aegisub.debug.out("works: \n"..transform)
+  -- aegisub.debug.out("works: \n"..transform)
 
--- I don't remember what it does and might not even be needed anymore but whatever I'm lazy to test it.
-	aegisub.set_undo_point(script_name)
+  -- I don't remember what it does and might not even be needed anymore but whatever I'm lazy to test it.
+  aegisub.set_undo_point(script_name)
 end
 
 
