@@ -28,13 +28,13 @@
 			"channels": {
 				"main": {
 					"version": "0.2.7",
-					"released": "2022-05-26",
+					"released": "2022-05-29",
 					"default": true,
 					"files": [
 						{
 							"name": ".moon",
 							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "9c592bc7845560d1dc153ca6e7f75d4543b5934a"
+							"sha1": "8b267bba0f9d2cc9e1e30410116dc8ecb3218756"
 						}
 					]
 				}
