@@ -87,7 +87,6 @@ dist = (a, b) ->
     return a\sub(b)\length!
 
 
-
 intersect = (l1, l2) ->
     if vec_pr(vector(l1[1], l1[2]), vector(l2[1], l2[2]))\length! == 0
         return l1[1]\add(vector(l1[1], l1[2])\mul(1e30))
@@ -224,7 +223,8 @@ datahandling = (sub, sel, results) ->
     return [{Point(x1[i], y1[i]), Point(x2[i], y2[i]), Point(x3[i], y3[i]), Point(x4[i], y4[i])} for i=1,#x1]
 
 
-getScale = (quad, pos, perspInfo, relScale=Point(1, 1)) ->
+-- helper function so I can more or less paste Mathematica output directly into the code
+unwrapQuadVals = (quad) ->
     x1 = quad[1].x
     x2 = quad[2].x - x1
     x3 = quad[3].x - x1
@@ -234,6 +234,40 @@ getScale = (quad, pos, perspInfo, relScale=Point(1, 1)) ->
     y3 = quad[3].y - y1
     y4 = quad[4].y - y1
 
+    return x1, x2, x3, x4, y1, y2, y3, y4
+
+
+quadToUnitSquare = (quad, pos) ->
+    x1, x2, x3, x4, y1, y2, y3, y4 = unwrapQuadVals(quad)
+    xp = pos.x - x1
+    yp = pos.y - y1
+
+    -- Invoke black math magic. Do not attempt to read it, for it will destroy your sanity.
+    cx = -(((x3*y2 - x2*y3)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(-(xp*y4) + x4*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp)))))
+    cy = ((-(x4*y3) + x3*y4)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(xp*y2 - x2*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp))))
+
+    return cx, cy
+
+
+unitSquareToQuad = (quad, cx, cy) ->
+    x1 = quad[1].x
+    x2 = quad[2].x
+    x3 = quad[3].x
+    x4 = quad[4].x
+    y1 = quad[1].y
+    y2 = quad[2].y
+    y3 = quad[3].y
+    y4 = quad[4].y
+
+    -- More black magic
+    px = (cx*(x2*x4*(y1 - y3) + x1*x4*(-y2 + y3) + x1*x3*(y2 - y4) + x2*x3*(-y1 + y4)) + x1*(x4*(y2 - y3) + x2*(y3 - y4) + x3*(-y2 + y4)) + cy*(x3*x4*(y1 - y2) + x2*x4*(-y1 + y3) + x1*x3*(y2 - y4) + x1*x2*(-y3 + y4)))/(-(x3*y2) + x4*y2 + x2*y3 - x4*y3 + cx*(x4*(y1 - y2) + x3*(-y1 + y2) + (x1 - x2)*(y3 - y4)) - x2*y4 + x3*y4 + cy*((x1 - x4)*(y2 - y3) + x3*(y1 - y4) + x2*(-y1 + y4)))
+    py = (x2*y1*y3 - cx*x2*y1*y3 - cy*x2*y1*y3 + cx*x1*y2*y3 - cx*x4*y2*y3 + x4*y1*(y2 - cy*y2 + (-1 + cx + cy)*y3) - x2*y1*y4 + cx*x2*y1*y4 - cx*x1*y2*y4 + cy*x1*y2*y4 - cy*x1*y3*y4 + cy*x2*y3*y4 + x3*((cx - cy)*y2*y4 + y1*((-1 + cy)*y2 + y4 - cx*y4)))/(-(x3*y2) + x4*y2 + x2*y3 - x4*y3 + cx*(x4*(y1 - y2) + x3*(-y1 + y2) + (x1 - x2)*(y3 - y4)) - x2*y4 + x3*y4 + cy*((x1 - x4)*(y2 - y3) + x3*(y1 - y4) + x2*(-y1 + y4)))
+
+    return Point(px, py)
+
+
+getScale = (quad, pos, perspInfo, relScale=Point(1, 1)) ->
+    x1, x2, x3, x4, y1, y2, y3, y4 = unwrapQuadVals(quad)
     xp = pos.x - x1
     yp = pos.y - y1
 
@@ -242,9 +276,8 @@ getScale = (quad, pos, perspInfo, relScale=Point(1, 1)) ->
     rz = -perspInfo["debfrz"] * math.pi / 180
     fax = perspInfo["debfax"]
 
-    -- Invoke black math magic. Do not attempt to read it, for it will destroy your sanity.
-    cx = -(((x3*y2 - x2*y3)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(-(xp*y4) + x4*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp)))))
-    cy = ((-(x4*y3) + x3*y4)*(x4*(-y2 + y3) + x3*(y2 - y4) + x2*(-y3 + y4))*(xp*y2 - x2*yp))/ (x3*(x2*y4*(2*xp*y2*(-y3 + y4) + x2*y4*(y3 - yp)) + x4^2*y2^2*(-y3 + yp) - 2*x4*(xp*y2*(y2 - y3)*y4 + x2*y3*(-y2 + y4)*yp)) + x3^2*(x4*y2^2*(y4 - yp) + y4*(xp*y2*(y2 - y4) + x2*y4*(-y2 + yp))) + y3*(x2^2*xp*(y3 - y4)*y4 + x4^2*(xp*y2*(y2 - y3) + x2*y2*(y3 - 2*yp) + x2*y3*yp) - x2^2*x4*(-2*y4*yp + y3*(y4 + yp))))
+    cx, cy = quadToUnitSquare(quad, pos)
+    -- And now the real black magic
     dsx2 = (((-1 + cy)*x3^2*y2*(y2 - y4)*y4 + y3*((-1 + cy)*x4^2*y2*(y2 - y3) + cy*x2^2*(y3 - y4)*y4 + x2*x4*y2*(-y3 + y4)) + x3*y2*(2*(-1 + cy)*x4*y3*y4 - (-1 + 2*cy)*x2*(y3 - y4)*y4 + x4*y2*(y3 + y4 - 2*cy*y4)))^2 + (x2*(x4*y3 - x3*y4)*(x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4)) + (x3*y2 - x4*y2 + x2*(-y3 + y4))*(cy*x4*(x3*y2 - x2*y3) + cx*x2*(x4*y3 - x3*y4)))^2)/ (x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4))^4
     dsy2 = ((x4*(x3*y2 - x2*y3)*(x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4)) - (x4*(y2 - y3) + (-x2 + x3)*y4)*(cy*x4*(x3*y2 - x2*y3) + cx*x2*(x4*y3 - x3*y4)))^2 + ((x3*y2 - x2*y3)*y4*(-(x4*y2) - x2*y3 + x4*y3 + x3*(y2 - y4) + x2*y4) + cx*(x4^2*y2*y3*(-y2 + y3) + 2*x3*x4*y2*(y2 - y3)*y4 + y4*(2*x2*x3*y2*(y3 - y4) + x3^2*y2*(-y2 + y4) + x2^2*y3*(-y3 + y4))))^2)/ (x4*((-1 + cx + cy)*y2 + y3 - cy*y3) + x3*(y2 - cx*y2 + (-1 + cy)*y4) + x2*((-1 + cx)*y3 - (-1 + cx + cy)*y4))^4
 
@@ -318,6 +351,7 @@ perspmotion = (sub, sel) ->
           {class: "label",  x: 5, y: 6, width: 1, height: 1, label: "Extra Fay"}
           {class: "checkbox", name: "scalebord",  x: 4, y: 7, width: 1, height: 1, label: "Scale \\bord", value: true}
           {class: "checkbox", name: "scaleshad",  x: 4, y: 8, width: 1, height: 1, label: "Scale \\shad", value: false, hint: "Don't tick this if you're using the \"shad trick!\""}
+          {class: "checkbox", name: "followpos",  x: 4, y: 9, width: 2, height: 1, label: "Also track position", value: false, hint: "Update the positions to keep the text's relative position in the quad constant.\nThe reference point is the current frame.\nStill needs the line to be fbf'ed."}
 
           },
 
@@ -341,8 +375,11 @@ perspmotion = (sub, sel) ->
 
     -- first, do the rel line to get its scale
     relLinePos = getLinePos(relLine)
-    perspRes, info = unrot(quads[relFrame], relLinePos)
-    relLineScale = getScale(quads[relFrame], relLinePos, info)
+    relLineQuad = quads[relFrame]
+    relLinecx, relLinecy = quadToUnitSquare(relLineQuad, relLinePos)
+    aegisub.debug.out(4, "Internal coordinates of relative line: #{relLinecx}, #{relLinecy}\n")
+    perspRes, info = unrot(relLineQuad, relLinePos)
+    relLineScale = getScale(relLineQuad, relLinePos, info)
 
     aegisub.debug.out(4, "Relative line's scale: #{relLineScale.x}, #{relLineScale.y}\n")
 
@@ -360,6 +397,10 @@ perspmotion = (sub, sel) ->
             aegisub.debug.out("Tracking data is too short!\nTracking Data: #{#quads} frames.\nCurrent subtitle line: at frame #{frame}.\n")
             aegisub.cancel()
 
+        if results.followpos
+            pos = unitSquareToQuad(quad, relLinecx, relLinecy)
+            aegisub.debug.out(5, "New coordinates: #{pos.x}, #{pos.y}\n")
+
         perspRes, perspInfo = unrot(quad, pos)
         scale = getScale(quad, pos, perspInfo, Point(results.xSca / relLineScale.x, results.ySca / relLineScale.y))
 
@@ -376,9 +417,13 @@ perspmotion = (sub, sel) ->
 
         line.text = delete_old_tags(line.text)
         if results.includeclip
-            line.text = line.text\gsub("\\pos", "\\clip(m #{quad[1].x} #{quad[1].y} l #{quad[2].x} #{quad[2].y} l #{quad[3].x} #{quad[3].y} l #{quad[4].x} #{quad[4].y})"..perspRes..scaleCmds..bordCmds.."\\pos")
-        else
-            line.text = line.text\gsub("\\pos", perspRes..scaleCmds..bordCmds.."\\pos")
+            line.text = line.text\gsub("\\pos", "\\clip(m #{quad[1].x} #{quad[1].y} l #{quad[2].x} #{quad[2].y} l #{quad[3].x} #{quad[3].y} l #{quad[4].x} #{quad[4].y})\\pos")
+
+        if results.followpos
+            line.text = line.text\gsub("\\pos%([-%d.]+.[-%d.]+%)", "\\pos(#{round(pos.x, 2)},#{round(pos.y,2)})")
+
+        line.text = line.text\gsub("\\pos", perspRes..scaleCmds..bordCmds.."\\pos")
+
         if perspInfo["debfax"] != 0
             realfax = (perspInfo["debfax"]*(scale.y/100))/(scale.x/100)
             line.text = line.text\gsub("\\fax([-%d.]+)", "\\fax"..realfax)
