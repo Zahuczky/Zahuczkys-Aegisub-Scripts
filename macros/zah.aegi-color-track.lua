@@ -225,22 +225,14 @@ function colortrack(subtitles, selected_lines, active_line)
   trimFrames(starttime, endtime)
   local trackedImg = cropPixels(numOfFrames, XPixArray, YPixArray)
 
-  -- I have no idea what this is but it doesn't work without it
-  local function printProg(line, totalLine)
-    -- aegisub.debug.out(line .. " of " .. totalLine)
-  end
   -- use png-lua to decode the images
-  local function getPixelStr(pixel)
-    return string.format("R: %d, G: %d, B: %d, A: %d", pixel.R, pixel.G, pixel.B, pixel.A)
-  end
-
   local reds = {}
   local greens = {}
   local blues = {}
 
 
   for i=1, numOfFrames do
-    local img = pngImage(trackedImg[i], printProg, true)
+    local img = pngImage(trackedImg[i], nil, true)
     local pixel = img.pixels[1][1]
     local redpix = tostring(pixel.R)
     local greenpix = tostring(pixel.G)
