@@ -67,29 +67,9 @@ showDialog = function(macro)
   end
 end
 
--- Main function
-function colortrack(subtitles, selected_lines, active_line)
-  line = subtitles[selected_lines[1]]
-  -- Start gui
-  local res = showDialog("main")
-  if not (res) then
-    return aegisub.cancel()
-  end
-
-  tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
-
--- Delete old temp files
--- While the script is still running the pixel.png's can't be deleted, because they're considered open.
-  j = 1
-  while (os.remove(tmp..pathsep.."pixel"..j..".png")) ~= nil do
-    os.remove(tmp..pathsep.."frame"..j..".png")
-    os.remove(tmp..pathsep.."pixel"..j..".png")
-    j=j+1
-  end
-
--- Calculate frame perfect times for trimming
-  local starterMS = subtitles[selected_lines[1]].start_time
-  local enderMS = subtitles[selected_lines[1]].end_time
+local function getTimes(line)
+  local starterMS = line.start_time
+  local enderMS = line.end_time
   local startframe = aegisub.frame_from_ms(starterMS)
   local endframe = aegisub.frame_from_ms(enderMS)
   local startMS = aegisub.ms_from_frame(startframe)
@@ -120,6 +100,32 @@ function colortrack(subtitles, selected_lines, active_line)
 
   local numOfFrames = endframe-startframe
 
+  return starttime, endtime, numOfFrames
+end
+
+-- Main function
+function colortrack(subtitles, selected_lines, active_line)
+  local line = subtitles[selected_lines[1]]
+  -- Start gui
+  local res = showDialog("main")
+  if not (res) then
+    return aegisub.cancel()
+  end
+
+  tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
+
+  -- Delete old temp files
+  -- While the script is still running the pixel.png's can't be deleted, because they're considered open.
+  j = 1
+  while (os.remove(tmp..pathsep.."pixel"..j..".png")) ~= nil do
+    os.remove(tmp..pathsep.."frame"..j..".png")
+    os.remove(tmp..pathsep.."pixel"..j..".png")
+    j=j+1
+  end
+
+  -- Calculate frame perfect times for trimming
+
+  local starttime, endtime, numOfFrames = getTimes(line)
 
 -- Settings
   XPixArray = { }
