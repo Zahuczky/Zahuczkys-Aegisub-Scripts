@@ -1,4 +1,4 @@
-﻿local tr = aegisub.gettext
+local tr = aegisub.gettext
 
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
@@ -109,7 +109,7 @@ local function trimFrames(starttime, endtime)
   -- Trim selected line out, to full frame PNGs
   petzku.io.run_cmd(
     string.format(
-      "ffmpeg -ss %s -to %s -i \"%s\" \"%s\"",
+      "ffmpeg -ss %s -to %s -i \"%s\" -pix_fmt rgb24 \"%s\"",
       starttime, endtime,
       aegisub.project_properties().video_file,
       tmp .. pathsep .. "frame%%d.png"
