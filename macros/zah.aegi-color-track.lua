@@ -239,43 +239,41 @@ function colortrack(subtitles, selected_lines, active_line)
     blues[i] = pixel.B
   end
 
-  --Put the colors into every table. This is suboptimal but I'm lazy to change it and it's not like it does any harm.
-  local fillHexTable = {}
-  local secoHexTable = {}
-  local bordHexTable = {}
-  local shadHexTable = {}
-  for i=1,numOfFrames do
-    local color = string.format("&H%02X%02X%02X&", blues[i], greens[i], reds[i])
-    fillHexTable[i] = "\\c&H"..color
-    secoHexTable[i] = "\\2c&H"..color
-    bordHexTable[i] = "\\3c&H"..color
-    shadHexTable[i] = "\\4c&H"..color
-  end
-
-  -- Delete the colors from the tables if they're not needed. I told yo this is stupid.
-  for i=1,numOfFrames do
-    if res.c == false then fillHexTable[i] = "" end
-    if res.c2 == false then secoHexTable[i] = "" end
-    if res.c3 == false then bordHexTable[i] = "" end
-    if res.c4 == false then shadHexTable[i] = "" end
-  end
-
-  -- Getting accurate times for the \t transform. Thx petzku. :*
-  local transformtimes = {}
-  local t_start_frame = aegisub.frame_from_ms(subtitles[selected_lines[1]].start_time)
-  local t_start_time = aegisub.ms_from_frame(t_start_frame)
-  for i=1, numOfFrames do
+  local function calcTransformTime(i)
+    -- Getting accurate times for the \t transform. Thx petzku. :*
+    local t_start_frame = aegisub.frame_from_ms(line.start_time)
+    local t_start_time = aegisub.ms_from_frame(t_start_frame)
     local ft = aegisub.ms_from_frame(t_start_frame + i) - t_start_time --frame time
-    transformtimes[i] = ft..","..ft..","
+    return ft
   end
-  -- for i=1,numOfFrames do
-  --   transformtimes[i] = oneframe*i..","..oneframe*i..","
-  -- end
 
-  -- Creating a single string from the color tables
-  local transform = fillHexTable[1]..secoHexTable[1]..bordHexTable[1]..shadHexTable[1]
+  local function makeTransformTimes(i)
+    local t = calcTransformTime(i)
+    return t..","..t..","
+  end
+
+  local function makeColorTags(i)
+    local c = string.format("&H%02X%02X%02X&", blues[i], greens[i], reds[i])
+    local ret = ""
+    if res.c then
+      ret = ret .. "\\c" .. c
+    end
+    if res.c2 then
+      ret = ret .. "\\2c" .. c
+    end
+    if res.c3 then
+      ret = ret .. "\\3c" .. c
+    end
+    if res.c4 then
+      ret = ret .. "\\4c" .. c
+    end
+    return ret
+  end
+
+  -- Creating a single string from the colors
+  local transform = makeColorTags(1)
   for i=2, numOfFrames do
-    transform = transform.."\\t("..transformtimes[i-1]..fillHexTable[i]..secoHexTable[i]..bordHexTable[i]..shadHexTable[i]..")"
+    transform = transform.."\\t("..makeTransformTimes(i-1)..makeColorTags(i)..")"
   end
 
   -- Put the string in the line
