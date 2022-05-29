@@ -102,9 +102,9 @@ function colortrack(subtitles, selected_lines, active_line)
   startS = startS % 60
   startM = startM % 60
 
-  local startRem = startMS - (startS*1000) - (startM*60) - (startH*60)
+  local startRem = startMS - (1000 * (startS + 60 * (startM + 60 * startH)))
 
-  local starttime = startH..":"..startM..":"..startS.."."..startRem
+  local starttime = string.format("%d:%02d:%02d.%03d", startH, startM, startS, startRem)
   if starterMS == 0 then starttime = "0:00:00" end
 
   local endS = math.floor(endMS / 1000)
@@ -114,11 +114,11 @@ function colortrack(subtitles, selected_lines, active_line)
   endS = endS % 60
   endM = endM % 60
 
-  local endRem = endMS - (endS*1000) - (endM*60) - (endH*60)
+  local endRem = endMS - (1000 * (endS + 60 * (endM + 60 * endH)))
 
-  local endtime = endH..":"..endM..":"..endS.."."..endRem
+  local endtime = string.format("%d:%02d:%02d.%03d", endH, endM, endS, endRem)
 
-  numOfFrames = endframe-startframe
+  local numOfFrames = endframe-startframe
 
 
 -- Settings
