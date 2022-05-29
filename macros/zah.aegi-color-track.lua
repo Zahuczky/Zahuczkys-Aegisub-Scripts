@@ -34,6 +34,7 @@ end
 local pngImage = pngModule.pngImage
 
 local pathsep = package.config:sub(1, 1)
+local tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
 
 local GUI = {
     main= {
@@ -102,6 +103,46 @@ local function getTimes(line)
   return starttime, endtime, numOfFrames
 end
 
+local function trimFrames(starttime, endtime)
+  petzku.io.run_cmd("mkdir "..tmp, true)
+
+  -- Trim selected line out, to full frame PNGs
+  petzku.io.run_cmd(
+    string.format(
+      "ffmpeg -ss %s -to %s -i \"%s\" \"%s\"",
+      starttime, endtime,
+      aegisub.project_properties().video_file,
+      tmp .. pathsep .. "frame%%d.png"
+    ),
+    true
+  )
+end
+
+local function cropPixels(numOfFrames, XPixArray, YPixArray)
+  -- Crop full frames into the pixel we actually want
+  local ffbatchstring = ""
+  for i=1,numOfFrames do
+    local infile = tmp..pathsep.."frame"..i..".png"
+    local outfile = tmp..pathsep.."pixel"..i..".png"
+    local crop = "crop=2:2:"..XPixArray[i]..":"..YPixArray[i]
+
+    ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i \""..infile.."\" -filter:v \""..crop.."\"".." \""..outfile.."\"\n"
+  end
+  petzku.io.run_cmd(ffbatchstring, true)
+
+  local fileNames = {}
+
+  for i=1, numOfFrames do
+    fileNames[i] = "pixel"..i..".png"
+  end
+
+  local trackedImg = {}
+
+  for i=1, numOfFrames do trackedImg[i] = tmp..pathsep..fileNames[i] end
+  return trackedImg
+end
+
+
 -- Main function
 function colortrack(subtitles, selected_lines, active_line)
   local line = subtitles[selected_lines[1]]
@@ -110,8 +151,6 @@ function colortrack(subtitles, selected_lines, active_line)
   if not (res) then
     return aegisub.cancel()
   end
-
-  local tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
 
   -- Delete old temp files
   -- While the script is still running the pixel.png's can't be deleted, because they're considered open.
@@ -183,37 +222,8 @@ function colortrack(subtitles, selected_lines, active_line)
 
   --aegisub.debug.out("\n\n\n\nvideo path: "..aegisub.decode_path("?video").."\n\n\n\n"..aegisub.project_properties().video_file.."\n\n\n"..aegisub.decode_path("?temp").."\n\n\n")
 
-  petzku.io.run_cmd("mkdir "..tmp, true)
-
-  -- Trim selected line out, to full frame PNGs
-  petzku.io.run_cmd(
-    string.format(
-      "ffmpeg -ss %s -to %s -i \"%s\" \"%s\"",
-      starttime, endtime,
-      aegisub.project_properties().video_file,
-      tmp .. pathsep .. "frame%%d.png"
-    ),
-    true
-  )
-
-  -- Crop full frames into the pixel we actually want
-  local ffbatchstring = ""
-  for i=1,numOfFrames do
-    ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i \""..tmp..pathsep.."frame"..i..".png\" -filter:v \"crop=2:2:"..XPixArray[i]..":"..YPixArray[i].."\"".." \""..tmp..pathsep.."pixel"..i..".png\"\n"
-  end
-  petzku.io.run_cmd(ffbatchstring, true)
-
-  local fileNames = {}
-
-  for i=1, numOfFrames do
-    fileNames[i] = "pixel"..i..".png"
-  end
-
-  -- local pngImage = require 'zah.png'
-
-  local trackedImg = {}
-
-  for i=1, numOfFrames do trackedImg[i] = tmp..pathsep..fileNames[i] end
+  trimFrames(starttime, endtime)
+  local trackedImg = cropPixels(numOfFrames, XPixArray, YPixArray)
 
   -- I have no idea what this is but it doesn't work without it
   local function printProg(line, totalLine)
