@@ -1,4 +1,4 @@
-﻿local tr = aegisub.gettext
+local tr = aegisub.gettext
 
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
@@ -8,7 +8,7 @@ script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
 local haveDepCtrl, DependencyControl, depCtrl = pcall(require, "l0.DependencyControl")
-local ConfigHandler, config, petzku, pngModule, deflatelua
+local ConfigHandler, config, petzku, util
 if haveDepCtrl then
     depCtrl = DependencyControl {
         feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
@@ -17,24 +17,16 @@ if haveDepCtrl then
              feed="https://raw.githubusercontent.com/petzku/Aegisub-Scripts/stable/DependencyControl.json"},
             {"a-mo.ConfigHandler", version= "1.1.4", url= "https://github.com/TypesettingTools/Aegisub-Motion",
              feed= "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json"},
-            {"zah.png", version="1.0.1", url="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-             feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"},
-            {"zah.deflatelua", version="1.0.1", url="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-             feed="https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"}
+            "aegisub.util"
         }
     }
-    petzku, ConfigHandler, pngModule, deflatelua = depCtrl:requireModules()
+    petzku, ConfigHandler, util = depCtrl:requireModules()
 else
     petzku = require 'petzku.util'
     ConfigHandler = require 'a-mo.ConfigHandler'
-    pngModule = require 'zah.png'
-    deflatelua = require 'zah.deflatelua'
+    util = require 'aegisub.util'
 end
 
-local pngImage = pngModule.pngImage
-
-local pathsep = package.config:sub(1, 1)
-local tmp = aegisub.decode_path("?temp")..pathsep.."aegisub-color-tracking"
 
 local GUI = {
     main= {
@@ -103,45 +95,30 @@ local function getTimes(line)
   return starttime, endtime, numOfFrames
 end
 
-local function trimFrames(starttime, endtime)
-  petzku.io.run_cmd("mkdir "..tmp, true)
-
-  -- Trim selected line out, to full frame PNGs
-  petzku.io.run_cmd(
-    string.format(
-      "ffmpeg -ss %s -to %s -i \"%s\" -pix_fmt rgb24 \"%s\"",
-      starttime, endtime,
-      aegisub.project_properties().video_file,
-      tmp .. pathsep .. "frame%%d.png"
-    ),
-    true
-  )
-end
-
-local function cropPixels(numOfFrames, XPixArray, YPixArray)
-  -- Crop full frames into the pixel we actually want
-  local ffbatchstring = ""
-  for i=1,numOfFrames do
-    local infile = tmp..pathsep.."frame"..i..".png"
-    local outfile = tmp..pathsep.."pixel"..i..".png"
-    local crop = "crop=2:2:"..XPixArray[i]..":"..YPixArray[i]
-
-    ffbatchstring = ffbatchstring.."ffmpeg -loglevel warning -i \""..infile.."\" -filter:v \""..crop.."\"".." \""..outfile.."\"\n"
-  end
-  petzku.io.run_cmd(ffbatchstring, true)
-
-  local fileNames = {}
-
-  for i=1, numOfFrames do
-    fileNames[i] = "pixel"..i..".png"
+local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels)
+  local filter = ""
+  if type(XPixels) ~= "table" and type(YPixels) ~= "table" then
+    filter = 'crop=2:2:' .. XPixels .. ":" .. YPixels
+  else
+    -- https://video.stackexchange.com/a/29182
+    for frame = 1, numOfFrames do -- can definitely be made more efficient by only having one enable=between if the coords are the same, but I can't be bothered.
+      filter = filter .. "swaprect=2:2:0:0:" .. XPixels[frame] .. ":" .. YPixels[frame] .. ":enable='between(n," .. frame - 1 .. "," .. frame - 1 .. ")',"
+    end
+    filter = filter .. "crop=2:2:0:0"
   end
 
-  local trackedImg = {}
-
-  for i=1, numOfFrames do trackedImg[i] = tmp..pathsep..fileNames[i] end
-  return trackedImg
+  local incantation = "ffmpeg -i '" .. aegisub.project_properties().video_file .. "' -ss " .. startTime .. " -to " .. endTime .. ' -filter:v "' .. filter .. '" -f rawvideo -pix_fmt rgb24 -'
+  local pixels = petzku.io.run_cmd(incantation, true)
+  local colors = {}
+  for i = 0, numOfFrames - 1 do
+    local offset = i * 12
+    local r = pixels:byte(1 + offset)
+    local g = pixels:byte(2 + offset)
+    local b = pixels:byte(3 + offset)
+    table.insert(colors, util.ass_color(r, g, b))
+  end
+  return colors
 end
-
 
 -- Main function
 function colortrack(subtitles, selected_lines, active_line)
@@ -153,23 +130,15 @@ function colortrack(subtitles, selected_lines, active_line)
     return aegisub.cancel()
   end
 
-  -- Delete old temp files
-  -- While the script is still running the pixel.png's can't be deleted, because they're considered open.
-  local j = 1
-  while (os.remove(tmp..pathsep.."pixel"..j..".png")) ~= nil do
-    os.remove(tmp..pathsep.."frame"..j..".png")
-    os.remove(tmp..pathsep.."pixel"..j..".png")
-    j=j+1
-  end
-
   -- Calculate frame perfect times for trimming
-  local starttime, endtime, numOfFrames = getTimes(line)
+  local startTime, endTime, numOfFrames = getTimes(line)
 
   -- Settings
-  local XPixArray = { }
-  local YPixArray = { }
+  local XPixels, YPixels
   if res.setting == "Tracking Data" then
     local dataArray = { }
+    XPixels = { }
+    YPixels = { }
     local j = 1
     for i in string.gmatch(res.data, "([^\n]*)\n?") do
       dataArray[j] = i
@@ -194,15 +163,15 @@ function colortrack(subtitles, selected_lines, active_line)
         helpArray[o] = token
         o = o + 1
       end
-      XPixArray[p] = math.floor(helpArray[2])
-      YPixArray[p] = math.floor(helpArray[3])
+      XPixels[p] = math.floor(helpArray[2])
+      YPixels[p] = math.floor(helpArray[3])
       p = p + 1
     end
-  end
-
-  for i=1, numOfFrames do
-    if res.setting == "Defined pixels" then XPixArray[i] = res.pixX end
-    if res.setting == "Defined pixels" then YPixArray[i] = res.pixY end
+  elseif res.setting == "Defined pixels" then
+    for i=1, numOfFrames do
+      XPixels = res.pixX
+      YPixels = res.pixY
+    end
   end
 
   -- if res.setting == "Middle of Rect. Clip" then
@@ -222,23 +191,7 @@ function colortrack(subtitles, selected_lines, active_line)
 
 
   --aegisub.debug.out("\n\n\n\nvideo path: "..aegisub.decode_path("?video").."\n\n\n\n"..aegisub.project_properties().video_file.."\n\n\n"..aegisub.decode_path("?temp").."\n\n\n")
-
-  trimFrames(starttime, endtime)
-  local trackedImg = cropPixels(numOfFrames, XPixArray, YPixArray)
-
-  -- use png-lua to decode the images
-  local reds = {}
-  local greens = {}
-  local blues = {}
-
-
-  for i=1, numOfFrames do
-    local img = pngImage(trackedImg[i], nil, true)
-    local pixel = img.pixels[1][1]
-    reds[i] = pixel.R
-    greens[i] = pixel.G
-    blues[i] = pixel.B
-  end
+  local colors = getColors(startTime, endTime, numOfFrames, XPixels, YPixels)
 
   local function calcTransformTime(i)
     -- Getting accurate times for the \t transform. Thx petzku. :*
@@ -253,28 +206,21 @@ function colortrack(subtitles, selected_lines, active_line)
     return t..","..t..","
   end
 
-  local function makeColorTags(i)
-    local c = string.format("&H%02X%02X%02X&", blues[i], greens[i], reds[i])
-    local ret = ""
-    if res.c then
-      ret = ret .. "\\c" .. c
-    end
-    if res.c2 then
-      ret = ret .. "\\2c" .. c
-    end
-    if res.c3 then
-      ret = ret .. "\\3c" .. c
-    end
-    if res.c4 then
-      ret = ret .. "\\4c" .. c
-    end
-    return ret
-  end
-
   -- Creating a single string from the colors
-  local transform = makeColorTags(1)
+  local transform = ""
+  -- stylua: ignore start
+  if res.c then transform = transform.."\\c"..colors[1] end
+  if res.c2 then transform = transform.."\\2c"..colors[1] end
+  if res.c3 then transform = transform.."\\3c"..colors[1] end
+  if res.c4 then transform = transform.."\\4c"..colors[1] end
   for i=2, numOfFrames do
-    transform = transform.."\\t("..makeTransformTimes(i-1)..makeColorTags(i)..")"
+    transform = transform.."\\t("..makeTransformTimes(i-1)
+    if res.c then transform = transform.."\\c"..colors[i] end
+    if res.c2 then transform = transform.."\\2c"..colors[i] end
+    if res.c3 then transform = transform.."\\3c"..colors[i] end
+    if res.c4 then transform = transform.."\\4c"..colors[i] end
+    transform = transform .. ")"
+  -- stylua: ignore end
   end
 
   -- Put the string in the lines
