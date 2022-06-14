@@ -3,7 +3,7 @@
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
 script_author = "Zahuczky"
-script_version = "1.0.1"
+script_version = "1.1.0"
 script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
