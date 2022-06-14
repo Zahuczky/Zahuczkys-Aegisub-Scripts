@@ -1,5 +1,5 @@
-### The daily_stream branch contains regular updates and experimental features are already implemented. Might no be stable, or could not work as expected. 
-### Versioning is unconsistent in this branch, don't think much about it.
+#### The daily_stream branch contains regular updates and experimental features are already implemented. Might not be stable, or could not work as expected.<br>The main branch is the one you most likely want/need.
+#### Versioning is unconsistent in that branch, don't think much about it.
 
 There are two scripts in this repo right now, zah.perspective.moon, which is just the original Perspective.moon by Alendt with a few tweaks, <br>and Aegisub-Perspective-Motion, on which this readme focuses.
 
