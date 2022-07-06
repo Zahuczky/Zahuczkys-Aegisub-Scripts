@@ -28,14 +28,14 @@
       "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
       "channels": {
         "main": {
-          "version": "0.2.4",
-          "released": "2022-03-12",
+          "version": "0.2.5",
+          "released": "2022-07-06",
           "default": true,
           "files": [
             {
               "name": ".moon",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "e45bf8aca3569c31a40cfaeda873bad2e794c24a"
+              "sha1": "d4f9439a7207f2da49958762374f18a5f8d30cb5"
             }
           ]
         }
@@ -57,6 +57,9 @@
           "Adding option to calculate perspective from org centered to the middle of the plane.(EXPERIMENTAL)",
           "Adding HELP window.",
           "Adding meaningful error messages."
+        ],
+        "0.2.5": [
+          "Fixed DependencyControl feed url"
         ]
       }
     },

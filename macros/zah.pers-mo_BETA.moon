@@ -1,7 +1,7 @@
 export script_name="Aegisub-Perspective-Motion BETA"
 export script_description="Applying perspective tracking"
 export script_author="Zahuczky"
-export script_version="0.2.4"
+export script_version="0.2.5"
 export script_namespace="zah.pers-mo_BETA"
 github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
 tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
@@ -12,13 +12,13 @@ tr = aegisub.gettext
 
 --DependencyControl = require "l0.DependencyControl"
 --depctrl = DependencyControl{
---    feed: "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
+--    feed: "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
 --		}
 
 haveDepCtrl, DependencyControl, depctrl = pcall(require, "l0.DependencyControl")
 if haveDepCtrl 
     depctrl = DependencyControl {
-        feed: "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
+        feed: "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
     }
 
 
