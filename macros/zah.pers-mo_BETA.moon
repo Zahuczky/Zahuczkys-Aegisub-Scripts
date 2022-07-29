@@ -333,6 +333,10 @@ delete_old_tags = (text) ->
 
 
 line2fbf = (sub, sel, act) ->
+    -- Me monkey, me patch!
+    oldundo = aegisub.set_undo_point
+    aegisub.set_undo_point = (x) -> return
+
     dlg = dlgg.DIALOG(sub, sel, act, true)
     for l, line, sel, i, n in dlg\iterSelected() 
         fbf = fbff.FBF(l)
@@ -344,12 +348,15 @@ line2fbf = (sub, sel, act) ->
             line.end_time = e
             line.text = fbf\perform(line, tags, move, fade)
             dlg\insertLine(line, sel)
-    return dlg\getSelection()
+    result = dlg\getSelection()
+
+    aegisub.set_undo_point = oldundo
+    return result
 
 
 -- main function, this get's run as 'apply' is clicked
-perspmotion = (sub, sel) ->
-    line2fbf(sub, sel, act)
+perspmotion = (sub, sel, act) ->
+    sel = line2fbf(sub, sel, act)
     meta, styles = karaskel.collect_head(sub, false)
 
     mainRelLine, relFrame = relativeStuff(sub,sel)
