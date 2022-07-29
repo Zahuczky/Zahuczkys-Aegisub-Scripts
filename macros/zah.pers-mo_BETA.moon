@@ -10,6 +10,10 @@ export helptext = "Thank you for using my script!\n\nKeep in mind, that it's sti
 
 tr = aegisub.gettext
 
+dlgg = require'ZF.ass.dialog'
+linee = require'ZF.ass.line'
+fbff = require'ZF.ass.fbf'
+
 --DependencyControl = require "l0.DependencyControl"
 --depctrl = DependencyControl{
 --    feed: "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
@@ -28,6 +32,7 @@ if haveDepCtrl
     depctrl\requireModules!
 else
     require'karaskel'
+
 
 -- Relative stuff
 
@@ -327,8 +332,24 @@ delete_old_tags = (text) ->
     return text\gsub("\\frx([-%d.]+)", "")\gsub("\\fry([-%d.]+)", "")\gsub("\\frz([-%d.]+)", "")\gsub("\\org%b()", "")\gsub("\\fax([-%d.]+)", "")\gsub("\\fay([-%d.]+)", "")\gsub("\\fscx([-%d.]+)", "")\gsub("\\fscy([-%d.]+)", "")\gsub("\\bord([-%d.]+)", "")
 
 
+line2fbf = (sub, sel, act) ->
+    dlg = dlgg.DIALOG(sub, sel, act, true)
+    for l, line, sel, i, n in dlg\iterSelected() 
+        fbf = fbff.FBF(l)
+        linee.LINE(line)\prepoc(dlg)
+        tags, move, fade = fbf\setup(line)
+        dlg\removeLine(l, sel)
+        for s, e in fbf\iter(1) 
+            line.start_time = s
+            line.end_time = e
+            line.text = fbf\perform(line, tags, move, fade)
+            dlg\insertLine(line, sel)
+    return dlg\getSelection()
+
+
 -- main function, this get's run as 'apply' is clicked
 perspmotion = (sub, sel) ->
+    line2fbf(sub, sel, act)
     meta, styles = karaskel.collect_head(sub, false)
 
     mainRelLine, relFrame = relativeStuff(sub,sel)
