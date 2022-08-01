@@ -10,9 +10,9 @@ export helptext = "Thank you for using my script!\n\nKeep in mind, that it's sti
 
 tr = aegisub.gettext
 
-dlgg = require'ZF.ass.dialog'
-linee = require'ZF.ass.line'
-fbff = require'ZF.ass.fbf'
+dlgg = require'zah.ZF.ass.dialog'
+linee = require'zah.ZF.ass.line'
+fbff = require'zah.ZF.ass.fbf'
 
 --DependencyControl = require "l0.DependencyControl"
 --depctrl = DependencyControl{
