@@ -423,6 +423,10 @@ perspmotion = (sub, sel, act) ->
         aegisub.debug.out(4, "Internal coordinates of relative #{group} line: #{rcx}, #{rcy}\n")
         perspRes, info = unrot(rquad, rpos)
         rscale = getScale(rquad, rpos, info)
+        rclip = relLine.text\match("\\i?clip%([^%)]-%)")
+        -- FIXME: Handle two clips per line properly
+        if rclip
+            rclip = rclip\gsub("%(([-%d. ]+),([-%d. ]+),([-%d. ]+),([-%d. ]+)%)", (a, b, c, d) -> "m #{a} #{b} l #{c} #{b} #{c} #{d} #{a} #{d}")
 
         orgrxscale = relLine.text\match("\\fscx([-%d.]+)") or 100
         orgryscale = relLine.text\match("\\fscy([-%d.]+)") or 100
@@ -435,6 +439,8 @@ perspmotion = (sub, sel, act) ->
             cy: rcy,
             scale: rscale,
             orgscale: Point(orgrxscale, orgryscale),
+            quad: rquad,
+            clip: rclip,
         }
 
     -- now loop over all lines
@@ -475,6 +481,19 @@ perspmotion = (sub, sel, act) ->
         line.text = delete_old_tags(line.text)
         if results.includeclip
             line.text = line.text\gsub("\\pos", "\\clip(m #{quad[1].x} #{quad[1].y} l #{quad[2].x} #{quad[2].y} l #{quad[3].x} #{quad[3].y} l #{quad[4].x} #{quad[4].y})\\pos")
+        
+        if relLine.clip
+            transf = (x, y) ->
+                cx, cy = quadToUnitSquare(relLine.quad, Point(x, y))
+                t = unitSquareToQuad(quad, cx, cy)
+                return "#{t.x} #{t.y}"
+
+            clip = relLine.clip\gsub("([-%d.]+) +([-%d.]+)", transf)
+
+            -- FIXME: Handle two clips per line properly
+            line.text = line.text\gsub("\\i?clip%([^%)]-%)", clip)
+            if not line.text\gmatch("\\i?clip")
+                line.text = line.text\gsub("\\pos", clip .. "\\pos")
 
         if results.followpos
             line.text = line.text\gsub("\\pos%([-%d.]+.[-%d.]+%)", "\\pos(#{round(pos.x, 2)},#{round(pos.y,2)})")
