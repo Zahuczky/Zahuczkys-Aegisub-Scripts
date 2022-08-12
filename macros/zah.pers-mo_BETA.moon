@@ -354,6 +354,17 @@ line2fbf = (sub, sel, act) ->
     return result
 
 
+-- Given the tags from perspinfo and the scaling, transform a point
+ass_transform = (perspinfo, scale, pt) ->
+    pt = Point(pt.x + perspinfo["debfax"] * pt.y, pt.y)
+    pt = Point(pt.x * scale.x, pt.y * scale.y)
+    pt = pt\rot_z(math.rad(perspinfo["debfrz"]))    -- the Point class handles the signs for x and z
+    pt = pt\rot_x(math.rad(perspinfo["debfrx"]))    -- ... which is very stupid, but I guess it's better not to touch it
+    pt = pt\rot_y(math.rad(perspinfo["debfry"]))
+    pt = pt\mul(312.5 / (pt.z + 312.5))
+    return pt
+
+
 -- main function, this get's run as 'apply' is clicked
 perspmotion = (sub, sel, act) ->
     sel = line2fbf(sub, sel, act)
@@ -387,7 +398,7 @@ perspmotion = (sub, sel, act) ->
           {class: "checkbox", name: "scaleshad",  x: 4, y: 8, width: 1, height: 1, label: "Scale \\shad", value: false, hint: "Don't tick this if you're using the \"shad trick!\""}
           {class: "checkbox", name: "followpos",  x: 4, y: 9, width: 2, height: 1, label: "Also track position", value: false, hint: "Update the positions to keep the text's relative position in the quad constant. The reference point is the current frame. Still needs the line to be fbf'ed."}
           {class: "checkbox", name: "actorgroups",  x: 4, y: 10, width: 2, height: 1, label: "Multiple grouped tracks", value: false, hint: "Tracking multiple signs in a single run. For this, mark every sign's group of lines with a different actor (only the first word matters). For each actor group, the line at the current frame will be taken as the reference line for scaling and positioning (wherever applicable). The x and y scaling values in the dialog will be discarded."}
-
+          {class: "checkbox", name: "unprojshapes", x: 4, y: 11, width: 2, height: 1, label: "Deproject shapes first", value: true, hint: "If not set, this will treat a shape like an ordinary dialogue line. If set, it will assume that shapes are drawn in the perspective of the reference frame, and transform them to screen coordinates first."}
           },
 
         help: {
@@ -415,7 +426,7 @@ perspmotion = (sub, sel, act) ->
     -- first, do the rel lines to get their scales
     relLines = {}
     for group, v in pairs(allgroups)
-        aegisub.log("Group: #{group}\n")
+        aegisub.log(5, "Group: #{group}\n")
         relLine = relativeStuff(sub, sel, group)
         rpos = getLinePos(relLine)
         rquad = quads[relFrame]
@@ -441,6 +452,7 @@ perspmotion = (sub, sel, act) ->
             orgscale: Point(orgrxscale, orgryscale),
             quad: rquad,
             clip: rclip,
+            transform: (pt) -> ass_transform(info, Point(1, 1), pt)
         }
 
     -- now loop over all lines
@@ -481,12 +493,31 @@ perspmotion = (sub, sel, act) ->
         line.text = delete_old_tags(line.text)
         if results.includeclip
             line.text = line.text\gsub("\\pos", "\\clip(m #{quad[1].x} #{quad[1].y} l #{quad[2].x} #{quad[2].y} l #{quad[3].x} #{quad[3].y} l #{quad[4].x} #{quad[4].y})\\pos")
+
+        -- assume that every line is either a shape or not...
+        drawingmatch = line.text\match("\\p(%d+)")
+        if drawingmatch and tonumber(drawingmatch) != 0 and results.unprojshapes
+            -- We want to take the transformation tags on the relative line, and undo them for the shape coordinates, so
+            -- that when transforming the resulting shape with these quads, we get the original shape.
+            -- So take a 1x1 square and apply the transform, and then transform the shape coordinates from the resulting quad back to the 1x1 square
+            squarequad = {Point(0, 0), Point(1, 0), Point(1, 1), Point(0, 1)}
+            orgtransfquad = [ relLine.transform(pt) for pt in *squarequad ]
+
+            transf = (x, y) ->
+                cx, cy = quadToUnitSquare(orgtransfquad, Point(x, y))
+                t = unitSquareToQuad(squarequad, cx, cy)    -- this should be a no-op but let's keep it for robustness
+                return "#{round(t.x, 3)} #{round(t.y, 3)}"
+
+            transfs = (shape) -> shape\gsub("([-%d.]+) +([-%d.]+)", transf)
+
+            -- assume that the whole line is a shape, but that there could be multiple formatting blocks
+            line.text = line.text\gsub("}[^{]+", transfs)
         
         if relLine.clip
             transf = (x, y) ->
                 cx, cy = quadToUnitSquare(relLine.quad, Point(x, y))
                 t = unitSquareToQuad(quad, cx, cy)
-                return "#{t.x} #{t.y}"
+                return "#{round(t.x, 2)} #{round(t.y, 2)}"
 
             clip = relLine.clip\gsub("([-%d.]+) +([-%d.]+)", transf)
 
@@ -506,7 +537,7 @@ perspmotion = (sub, sel, act) ->
 
             factor = getFaxCompFactor(styles, line)
             newPosX = round(pos.x - realfax * factor * scale.x / 100, 3)
-            line.text = line.text\gsub("\\pos", "\\pos(#{newPosX},#{pos.y})\\org")
+            line.text = line.text\gsub("\\pos", "\\pos(#{newPosX},#{round(pos.y, 3)})\\org")
 
     -- finally, set the lines
     for si, li in ipairs(sel)
