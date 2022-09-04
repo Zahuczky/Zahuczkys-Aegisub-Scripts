@@ -109,7 +109,7 @@ local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels)
 
   local pixpath = aegisub.decode_path("?temp/" .. script_namespace ..".pixels")
 
-  local incantation = "ffmpeg -i '" .. aegisub.project_properties().video_file .. "' -ss " .. startTime .. " -to " .. endTime .. ' -filter:v "' .. filter .. '" -f rawvideo -pix_fmt rgb24 "'.. pixpath .. '"'
+  local incantation = 'ffmpeg -i "' .. aegisub.project_properties().video_file .. '" -ss ' .. startTime .. " -to " .. endTime .. ' -filter:v "' .. filter .. '" -f rawvideo -pix_fmt rgb24 "'.. pixpath .. '"'
   aegisub.log(4, "incantation: ".. incantation.."\n")
   petzku.io.run_cmd(incantation, true)
   aegisub.log(4, "ran\n")
