@@ -3,7 +3,7 @@ local tr = aegisub.gettext
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
 script_author = "Zahuczky"
-script_version = "1.0.1"
+script_version = "1.1.0"
 script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
@@ -107,16 +107,33 @@ local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels)
     filter = filter .. "crop=2:2:0:0"
   end
 
-  local incantation = "ffmpeg -i '" .. aegisub.project_properties().video_file .. "' -ss " .. startTime .. " -to " .. endTime .. ' -filter:v "' .. filter .. '" -f rawvideo -pix_fmt rgb24 -'
-  local pixels = petzku.io.run_cmd(incantation, true)
+  local pixpath = aegisub.decode_path("?temp/" .. script_namespace ..".pixels")
+
+  local incantation = "ffmpeg -i '" .. aegisub.project_properties().video_file .. "' -ss " .. startTime .. " -to " .. endTime .. ' -filter:v "' .. filter .. '" -f rawvideo -pix_fmt rgb24 "'.. pixpath .. '"'
+  aegisub.log(4, "incantation: ".. incantation.."\n")
+  petzku.io.run_cmd(incantation, true)
+  aegisub.log(4, "ran\n")
+  local pixfile = io.open(pixpath, "rb")
+  local pixels = pixfile:read("*a") -- this motherfucker
+  -- not including *a was the root of all the problems with file io
+  aegisub.log(4, "pixels len: "..#pixels.."\n")
+  pixfile:close()
   local colors = {}
   for i = 0, numOfFrames - 1 do
     local offset = i * 12
+    aegisub.log(5, "offset: "..offset.."\n")
     local r = pixels:byte(1 + offset)
+    aegisub.log(5, "r pos: "..1 + offset.."\n")
+    aegisub.log(5, "r: "..r.."\n")
     local g = pixels:byte(2 + offset)
+    aegisub.log(5, "g pos: "..2 + offset.."\n")
+    aegisub.log(5, "g: "..g.."\n")
     local b = pixels:byte(3 + offset)
+    aegisub.log(5, "b pos: "..3 + offset.."\n")
+    aegisub.log(5, "b: "..b.."\n")
     table.insert(colors, util.ass_color(r, g, b))
   end
+  os.remove(pixpath) -- will stay there if it failed, might be useful for debugging
   return colors
 end
 
