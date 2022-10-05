@@ -2,8 +2,8 @@ local tr = aegisub.gettext
 
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
-script_author = "Zahuczky"
-script_version = "1.1.0"
+script_author = "Zahuczky, garret"
+script_version = "2.0.0"
 script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
@@ -95,45 +95,63 @@ local function getTimes(line)
   return starttime, endtime, numOfFrames
 end
 
-local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels)
-  local filter = ""
-  if type(XPixels) ~= "table" and type(YPixels) ~= "table" then
-    filter = 'crop=2:2:' .. XPixels .. ":" .. YPixels
-  else
-    -- https://video.stackexchange.com/a/29182
-    for frame = 1, numOfFrames do -- can definitely be made more efficient by only having one enable=between if the coords are the same, but I can't be bothered.
-      filter = filter .. "swaprect=2:2:0:0:" .. XPixels[frame] .. ":" .. YPixels[frame] .. ":enable='between(n," .. frame - 1 .. "," .. frame - 1 .. ")',"
+local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels, subtitles, selected_lines)
+  if aegisub.get_frame then
+    colors={}
+    local start_frame = aegisub.frame_from_ms(subtitles[selected_lines[1]].start_time)
+    if type(XPixels) ~= "table" and type(YPixels) ~= "table" then
+      XPixArray = {}
+      YPixArray = {}
+      for i=1, numOfFrames do
+        XPixArray[i]=XPixels
+        YPixArray[i]=YPixels
+      end
     end
-    filter = filter .. "crop=2:2:0:0"
-  end
+    for i=1, numOfFrames do
+        frame = aegisub.get_frame((start_frame + i-1), false)
+        colors[i]=frame:getPixelFormatted(XPixArray[i], YPixArray[i])
+    end
+  else
+    local filter = ""
+    if type(XPixels) ~= "table" and type(YPixels) ~= "table" then
+      filter = 'crop=2:2:' .. XPixels .. ":" .. YPixels
+    else
+      -- https://video.stackexchange.com/a/29182
+      for frame = 1, numOfFrames do -- can definitely be made more efficient by only having one enable=between if the coords are the same, but I can't be bothered.
+        filter = filter .. "swaprect=2:2:0:0:" .. XPixels[frame] .. ":" .. YPixels[frame] .. ":enable='between(n," .. frame - 1 .. "," .. frame - 1 .. ")',"
+      end
+      filter = filter .. "crop=2:2:0:0"
+    end
 
-  local pixpath = aegisub.decode_path("?temp/" .. script_namespace ..".pixels")
+    local pixpath = aegisub.decode_path("?temp/" .. script_namespace ..".pixels")
 
-  local incantation = 'ffmpeg -i "' .. aegisub.project_properties().video_file .. '" -ss ' .. startTime .. " -to " .. endTime .. ' -filter:v "' .. filter .. '" -f rawvideo -pix_fmt rgb24 "'.. pixpath .. '"'
-  aegisub.log(4, "incantation: ".. incantation.."\n")
-  petzku.io.run_cmd(incantation, true)
-  aegisub.log(4, "ran\n")
-  local pixfile = io.open(pixpath, "rb")
-  local pixels = pixfile:read("*a") -- this motherfucker
-  -- not including *a was the root of all the problems with file io
-  aegisub.log(4, "pixels len: "..#pixels.."\n")
-  pixfile:close()
-  local colors = {}
-  for i = 0, numOfFrames - 1 do
-    local offset = i * 12
-    aegisub.log(5, "offset: "..offset.."\n")
-    local r = pixels:byte(1 + offset)
-    aegisub.log(5, "r pos: "..1 + offset.."\n")
-    aegisub.log(5, "r: "..r.."\n")
-    local g = pixels:byte(2 + offset)
-    aegisub.log(5, "g pos: "..2 + offset.."\n")
-    aegisub.log(5, "g: "..g.."\n")
-    local b = pixels:byte(3 + offset)
-    aegisub.log(5, "b pos: "..3 + offset.."\n")
-    aegisub.log(5, "b: "..b.."\n")
-    table.insert(colors, util.ass_color(r, g, b))
+    local incantation = 'ffmpeg -i "' .. aegisub.project_properties().video_file .. '" -ss ' .. startTime .. " -to " .. endTime .. ' -filter:v "' .. filter .. '" -f rawvideo -pix_fmt rgb24 "'.. pixpath .. '"'
+    aegisub.log(4, "incantation: ".. incantation.."\n")
+    petzku.io.run_cmd(incantation, true)
+    aegisub.log(4, "ran\n")
+    local pixfile = io.open(pixpath, "rb")
+    local pixels = pixfile:read("*a") -- this motherfucker
+    -- not including *a was the root of all the problems with file io
+    aegisub.log(4, "pixels len: "..#pixels.."\n")
+    pixfile:close()
+    local colors = {}
+    for i = 0, numOfFrames - 1 do
+      local offset = i * 12
+      aegisub.log(5, "offset: "..offset.."\n")
+      local r = pixels:byte(1 + offset)
+      aegisub.log(5, "r pos: "..1 + offset.."\n")
+      aegisub.log(5, "r: "..r.."\n")
+      local g = pixels:byte(2 + offset)
+      aegisub.log(5, "g pos: "..2 + offset.."\n")
+      aegisub.log(5, "g: "..g.."\n")
+      local b = pixels:byte(3 + offset)
+      aegisub.log(5, "b pos: "..3 + offset.."\n")
+      aegisub.log(5, "b: "..b.."\n")
+      table.insert(colors, util.ass_color(r, g, b))
+    end
+    os.remove(pixpath) -- will stay there if it failed, might be useful for debugging
+    return colors
   end
-  os.remove(pixpath) -- will stay there if it failed, might be useful for debugging
   return colors
 end
 
@@ -208,7 +226,7 @@ function colortrack(subtitles, selected_lines, active_line)
 
 
   --aegisub.debug.out("\n\n\n\nvideo path: "..aegisub.decode_path("?video").."\n\n\n\n"..aegisub.project_properties().video_file.."\n\n\n"..aegisub.decode_path("?temp").."\n\n\n")
-  local colors = getColors(startTime, endTime, numOfFrames, XPixels, YPixels)
+  local colors = getColors(startTime, endTime, numOfFrames, XPixels, YPixels, subtitles, selected_lines)
 
   local function calcTransformTime(i)
     -- Getting accurate times for the \t transform. Thx petzku. :*
