@@ -69,13 +69,27 @@
       "channels": {
         "main": {
           "version": "2.0.0",
-          "released": "2022-10-05",
+          "released": "2022-10-06",
           "default": true,
           "files": [
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
               "sha1": "485adcea6f81d684518876ee459025b0cc8fe414"
+            }
+          ],
+        "requiredModules": [
+            {
+              "moduleName": "petzku.util",
+              "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+              "version": "0.3.0",
+              "feed": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/stable/DependencyControl.json"
+            },
+			{
+              "moduleName": "a-mo.ConfigHandler",
+              "url": "https://github.com/TypesettingTools/Aegisub-Motion",
+              "version": "1.1.4",
+              "feed": "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json"
             }
           ]
         }
@@ -93,4 +107,4 @@
       }
     }
   }
-}
+  }
