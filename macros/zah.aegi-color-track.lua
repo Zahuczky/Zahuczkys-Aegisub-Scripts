@@ -110,6 +110,8 @@ local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels, subt
     for i=1, numOfFrames do
         frame = aegisub.get_frame((start_frame + i-1), false)
         colors[i]=frame:getPixelFormatted(XPixArray[i], YPixArray[i])
+        aegisub.progress.set(i/numOfFrames*100)
+        aegisub.progress.task(string.format("Getting colors from frame %d/%d", i, numOfFrames))
     end
   else
     local filter = ""
