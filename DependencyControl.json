@@ -68,14 +68,14 @@
       "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
       "channels": {
         "main": {
-          "version": "2.0.0",
+          "version": "2.0.1",
           "released": "2022-10-06",
           "default": true,
           "files": [
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "485adcea6f81d684518876ee459025b0cc8fe414"
+              "sha1": "3cb51202aa37f0b7739a0e6bb75e5c889e21b288"
             }
           ],
         "requiredModules": [
@@ -103,6 +103,9 @@
         ],
         "2.0.0": [
           "Complete restrocture by garret, no more png dissecting, support for new API version in arch1 builds."
+        ],
+        "2.0.1": [
+          "Adding progress reporting"
         ]
       }
     }
