@@ -68,26 +68,14 @@
       "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
       "channels": {
         "main": {
-          "version": "1.1.0",
-          "released": "2022-06-14",
+          "version": "2.0.0",
+          "released": "2022-10-05",
           "default": true,
           "files": [
             {
               "name": ".lua",
               "url": "@{fileBaseUrl}@{fileName}",
               "sha1": "da7f6965cb01e94544a88900830d085808f1d454"
-            }
-          ],
-          "requiredModules": [
-            {
-              "moduleName": "zah.png",
-              "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-              "version": "1.0.1"
-            },
-            {
-              "moduleName": "zah.deflatelua",
-              "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-              "version": "1.0.1"
             }
           ]
         }
@@ -98,62 +86,13 @@
         ],
         "1.1.0": [
           "Various fixes by Petzku"
+        ],
+        "2.0.0": [
+          "Complete restrocture by garret, no more png dissecting, support for new API version in arch1 builds."
         ]
       }
     }
-  },
-  "modules": {
-    "zah.png": {
-      "fileBaseUrl": "@{fileBaseUrl}/main/modules/@{namespacePath}",
-      "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-      "author": "Zahuczky",
-      "name": "png",
-      "description": "Pure lua png implementation",
-      "channels": {
-        "main": {
-          "version": "1.0.1",
-          "released": "2022-05-07",
-          "default": true,
-          "files": [
-            {
-              "name": ".lua",
-              "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "1a3c9bd1af94f38f08dac125c93eb8e921e74c0a"
-            }
-          ]
-        }
-      },
-      "changelog": {
-        "1.0.0": [
-          "Initial release"
-        ]
-      }
-    },
-    "zah.deflatelua": {
-      "fileBaseUrl": "@{fileBaseUrl}/main/modules/@{namespacePath}",
-      "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-      "author": "Zahuczky",
-      "name": "deflatelua",
-      "description": "Module for png",
-      "channels": {
-        "main": {
-          "version": "1.0.1",
-          "released": "2022-05-07",
-          "default": true,
-          "files": [
-            {
-              "name": ".lua",
-              "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "f3ad12a123e03dcea51ce24fd5c8b1d679a5e186"
-            }
-          ]
-        }
-      },
-      "changelog": {
-        "1.0.0": [
-          "Initial release"
-        ]
-      }
+  }
     }
   }
 }
