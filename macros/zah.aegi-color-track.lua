@@ -192,7 +192,7 @@ function colortrack(subtitles, selected_lines, active_line)
     if res.data == "" then
       aegisub.debug.out("You forgot to give me any data, so I quit.\n\n")
       return aegisub.cancel()
-    elseif dataArray[9] ~= "Position" then
+    elseif dataArray[9] ~= "Position" and dataArray[9] ~= "Anchor Point" then
       aegisub.debug.out("I have no idea what kind of data you pasted in, but I'm sure it's not what I wanted.\n\nI need After Effects Transform data.\n\nThe same thing you use for Aegisub-Motion.\n\n")
       return aegisub.cancel()
     end
