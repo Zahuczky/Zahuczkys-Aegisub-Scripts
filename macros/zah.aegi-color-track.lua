@@ -95,24 +95,32 @@ local function getTimes(line)
   return starttime, endtime, numOfFrames
 end
 
+-- XPixels and YPixels are either one single value (tracking fixed pixel) or an array of values
 local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels, subtitles, selected_lines)
+
+  -- built-in aegisub API for getting frame data. not necessarily present, fall back to ffmpeg if necessary
   if aegisub.get_frame then
-    colors={}
+    local colors={}
     local start_frame = aegisub.frame_from_ms(subtitles[selected_lines[1]].start_time)
+
+    -- if we got a single pair of coordinates, coerce them into arrays (of the repeated value) instead
     if type(XPixels) ~= "table" and type(YPixels) ~= "table" then
-      XPixArray = {}
-      YPixArray = {}
+      local XPixArray = {}
+      local YPixArray = {}
       for i=1, numOfFrames do
         XPixArray[i]=XPixels
         YPixArray[i]=YPixels
       end
+      XPixels, YPixels = XPixArray, YPixArray
     end
+
     for i=1, numOfFrames do
-        frame = aegisub.get_frame((start_frame + i-1), false)
-        colors[i]=frame:getPixelFormatted(XPixArray[i], YPixArray[i])
-        aegisub.progress.set((i/numOfFrames)*100)
-        aegisub.progress.task(string.format("Getting colors from frame %d/%d", i, numOfFrames))
+      local frame = aegisub.get_frame((start_frame + i-1), false)
+      colors[i]=frame:getPixelFormatted(XPixels[i], YPixels[i])
+      aegisub.progress.set((i/numOfFrames)*100)
+      aegisub.progress.task(string.format("Getting colors from frame %d/%d", i, numOfFrames))
     end
+    return colors
   else
     local filter = ""
     if type(XPixels) ~= "table" and type(YPixels) ~= "table" then
@@ -154,7 +162,6 @@ local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels, subt
     os.remove(pixpath) -- will stay there if it failed, might be useful for debugging
     return colors
   end
-  return colors
 end
 
 -- Main function
@@ -205,10 +212,8 @@ function colortrack(subtitles, selected_lines, active_line)
       p = p + 1
     end
   elseif res.setting == "Defined pixels" then
-    for i=1, numOfFrames do
-      XPixels = res.pixX
-      YPixels = res.pixY
-    end
+    XPixels = res.pixX
+    YPixels = res.pixY
   end
 
   -- if res.setting == "Middle of Rect. Clip" then
