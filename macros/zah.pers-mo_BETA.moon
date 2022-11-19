@@ -190,20 +190,22 @@ parsePin = (dataArray, n) ->
     local posPin
     for k=1,#dataArray
         if dataArray[k]\match("^Effects[\t ]CC Power Pin #1[\t ]CC Power Pin%-#{n}$")
-            posPin=k+2
+            posPin = k
+            break
 
     if posPin == nil
         aegisub.log("Invalid tracking data!\n")
         aegisub.cancel()
 
-    dataLength = (#dataArray-22)/4
+    i = posPin + 2
 
     x = {}
     y = {}
-    for i=1,dataLength
-        values = [t for t in string.gmatch(dataArray[posPin + i - 1], "%S+")]
-        x[i] = values[2]
-        y[i] = values[3]
+    while dataArray[i]\match("^[\t ]+[0-9]")
+        values = [t for t in string.gmatch(dataArray[i], "%S+")]
+        table.insert(x, values[2])
+        table.insert(y, values[3])
+        i += 1
 
     return x, y
 
@@ -220,7 +222,8 @@ datahandling = (sub, sel, results) ->
     if results.data == ""
         aegisub.debug.out("You forgot to give me any data, so I quit.\n\n")
         aegisub.cancel()
-    elseif dataArray[9] != "Effects\tCC Power Pin #1\tCC Power Pin-0002"
+
+    elseif #([i for i, l in ipairs(dataArray) when l\match"Effects[\t ]CC Power Pin #1[\t ]CC Power Pin%-0002"]) == 0
         aegisub.debug.out("I have no idea what kind of data you pasted in, but I'm sure it's not what I wanted.\n\nI need After Effects CC Power Pin data.\n\nPress the HELP button in the script if you don't know what you're doing.\n\n")
         aegisub.cancel()
 
