@@ -21,7 +21,7 @@ export zf
 haveDepCtrl, DependencyControl, depctrl = pcall(require, "l0.DependencyControl")
 if haveDepCtrl
     depctrl = DependencyControl {        
-        feed: "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
+        feed: "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
         {"ZF.main", url: "https://github.com/TypesettingTools/zeref-Aegisub-Scripts", 
         feed: "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json"},
         "karaskel"
