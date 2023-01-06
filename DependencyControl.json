@@ -17,7 +17,8 @@
     "coffeeflux-scripts": "https://raw.githubusercontent.com/TypesettingTools/CoffeeFlux-Aegisub-Scripts/master/DependencyControl.json",
     "myaamori-scripts": "https://raw.githubusercontent.com/TypesettingTools/Myaamori-Aegisub-Scripts/master/DependencyControl.json",
     "petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json",
-    "zahuczky-scripts": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json"
+    "zahuczky-scripts": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
+    "zeref-aegisub-scripts": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json"
   },
   "macros": {
     "zah.pers-mo_BETA": {
@@ -28,14 +29,14 @@
       "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
       "channels": {
         "main": {
-          "version": "0.2.4",
-          "released": "2022-03-12",
+          "version": "0.3.0",
+          "released": "2023-01-06",
           "default": true,
           "files": [
             {
               "name": ".moon",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "e45bf8aca3569c31a40cfaeda873bad2e794c24a"
+              "sha1": "ba51d776c9f6973018bdbab0b168110ecc4467f4"
             }
           ]
         }
@@ -57,6 +58,10 @@
           "Adding option to calculate perspective from org centered to the middle of the plane.(EXPERIMENTAL)",
           "Adding HELP window.",
           "Adding meaningful error messages."
+        ],
+        "0.3.0": [
+          "Unimaginable amount of improvements.",
+          "Sorting out all the dependencies"
         ]
       }
     },
