@@ -24,6 +24,15 @@ Credits: The part of this script that calculates the perspective itself, is from
 - You can't set your base fscx/fscy beforehand for the first frame. Planned to be fixed in v0.3.
 - Your perspective is calulated fully from the track, no information is taken from your lines to be used, like base perspective.
 
+## Changelog:
+- v0.1.0 <br> 
+    Scipt created.
+- v0.2.0 <br> 
+    Initial GitHub release. <br> 
+    Handling scaling over to my script, instead of letting Aegisub-Motion handling it. <br>
+    Preparations for DependecyControl use. 
+- v0.2.1 <br>
+    Fixing DependencyControl stuff, adding optional usage. 
 
 ### TODO:<br>
 - Making developer documentation.<br>
