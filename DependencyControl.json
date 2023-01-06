@@ -38,6 +38,14 @@
               "url": "@{fileBaseUrl}@{fileName}",
               "sha1": "ba51d776c9f6973018bdbab0b168110ecc4467f4"
             }
+          ],
+          "requiredModules": [
+            {
+              "moduleName": "ZF.main",
+              "url": "https://github.com/TypesettingTools/zeref-Aegisub-Scripts",
+              "version": "2.2.0",
+              "feed": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json"
+            }
           ]
         }
       },
