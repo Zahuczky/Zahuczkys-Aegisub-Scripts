@@ -1,7 +1,7 @@
 export script_name="Aegisub-Perspective-Motion BETA"
 export script_description="Applying perspective tracking"
 export script_author="Zahuczky"
-export script_version = "0.2.7"
+export script_version = "0.3.0"
 export script_namespace="zah.pers-mo_BETA"
 github_repo="https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts"
 tutorial_docs="https://zahuczky.com/aegisub-perspective-motion/"
@@ -10,9 +10,7 @@ export helptext = "Thank you for using my script!\n\nKeep in mind, that it's sti
 
 tr = aegisub.gettext
 
-dlgg = require'zah.ZF.ass.dialog'
-linee = require'zah.ZF.ass.line'
-fbff = require'zah.ZF.ass.fbf'
+export zf
 
 --DependencyControl = require "l0.DependencyControl"
 --depctrl = DependencyControl{
@@ -22,15 +20,17 @@ fbff = require'zah.ZF.ass.fbf'
 -- DependencyControl stuff for version management
 haveDepCtrl, DependencyControl, depctrl = pcall(require, "l0.DependencyControl")
 if haveDepCtrl
-    depctrl = DependencyControl {
+    depctrl = DependencyControl {        
         feed: "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts/DependencyControl.json",
-        {
-            "karaskel"
-        }
+        {"ZF.main", url: "https://github.com/TypesettingTools/zeref-Aegisub-Scripts", 
+        feed: "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json"},
+        "karaskel"
+
     }
 
-    depctrl\requireModules!
+    zf, karaskel = depctrl\requireModules!
 else
+    zf = require'ZF.main'
     require'karaskel'
 
 
@@ -335,23 +335,36 @@ delete_old_tags = (text) ->
     return text\gsub("\\frx([-%d.]+)", "")\gsub("\\fry([-%d.]+)", "")\gsub("\\frz([-%d.]+)", "")\gsub("\\org%b()", "")\gsub("\\fax([-%d.]+)", "")\gsub("\\fay([-%d.]+)", "")\gsub("\\fscx([-%d.]+)", "")\gsub("\\fscy([-%d.]+)", "")\gsub("\\bord([-%d.]+)", "")
 
 
-line2fbf = (sub, sel, act) ->
+line2fbf = (subs, selected, active) ->
     -- Me monkey, me patch!
     oldundo = aegisub.set_undo_point
     aegisub.set_undo_point = (x) -> return
 
-    dlg = dlgg.DIALOG(sub, sel, act, true)
-    for l, line, sel, i, n in dlg\iterSelected() 
-        fbf = fbff.FBF(l)
-        linee.LINE(line)\prepoc(dlg)
-        tags, move, fade = fbf\setup(line)
-        dlg\removeLine(l, sel)
-        for s, e in fbf\iter(1) 
+    dlg = zf.dialog subs, selected, active, true
+    for l, line, sel, i, n in dlg\iterSelected!
+        dlg\progressLine sel
+        -- checks if the line is commented out
+        if l.comment
+            dlg\warning sel, "The line is commented out"
+            continue
+        -- checks if the line duration is more than 0 frame
+        if (l.end_time - l.start_time) <= 0
+            dlg\warning sel, "The line doesn't have enough time for 1 frame."
+            continue
+        -- calls the class FBF
+        fbf = zf.fbf l
+        -- extends the line information
+        zf.line(line)\prepoc dlg
+        tags, move, fade = fbf\setup line
+        dlg\removeLine l, sel
+        -- iteration with all frames
+        for s, e in fbf\iter 1
+            break if aegisub.progress.is_cancelled!
             line.start_time = s
             line.end_time = e
-            line.text = fbf\perform(line, tags, move, fade)
-            dlg\insertLine(line, sel)
-    result = dlg\getSelection()
+            line.text = fbf\perform line, tags, move, fade
+            dlg\insertLine line, sel
+    result = dlg\getSelection!
 
     aegisub.set_undo_point = oldundo
     return result
