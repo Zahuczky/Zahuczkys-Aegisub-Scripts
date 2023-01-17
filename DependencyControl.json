@@ -29,14 +29,14 @@
       "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
       "channels": {
         "main": {
-          "version": "0.3.0",
-          "released": "2023-01-06",
+          "version": "0.3.1",
+          "released": "2023-01-17",
           "default": true,
           "files": [
             {
               "name": ".moon",
               "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "06c6c641fb9760c1efb1f7c391cc16fefee194dc"
+              "sha1": "de02ed295191f4d61dbb62f09be802c0722aa60a"
             }
           ],
           "requiredModules": [
@@ -70,6 +70,9 @@
         "0.3.0": [
           "Unimaginable amount of improvements.",
           "Sorting out all the dependencies"
+        ],
+        "0.3.1": [
+          "Save tracking datas ambient quad to extradata"
         ]
       }
     },
