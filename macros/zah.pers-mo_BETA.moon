@@ -398,8 +398,9 @@ perspmotion = (sub, sel, act) ->
           {class: "label",  x: 0, y: 1, width: 1, height: 1, label: "here, not Transform or Corner Pin data!"}
           {class: "textbox", name: "data",  x: 0, y: 2, width: 3, height: 7, },
           {class: "checkbox", name: "includeclip",  x: 0, y: 9, width: 1, height: 1, label: "Include \\clip for debugging", value: false}
-          {class: "dropdown", name: "setupoptions",  x: 0, y: 10, width: 3, height: 1, items: {"Perspective + Scaling","Only Perspective","Only Scaling"}, value: "Perspective + Scaling"}
-          {class: "label",  x: 0, y: 11, width: 1, height: 1, label: "v"..script_version}
+          {class: "checkbox", name: "includeextra", x: 0, y: 10, width: 1, height: 1, label: "Add quad to extradata", value: true, hint: "Save the tracked quad to the line's extradata. On arch1t3cht/Aegisub, this will set the ambient quad for the perspective tool."}
+          {class: "dropdown", name: "setupoptions",  x: 0, y: 11, width: 3, height: 1, items: {"Perspective + Scaling","Only Perspective","Only Scaling"}, value: "Perspective + Scaling"}
+          {class: "label",  x: 0, y: 12, width: 1, height: 1, label: "v"..script_version}
           {class: "intedit", name: "xSca",  x: 4, y: 2, width: 1, height: 1, value: xScaleRel}
           {class: "label",  x: 5, y: 2, width: 1, height: 1, label: "X Scaling"}
           {class: "intedit", name: "ySca",  x: 4, y: 3, width: 1, height: 1, value: yScaleRel}
@@ -509,6 +510,9 @@ perspmotion = (sub, sel, act) ->
         line.text = delete_old_tags(line.text)
         if results.includeclip
             line.text = line.text\gsub("\\pos", "\\clip(m #{quad[1].x} #{quad[1].y} l #{quad[2].x} #{quad[2].y} l #{quad[3].x} #{quad[3].y} l #{quad[4].x} #{quad[4].y})\\pos")
+
+        if results.includeextra
+            line.extra["_aegi_perspective_ambient_plane"] = table.concat(["#{quad[i].x};#{quad[i].y}" for i=1,4], "|")
 
         -- assume that every line is either a shape or not...
         drawingmatch = line.text\match("\\p(%d+)")
