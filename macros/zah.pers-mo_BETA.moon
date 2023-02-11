@@ -189,7 +189,7 @@ relativeStuff = (sub, sel, group) ->
 parsePin = (dataArray, n) ->
     local posPin
     for k=1,#dataArray
-        if dataArray[k]\match("^Effects[\t ]CC Power Pin #1[\t ]CC Power Pin%-#{n}$")
+        if dataArray[k]\match("^Effects[\t ]+CC Power Pin #1[\t ]+CC Power Pin%-#{n}$")
             posPin = k
             break
 
@@ -223,7 +223,7 @@ datahandling = (sub, sel, results) ->
         aegisub.debug.out("You forgot to give me any data, so I quit.\n\n")
         aegisub.cancel()
 
-    elseif #([i for i, l in ipairs(dataArray) when l\match"Effects[\t ]CC Power Pin #1[\t ]CC Power Pin%-0002"]) == 0
+    elseif #([i for i, l in ipairs(dataArray) when l\match"Effects[\t ]+CC Power Pin #1[\t ]+CC Power Pin%-0002"]) == 0
         aegisub.debug.out("I have no idea what kind of data you pasted in, but I'm sure it's not what I wanted.\n\nI need After Effects CC Power Pin data.\n\nPress the HELP button in the script if you don't know what you're doing.\n\n")
         aegisub.cancel()
 
