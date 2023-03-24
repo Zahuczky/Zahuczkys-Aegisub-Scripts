@@ -252,17 +252,23 @@ function colortrack(subtitles, selected_lines, active_line)
   -- Creating a single string from the colors
   local transform = ""
   -- stylua: ignore start
-  if res.c then transform = transform.."\\c"..colors[1] end
-  if res.c2 then transform = transform.."\\2c"..colors[1] end
-  if res.c3 then transform = transform.."\\3c"..colors[1] end
-  if res.c4 then transform = transform.."\\4c"..colors[1] end
+  if colors[1] then
+    if res.c then transform = transform.."\\c"..colors[1] end
+    if res.c2 then transform = transform.."\\2c"..colors[1] end
+    if res.c3 then transform = transform.."\\3c"..colors[1] end
+    if res.c4 then transform = transform.."\\4c"..colors[1] end
+  end
   for i=2, numOfFrames do
+    local color = colors[i]
+    -- color could be nil if the tracking point is outside video frame
+    if color then
     transform = transform.."\\t("..makeTransformTimes(i-1)
-    if res.c then transform = transform.."\\c"..colors[i] end
-    if res.c2 then transform = transform.."\\2c"..colors[i] end
-    if res.c3 then transform = transform.."\\3c"..colors[i] end
-    if res.c4 then transform = transform.."\\4c"..colors[i] end
+      if res.c then transform = transform.."\\c"..color end
+      if res.c2 then transform = transform.."\\2c"..color end
+      if res.c3 then transform = transform.."\\3c"..color end
+      if res.c4 then transform = transform.."\\4c"..color end
     transform = transform .. ")"
+    end
   -- stylua: ignore end
   end
 
