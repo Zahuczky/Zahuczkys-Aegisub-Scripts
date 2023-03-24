@@ -1,133 +1,133 @@
 {
-  "dependencyControlFeedFormatVersion": "0.3.0",
-  "name": "Zahuczky's Automation Scripts",
-  "description": "Main repository for all of Zahuczky's automation scripts.",
-  "baseUrl": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-  "url": "@{baseUrl}",
-  "fileBaseUrl": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-  "maintainer": "Zahuczky",
-  "knownFeeds": {
-    "line0scripts": "https://raw.githubusercontent.com/TypesettingTools/line0-Aegisub-Scripts/master/DependencyControl.json",
-    "a-mo": "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json",
-    "SubInspector": "https://raw.githubusercontent.com/TypesettingTools/SubInspector/master/DependencyControl.json",
-    "ASSFoundation": "https://raw.githubusercontent.com/TypesettingTools/ASSFoundation/master/DependencyControl.json",
-    "ffi-experiments": "https://raw.githubusercontent.com/torque/ffi-experiments/master/DependencyControl.json",
-    "lyger-scripts": "https://raw.githubusercontent.com/TypesettingTools/lyger-Aegisub-Scripts/master/DependencyControl.json",
-    "unanimated-scripts": "https://raw.githubusercontent.com/unanimated/luaegisub/master/DependencyControl.json",
-    "coffeeflux-scripts": "https://raw.githubusercontent.com/TypesettingTools/CoffeeFlux-Aegisub-Scripts/master/DependencyControl.json",
-    "myaamori-scripts": "https://raw.githubusercontent.com/TypesettingTools/Myaamori-Aegisub-Scripts/master/DependencyControl.json",
-    "petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json",
-    "zahuczky-scripts": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
-    "zeref-aegisub-scripts": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json"
-  },
-  "macros": {
-    "zah.pers-mo_BETA": {
-      "url": "@{baseUrl}#@{namespace}",
-      "author": "Zahuczky",
-      "name": "Aegisub-Perspective-Motion BETA",
-      "description": "Applying perspective tracking",
-      "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
-      "channels": {
-        "main": {
-          "version": "0.3.1",
-          "released": "2023-01-17",
-          "default": true,
-          "files": [
-            {
-              "name": ".moon",
-              "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "de02ed295191f4d61dbb62f09be802c0722aa60a"
-            }
-          ],
-          "requiredModules": [
-            {
-              "moduleName": "ZF.main",
-              "url": "https://github.com/TypesettingTools/zeref-Aegisub-Scripts",
-              "version": "2.2.0",
-              "feed": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json"
-            }
-          ]
-        }
-      },
-      "changelog": {
-        "0.2.0": [
-          "Initial release"
-        ],
-        "0.2.1": [
-          "Fixed DependencyControl stuffs inside my script, added conditinal use. "
-        ],
-        "0.2.2": [
-          "Added different perspective calculation options. (transform for target org, transforms near center of tetragon, transforms with target ratio)"
-        ],
-        "0.2.3": [
-          "More fixing to DependencyControl related stuff."
-        ],
-        "0.2.4": [
-          "Adding option to calculate perspective from org centered to the middle of the plane.(EXPERIMENTAL)",
-          "Adding HELP window.",
-          "Adding meaningful error messages."
-        ],
-        "0.3.0": [
-          "Unimaginable amount of improvements.",
-          "Sorting out all the dependencies"
-        ],
-        "0.3.1": [
-          "Save tracking datas ambient quad to extradata"
-        ]
-      }
-    },
-    "zah.aegi-color-track": {
-      "url": "@{baseUrl}#@{namespace}",
-      "author": "Zahuczky",
-      "name": "Aegisub-Color-Tracking",
-      "description": "Tracking the color from a given pixel or tracking data",
-      "fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
-      "channels": {
-        "main": {
-          "version": "2.0.2",
-          "released": "2023-03-23",
-          "default": true,
-          "files": [
-            {
-              "name": ".lua",
-              "url": "@{fileBaseUrl}@{fileName}",
-              "sha1": "5634ace5ced65f1e655f56078eccae1cf9a16570"
-            }
-          ],
-          "requiredModules": [
-            {
-              "moduleName": "petzku.util",
-              "url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
-              "version": "0.3.0",
-              "feed": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/stable/DependencyControl.json"
-            },
-            {
-              "moduleName": "a-mo.ConfigHandler",
-              "url": "https://github.com/TypesettingTools/Aegisub-Motion",
-              "version": "1.1.4",
-              "feed": "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json"
-            }
-          ]
-        }
-      },
-      "changelog": {
-        "1.0.0": [
-          "Initial release"
-        ],
-        "1.1.0": [
-          "Various fixes by Petzku"
-        ],
-        "2.0.0": [
-          "Complete restrocture by garret, no more png dissecting, support for new API version in arch1 builds."
-        ],
-        "2.0.1": [
-          "Adding progress reporting"
-        ],
-        "2.0.2": [
-          "Fix handling of tracking data when using Aegisub built-in frame API",
-          "Refactor internal handling of timecodes"
-        ]
-      }
-    }
-  }
+	"dependencyControlFeedFormatVersion": "0.3.0",
+	"name": "Zahuczky's Automation Scripts",
+	"description": "Main repository for all of Zahuczky's automation scripts.",
+	"baseUrl": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+	"url": "@{baseUrl}",
+	"fileBaseUrl": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+	"maintainer": "Zahuczky",
+	"knownFeeds": {
+		"line0scripts": "https://raw.githubusercontent.com/TypesettingTools/line0-Aegisub-Scripts/master/DependencyControl.json",
+		"a-mo": "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json",
+		"SubInspector": "https://raw.githubusercontent.com/TypesettingTools/SubInspector/master/DependencyControl.json",
+		"ASSFoundation": "https://raw.githubusercontent.com/TypesettingTools/ASSFoundation/master/DependencyControl.json",
+		"ffi-experiments": "https://raw.githubusercontent.com/torque/ffi-experiments/master/DependencyControl.json",
+		"lyger-scripts": "https://raw.githubusercontent.com/TypesettingTools/lyger-Aegisub-Scripts/master/DependencyControl.json",
+		"unanimated-scripts": "https://raw.githubusercontent.com/unanimated/luaegisub/master/DependencyControl.json",
+		"coffeeflux-scripts": "https://raw.githubusercontent.com/TypesettingTools/CoffeeFlux-Aegisub-Scripts/master/DependencyControl.json",
+		"myaamori-scripts": "https://raw.githubusercontent.com/TypesettingTools/Myaamori-Aegisub-Scripts/master/DependencyControl.json",
+		"petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json",
+		"zahuczky-scripts": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
+		"zeref-aegisub-scripts": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json"
+	},
+	"macros": {
+		"zah.pers-mo_BETA": {
+			"url": "@{baseUrl}#@{namespace}",
+			"author": "Zahuczky",
+			"name": "Aegisub-Perspective-Motion BETA",
+			"description": "Applying perspective tracking",
+			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+			"channels": {
+				"main": {
+					"version": "0.3.1",
+					"released": "2023-03-24",
+					"default": true,
+					"files": [
+						{
+							"name": ".moon",
+							"url": "@{fileBaseUrl}@{fileName}",
+							"sha1": "7d3a234d02cda7dc9ce7d7da3b4a45fe1f542f3a"
+						}
+					],
+					"requiredModules": [
+						{
+							"moduleName": "ZF.main",
+							"url": "https://github.com/TypesettingTools/zeref-Aegisub-Scripts",
+							"version": "2.2.0",
+							"feed": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json"
+						}
+					]
+				}
+			},
+			"changelog": {
+				"0.2.0": [
+					"Initial release"
+				],
+				"0.2.1": [
+					"Fixed DependencyControl stuffs inside my script, added conditinal use. "
+				],
+				"0.2.2": [
+					"Added different perspective calculation options. (transform for target org, transforms near center of tetragon, transforms with target ratio)"
+				],
+				"0.2.3": [
+					"More fixing to DependencyControl related stuff."
+				],
+				"0.2.4": [
+					"Adding option to calculate perspective from org centered to the middle of the plane.(EXPERIMENTAL)",
+					"Adding HELP window.",
+					"Adding meaningful error messages."
+				],
+				"0.3.0": [
+					"Unimaginable amount of improvements.",
+					"Sorting out all the dependencies"
+				],
+				"0.3.1": [
+					"Save tracking datas ambient quad to extradata"
+				]
+			}
+		},
+		"zah.aegi-color-track": {
+			"url": "@{baseUrl}#@{namespace}",
+			"author": "Zahuczky",
+			"name": "Aegisub-Color-Tracking",
+			"description": "Tracking the color from a given pixel or tracking data",
+			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+			"channels": {
+				"main": {
+					"version": "2.0.2",
+					"released": "2023-03-23",
+					"default": true,
+					"files": [
+						{
+							"name": ".lua",
+							"url": "@{fileBaseUrl}@{fileName}",
+							"sha1": "5634ace5ced65f1e655f56078eccae1cf9a16570"
+						}
+					],
+					"requiredModules": [
+						{
+							"moduleName": "petzku.util",
+							"url": "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
+							"version": "0.3.0",
+							"feed": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/stable/DependencyControl.json"
+						},
+						{
+							"moduleName": "a-mo.ConfigHandler",
+							"url": "https://github.com/TypesettingTools/Aegisub-Motion",
+							"version": "1.1.4",
+							"feed": "https://raw.githubusercontent.com/TypesettingTools/Aegisub-Motion/DepCtrl/DependencyControl.json"
+						}
+					]
+				}
+			},
+			"changelog": {
+				"1.0.0": [
+					"Initial release"
+				],
+				"1.1.0": [
+					"Various fixes by Petzku"
+				],
+				"2.0.0": [
+					"Complete restrocture by garret, no more png dissecting, support for new API version in arch1 builds."
+				],
+				"2.0.1": [
+					"Adding progress reporting"
+				],
+				"2.0.2": [
+					"Fix handling of tracking data when using Aegisub built-in frame API",
+					"Refactor internal handling of timecodes"
+				]
+			}
+		}
+	}
 }
