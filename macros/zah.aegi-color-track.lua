@@ -3,7 +3,7 @@ local tr = aegisub.gettext
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
 script_author = "Zahuczky, garret"
-script_version = "2.0.1"
+script_version = "2.0.2"
 script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
@@ -59,14 +59,16 @@ local function showDialog(macro)
   end
 end
 
-local function getTimes(line)
-  local starterMS = line.start_time
-  local enderMS = line.end_time
-  local startframe = aegisub.frame_from_ms(starterMS)
-  local endframe = aegisub.frame_from_ms(enderMS)
-  local startMS = aegisub.ms_from_frame(startframe)
-  local endMS = aegisub.ms_from_frame(endframe)
+local function getFrames(line)
+  local startFrame = aegisub.frame_from_ms(line.start_time)
+  local endFrame = aegisub.frame_from_ms(line.end_time)
 
+  local numOfFrames = endFrame - startFrame
+
+  return startFrame, endFrame, numOfFrames
+end
+
+local function formatTimesFfmpeg(startMS, endMS)
   local startS = math.floor(startMS / 1000)
   local startM = math.floor(startS / 60)
   local startH = math.floor(startM / 60)
@@ -76,8 +78,9 @@ local function getTimes(line)
 
   local startRem = startMS - (1000 * (startS + 60 * (startM + 60 * startH)))
 
-  local starttime = string.format("%d:%02d:%02d.%03d", startH, startM, startS, startRem)
-  if starterMS == 0 then starttime = "0:00:00" end
+  local fmtStart = string.format("%d:%02d:%02d.%03d", startH, startM, startS, startRem)
+  -- in case we get a "negative" timestamp
+  if startMS <= 0 then fmtStart = "0:00:00" end
 
   local endS = math.floor(endMS / 1000)
   local endM = math.floor(endS / 60)
@@ -88,32 +91,38 @@ local function getTimes(line)
 
   local endRem = endMS - (1000 * (endS + 60 * (endM + 60 * endH)))
 
-  local endtime = string.format("%d:%02d:%02d.%03d", endH, endM, endS, endRem)
+  local fmtEnd = string.format("%d:%02d:%02d.%03d", endH, endM, endS, endRem)
 
-  local numOfFrames = endframe-startframe
-
-  return starttime, endtime, numOfFrames
+  return fmtStart, fmtEnd
 end
 
-local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels, subtitles, selected_lines)
+-- XPixels and YPixels are either one single value (tracking fixed pixel) or an array of values
+local function getColors(startFrame, endFrame, numOfFrames, XPixels, YPixels)
+
+  -- built-in aegisub API for getting frame data. not necessarily present, fall back to ffmpeg if necessary
   if aegisub.get_frame then
-    colors={}
-    local start_frame = aegisub.frame_from_ms(subtitles[selected_lines[1]].start_time)
+    local colors={}
+
+    -- if we got a single pair of coordinates, coerce them into arrays (of the repeated value) instead
     if type(XPixels) ~= "table" and type(YPixels) ~= "table" then
-      XPixArray = {}
-      YPixArray = {}
+      local XPixArray = {}
+      local YPixArray = {}
       for i=1, numOfFrames do
         XPixArray[i]=XPixels
         YPixArray[i]=YPixels
       end
+      XPixels, YPixels = XPixArray, YPixArray
     end
+
     for i=1, numOfFrames do
-        frame = aegisub.get_frame((start_frame + i-1), false)
-        colors[i]=frame:getPixelFormatted(XPixArray[i], YPixArray[i])
-        aegisub.progress.set((i/numOfFrames)*100)
-        aegisub.progress.task(string.format("Getting colors from frame %d/%d", i, numOfFrames))
+      local frame = aegisub.get_frame((startFrame + i-1), false)
+      colors[i]=frame:getPixelFormatted(XPixels[i], YPixels[i])
+      aegisub.progress.set((i/numOfFrames)*100)
+      aegisub.progress.task(string.format("Getting colors from frame %d/%d", i, numOfFrames))
     end
+    return colors
   else
+    local ffmpegStart, ffmpegEnd = formatTimesFfmpeg(aegisub.ms_from_frame(startFrame), aegisub.ms_from_frame(endFrame))
     local filter = ""
     if type(XPixels) ~= "table" and type(YPixels) ~= "table" then
       filter = 'crop=2:2:' .. XPixels .. ":" .. YPixels
@@ -127,7 +136,7 @@ local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels, subt
 
     local pixpath = aegisub.decode_path("?temp/" .. script_namespace ..".pixels")
 
-    local incantation = 'ffmpeg -i "' .. aegisub.project_properties().video_file .. '" -ss ' .. startTime .. " -to " .. endTime .. ' -filter:v "' .. filter .. '" -f rawvideo -pix_fmt rgb24 "'.. pixpath .. '"'
+    local incantation = 'ffmpeg -i "' .. aegisub.project_properties().video_file .. '" -ss ' .. ffmpegStart .. " -to " .. ffmpegEnd .. ' -filter:v "' .. filter .. '" -f rawvideo -pix_fmt rgb24 "'.. pixpath .. '"'
     aegisub.log(4, "incantation: ".. incantation.."\n")
     petzku.io.run_cmd(incantation, true)
     aegisub.log(4, "ran\n")
@@ -154,7 +163,6 @@ local function getColors(startTime, endTime, numOfFrames, XPixels, YPixels, subt
     os.remove(pixpath) -- will stay there if it failed, might be useful for debugging
     return colors
   end
-  return colors
 end
 
 -- Main function
@@ -168,7 +176,7 @@ function colortrack(subtitles, selected_lines, active_line)
   end
 
   -- Calculate frame perfect times for trimming
-  local startTime, endTime, numOfFrames = getTimes(line)
+  local startFrame, endFrame, numOfFrames = getFrames(line)
 
   -- Settings
   local XPixels, YPixels
@@ -184,7 +192,7 @@ function colortrack(subtitles, selected_lines, active_line)
     if res.data == "" then
       aegisub.debug.out("You forgot to give me any data, so I quit.\n\n")
       return aegisub.cancel()
-    elseif dataArray[9] ~= "Position" then
+    elseif dataArray[9] ~= "Position" and dataArray[9] ~= "Anchor Point" then
       aegisub.debug.out("I have no idea what kind of data you pasted in, but I'm sure it's not what I wanted.\n\nI need After Effects Transform data.\n\nThe same thing you use for Aegisub-Motion.\n\n")
       return aegisub.cancel()
     end
@@ -205,10 +213,8 @@ function colortrack(subtitles, selected_lines, active_line)
       p = p + 1
     end
   elseif res.setting == "Defined pixels" then
-    for i=1, numOfFrames do
-      XPixels = res.pixX
-      YPixels = res.pixY
-    end
+    XPixels = res.pixX
+    YPixels = res.pixY
   end
 
   -- if res.setting == "Middle of Rect. Clip" then
@@ -228,7 +234,7 @@ function colortrack(subtitles, selected_lines, active_line)
 
 
   --aegisub.debug.out("\n\n\n\nvideo path: "..aegisub.decode_path("?video").."\n\n\n\n"..aegisub.project_properties().video_file.."\n\n\n"..aegisub.decode_path("?temp").."\n\n\n")
-  local colors = getColors(startTime, endTime, numOfFrames, XPixels, YPixels, subtitles, selected_lines)
+  local colors = getColors(startFrame, endFrame, numOfFrames, XPixels, YPixels)
 
   local function calcTransformTime(i)
     -- Getting accurate times for the \t transform. Thx petzku. :*
