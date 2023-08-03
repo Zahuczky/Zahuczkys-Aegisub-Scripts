@@ -1,0 +1,6 @@
+vsmasktools >= 1.1.2
+vstools >= 2.3.0
+numpy >= 1.24.3
+opencv-python >= 4.8.0.74
+PyQt6 >= 6.5.2
+pyqtdarktheme >= 2.1.0
