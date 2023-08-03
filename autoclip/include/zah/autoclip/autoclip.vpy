@@ -1,4 +1,5 @@
-# Version 1.0.0
+# Version 1.0.1
+# Even when this file doesn't change, version numbering is kept consistent with the lua script.
 
 import vapoursynth as vs
 from vsmasktools import replace_squaremask
