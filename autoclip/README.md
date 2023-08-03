@@ -7,7 +7,7 @@
 - Add a rectangular clip to the first line of the sign, that clip is going to be the watched area.
 - Anything entering that clip will be clipped out.
 - The frame where you stand in the video is going to be used as the "reference frame". Ideally, that should be a frame where your sign is not obstructed at all.
- - The script looks at your reference frame, and clips out the changes compared to that in other frames. 
+  - The script looks at your reference frame, and clips out the changes compared to that in other frames. 
 - Run AutoClip from the Automation menu.
 - Fiddle with the sliders.
 - Click "Apply clips"
