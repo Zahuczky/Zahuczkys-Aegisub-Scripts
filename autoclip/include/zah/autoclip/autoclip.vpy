@@ -301,12 +301,24 @@ if __name__ == '__main__':
     parser.add_argument("-a", "--active-frame", dest="active", help="current video frame in aegi", metavar="STRING")
     args = parser.parse_args()
 
-    video = str(args.video)
-    video_path = video.replace("\\", "/")
+    debug = False
+    if debug:
+        video_path = "C:/Users/zozic/Downloads/ayumu/[Erai-raws] Soredemo Ayumu wa Yosetekuru - 01 [1080p][Multiple Subtitle][F91EC6FA].mkv"
+        first = "7822"
+        last = "7929"
+        clip = "828.10 0 1086.456 152"
+        active = "2"
+    else:
+        video = str(args.video)
+        video_path = video.replace("\\", "/")
+        first = args.first
+        last = args.last
+        clip = args.clip
+        active = args.active
 
     app = QApplication([])
     # set fany window name
     app.setStyleSheet(qdarktheme.load_stylesheet())
-    gui = VideoPlayer(video_path, args.first, args.last, args.clip, args.active)
+    gui = VideoPlayer(video_path, first, last, clip, active)
     gui.show()
     app.exec()

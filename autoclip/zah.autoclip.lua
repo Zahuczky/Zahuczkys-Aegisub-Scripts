@@ -55,7 +55,7 @@ function autoclip(sub, sel, act)
     clipfile = aegisub.decode_path("?temp")..ps.."zahuczky"..ps.."autoclip.txt"
 
     if file_exists(clipfile) == false then
-        aegisub.debug.out("Something wen horribly wrong, and I have no idea exactly where.")
+        aegisub.debug.out("Something went horribly wrong, and I have no idea exactly where.")
         aegisub.cancel()
     end
 
