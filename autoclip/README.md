@@ -7,6 +7,7 @@
 - Add a rectangular clip to the first line of the sign, that clip is going to be the watched area.
 - Anything entering that clip will be clipped out.
 - The frame where you stand in the video is going to be used as the "reference frame". Ideally, that should be a frame where your sign is not obstructed at all.
+ - The script looks at your reference frame, and clips out the changes compared to that in other frames. 
 - Run AutoClip from the Automation menu.
 - Fiddle with the sliders.
 - Click "Apply clips"
@@ -16,7 +17,7 @@
 - Install [Vapoursynth](https://www.vapoursynth.com/ "Vapoursynth"). (testing was done on R63)
 - Download the contents of the /autoclip folder of this repo.
 - Place` autoclip/include/zah/autoclip/autoclip.vpy` into your `aegisub/automation/include/zah/autoclip/` folder.
-Place `autoclip/zah.autoclip.lua` into  your `aegisub/automation/autoload` folder.
+- Place `autoclip/zah.autoclip.lua` into  your `aegisub/automation/autoload` folder.
 - Place the `requirements.txt` *somewhere*.
 - Open a terminal and `cd` to wherever you put the `requirements.txt`.
 - Run `pip install -r requirements.txt`.
@@ -29,4 +30,6 @@ Place `autoclip/zah.autoclip.lua` into  your `aegisub/automation/autoload` folde
 - More sliders (probably bunch of other VS filters to fine-tune the clip area)
 - Simplifying the clips to curves and such.  
 - depctrl
+- Currently only the longest contour gets taken into account. Maybe combine them? Maybe a slider for this?
+- Figure out a way to get and combine every plane of the original video. 
 
