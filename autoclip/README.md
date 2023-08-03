@@ -27,5 +27,6 @@ Place `autoclip/zah.autoclip.lua` into  your `aegisub/automation/autoload` folde
 - Handle moving signs/tracking data for those
 - Signs with multiple layers? I forgot about that but Im already writing this readme so *shrug*. 
 - More sliders (probably bunch of other VS filters to fine-tune the clip area)
+- Simplifying the clips to curves and such.  
 - depctrl
 
