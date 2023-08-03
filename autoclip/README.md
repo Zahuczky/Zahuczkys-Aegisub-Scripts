@@ -14,7 +14,9 @@
 
 ## Installation:
 - Install a recent version of [Python](https://www.python.org/downloads/ "Python"). (testing was done on 3.11.3, but should work on any recent 3.X)
-- Install [Vapoursynth](https://www.vapoursynth.com/ "Vapoursynth"). (testing was done on R63)
+- Install [Vapoursynth](https://www.vapoursynth.com/ "Vapoursynth") >= R63.
+  - Most recent vs-tools requires R63. You might be able to circumvent this if you want to hold on to an older version, but no support is provided for that.
+  - It is advised to install vapoursynth from their site, rather than from pip. The version in pip is usually older. 
 - Download the contents of the /autoclip folder of this repo.
 - Place` autoclip/include/zah/autoclip/autoclip.vpy` into your `aegisub/automation/include/zah/autoclip/` folder.
 - Place `autoclip/zah.autoclip.lua` into  your `aegisub/automation/autoload` folder.
