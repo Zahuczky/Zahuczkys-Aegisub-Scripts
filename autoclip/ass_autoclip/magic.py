@@ -1,30 +1,46 @@
-# Version 1.0.1
-# Even when this file doesn't change, version numbering is kept consistent with the lua script.
-
 import vapoursynth as vs
 from vsmasktools import replace_squaremask
 import vstools as vst
-import numpy as np
-import cv2
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QSlider, QVBoxLayout, QSizePolicy, QCheckBox, QPushButton, QMessageBox
-from PyQt6.QtCore import Qt, QSize
-import qdarktheme
-import os
-import sys
-import tempfile
-import argparse as ap
 
-from PyQt6.QtGui import QImage, QPixmap
-class VideoPlayer(QWidget):
-    def __init__(self, video_path, first_frame, last_frame, target_clip, act):
-        super().__init__()
-        self.setWindowTitle("AutoClip")
 
-        # target clip is the top left and bottom right coordinates of the clip in the format "x1 y1 x2 y2"
-        # let's convert this into "width, height, x1, y1"
-        clip_params = target_clip.split(" ")
-        clip_params = [int(float(x)) for x in clip_params]
-        clip_params = [clip_params[2] - clip_params[0], clip_params[3] - clip_params[1], clip_params[0], clip_params[1]]
+class Video:
+    def __init__(self, video, clip, first, last, active):
+
+        # Load, cut and filter the video
+        # no touchie unless you really know what you're doing
+        self.core = vs.core
+        self.clip = self.core.lsmas.LWLibavSource(video_path)
+        self.clip = self.clip[int(first_frame):int(last_frame)]
+        self.black_clip = self.clip.std.BlankClip(width=1920, height=1080, color=[0, 128, 128])
+        self.maskk = replace_squaremask(clipa=self.black_clip, clipb=self.clip, mask_params=(clip_params), ranges=(None, None))
+        self.ref_frame = self.maskk.std.FreezeFrames(first=[0], last=[self.maskk.num_frames - 1], replacement=[int(act)])
+        self.diff_treshold = 0.04
+        self.diff_clip2 = self.core.std.Expr([vst.depth(self.maskk, 32), vst.depth(self.ref_frame, 32)], f"x y - abs {self.diff_treshold} < 0 1 ?")
+        self.diff_clip2 = vst.depth(self.diff_clip2, 16, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL)
+        self.clip = vst.depth(self.clip, 16, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL)
+
+
+#import numpy as np
+#import cv2
+#from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QSlider, QVBoxLayout, QSizePolicy, QCheckBox, QPushButton, QMessageBox
+#from PyQt6.QtCore import Qt, QSize
+#import qdarktheme
+#import os
+#import sys
+#import tempfile
+#import argparse as ap
+
+#from PyQt6.QtGui import QImage, QPixmap
+#class VideoPlayer(QWidget):
+#    def __init__(self, video_path, first_frame, last_frame, target_clip, act):
+#        super().__init__()
+#        self.setWindowTitle("AutoClip")
+
+#        # target clip is the top left and bottom right coordinates of the clip in the format "x1 y1 x2 y2"
+#        # let's convert this into "width, height, x1, y1"
+#        clip_params = target_clip.split(" ")
+#        clip_params = [int(float(x)) for x in clip_params]
+#        clip_params = [clip_params[2] - clip_params[0], clip_params[3] - clip_params[1], clip_params[0], clip_params[1]]
 
 
     # Load, cut and filter the video
@@ -40,79 +56,79 @@ class VideoPlayer(QWidget):
         self.diff_clip2 = vst.depth(self.diff_clip2, 16, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL)
         self.clip = vst.depth(self.clip, 16, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL)
 
-        # Create the GUI elements
-        self.image_label = QLabel(self) # Maybe it shouldn't be a QLabel but QGraphicView instead? But I couldn't figure out how to not pan the image when zooming with the wheel
-        self.image_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center the image
-        self.slider = QSlider(Qt.Orientation.Horizontal, self)
-        # Set default value for slider
-        self.slider.setValue(int(act)) # Let's set this to act from aegisub, probably this is a sane thing.
-        self.slider.setRange(0, self.diff_clip2.num_frames - 1) # I hate 0 indexing. 
-        self.slider.valueChanged.connect(self.update_image)
-        self.contours = None
+#        # Create the GUI elements
+#        self.image_label = QLabel(self) # Maybe it shouldn't be a QLabel but QGraphicView instead? But I couldn't figure out how to not pan the image when zooming with the wheel
+#        self.image_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+#        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)  # Center the image
+#        self.slider = QSlider(Qt.Orientation.Horizontal, self)
+#        # Set default value for slider
+#        self.slider.setValue(int(act)) # Let's set this to act from aegisub, probably this is a sane thing.
+#        self.slider.setRange(0, self.diff_clip2.num_frames - 1) # I hate 0 indexing.
+#        self.slider.valueChanged.connect(self.update_image)
+#        self.contours = None
 
-        # Set the slider's style to resemble a progress bar
-        self.slider.setStyleSheet("""
-            QSlider {
-                background: #202124;
-                height: 20px;
-            }
+#        # Set the slider's style to resemble a progress bar
+#        self.slider.setStyleSheet("""
+#            QSlider {
+#                background: #202124;
+#                height: 20px;
+#            }
 
-            QSlider::groove {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #aaa, stop:1 #ddd);
-                border: 1px solid #777;
-                height: 10px;
-                border-radius: 2px;
-            }
+#            QSlider::groove {
+#                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #aaa, stop:1 #ddd);
+#                border: 1px solid #777;
+#                height: 10px;
+#                border-radius: 2px;
+#            }
 
-            QSlider::handle {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #eee, stop:1 #ccc);
-                border: 1px solid #777;
-                width: 8px;
-                border-radius: 4px;
-            }
-        """)
-        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowMinimizeButtonHint | Qt.WindowType.WindowMaximizeButtonHint | Qt.WindowType.WindowCloseButtonHint)
+#            QSlider::handle {
+#                background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #eee, stop:1 #ccc);
+#                border: 1px solid #777;
+#                width: 8px;
+#                border-radius: 4px;
+#            }
+#        """)
+#        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowMinimizeButtonHint | Qt.WindowType.WindowMaximizeButtonHint | Qt.WindowType.WindowCloseButtonHint)
 
-        self.frame_label = QLabel(self)
-        self.frame_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.frame_label.setText(f"Frame {int(act)+1} / {self.diff_clip2.num_frames}")
-        self.slider.valueChanged.connect(self.update_frame_label)
+#        self.frame_label = QLabel(self)
+#        self.frame_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+#        self.frame_label.setText(f"Frame {int(act)+1} / {self.diff_clip2.num_frames}")
+#        self.slider.valueChanged.connect(self.update_frame_label)
 
 
-        # Create the slider for diff_treshold
-        self.diff_treshold_slider = QSlider(Qt.Orientation.Horizontal, self)
-        self.diff_treshold_slider.setRange(1, 2000)  # Set the range of the slider (0.01 to 0.2 with a step of 0.01). Maybe experiment more with the range and step. TODO
-        self.diff_treshold_slider.setValue(int(self.diff_treshold * 10000))  # Set the initial value based on self.diff_treshold
-        self.diff_treshold_slider.valueChanged.connect(self.update_diff_treshold)
+#        # Create the slider for diff_treshold
+#        self.diff_treshold_slider = QSlider(Qt.Orientation.Horizontal, self)
+#        self.diff_treshold_slider.setRange(1, 2000)  # Set the range of the slider (0.01 to 0.2 with a step of 0.01). Maybe experiment more with the range and step. TODO
+#        self.diff_treshold_slider.setValue(int(self.diff_treshold * 10000))  # Set the initial value based on self.diff_treshold
+#        self.diff_treshold_slider.valueChanged.connect(self.update_diff_treshold)
 
-        self.diff_label = QLabel(self)
-        self.diff_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.diff_label.setText(f"Required difference: 400")
-        self.diff_treshold_slider.valueChanged.connect(self.update_diff_label)
+#        self.diff_label = QLabel(self)
+#        self.diff_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+#        self.diff_label.setText(f"Required difference: 400")
+#        self.diff_treshold_slider.valueChanged.connect(self.update_diff_label)
         
-        self.show_diff_checkbox = QCheckBox("Show Difference", self)
-        self.show_diff_checkbox.stateChanged.connect(self.update_image)
+#        self.show_diff_checkbox = QCheckBox("Show Difference", self)
+#        self.show_diff_checkbox.stateChanged.connect(self.update_image)
 
-        appply_button = QPushButton("Apply Clips")
-        appply_button.clicked.connect(self.apply_clips)
+#        appply_button = QPushButton("Apply Clips")
+#        appply_button.clicked.connect(self.apply_clips)
 
-        # Set the layout
-        layout = QVBoxLayout()
-        layout.addWidget(self.image_label)
-        layout.addWidget(self.frame_label)
-        layout.addWidget(self.slider)
-        layout.addWidget(self.diff_label)
-        layout.addWidget(self.diff_treshold_slider)
-        layout.addWidget(self.show_diff_checkbox)
-        layout.addWidget(appply_button)
-        self.setLayout(layout)
+#        # Set the layout
+#        layout = QVBoxLayout()
+#        layout.addWidget(self.image_label)
+#        layout.addWidget(self.frame_label)
+#        layout.addWidget(self.slider)
+#        layout.addWidget(self.diff_label)
+#        layout.addWidget(self.diff_treshold_slider)
+#        layout.addWidget(self.show_diff_checkbox)
+#        layout.addWidget(appply_button)
+#        self.setLayout(layout)
 
-        self.setMinimumSize(640, 360) # Why would you go smaller. To draw out some bugs? Nah-uh, not on my watch
-        self.current_zoom = 1.0  # 100% (no zoom)
-        self.zoom_step = 0.1  # Adjust the zoom step as desired
+#        self.setMinimumSize(640, 360) # Why would you go smaller. To draw out some bugs? Nah-uh, not on my watch
+#        self.current_zoom = 1.0  # 100% (no zoom)
+#        self.zoom_step = 0.1  # Adjust the zoom step as desired
 
-        self.update_image()
+#        self.update_image()
 
 
 

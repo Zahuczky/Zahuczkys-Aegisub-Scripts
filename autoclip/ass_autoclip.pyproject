@@ -1,0 +1,12 @@
+{
+    "files": [
+        "pyproject.toml",
+        "README.md",
+        "LICENSE",
+        ".gitignore",
+        "ass_autoclip/__init__.py",
+        "ass_autoclip/autoclip.py",
+        "ass_autoclip/magic.py",
+        "ass_autoclip/autoclip.qml"
+    ]
+}
