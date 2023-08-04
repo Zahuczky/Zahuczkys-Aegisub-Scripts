@@ -199,9 +199,14 @@ class Backend(QObject):
 
     @Slot
     def newFrame(self):
+        locked = FrameLock.tryLock()
         CacheThreadPool.lock()
         CacheThreadPool.start(RequestFrame(self.active, self.difference, self.show_difference, time_critical=True),
                               priority=QThread.Priority.TimeCriticalPriority)
+        if not locked:
+            FrameLock.lock()
+        FramesPending = { "frame": self.active, "prev": FramesPending }
+        FrameLock.unlock()
 
         if self.previous_active and self.previous_active < self.active:
             for f in range(self.active + 1, min(self.frames, self.active + 7)):
@@ -224,9 +229,14 @@ class Backend(QObject):
 
     @Slot
     def newSettings(self):
+        locked = FrameLock.tryLock()
         CacheThreadPool.lock()
         CacheThreadPool.start(RequestFrame(self.frame, self.difference, self.show_difference, time_critical=True),
                               priority=QThread.Priority.TimeCriticalPriority)
+        if not locked:
+            FrameLock.lock()
+        FramesPending = { "frame": self.active, "prev": None }
+        FrameLock.unlock()
 
         for f in range(self.active + 1, min(self.frames, self.active + 4)):
             CacheThreadPool.start(RequestFrame(f, self.difference, self.show_difference),
