@@ -1,3 +1,4 @@
 __pycache__
 dist
 *.pyproject.user
+.vscode

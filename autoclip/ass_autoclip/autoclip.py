@@ -1,9 +1,12 @@
 import os
 from pathlib import Path
-from PySide6.QtCore import QObject, QMutex, Property, Qt, QRunnable, Signal, QSize, Slot, QThread, QThreadPool
+from PySide6.QtCore import QObject, QMutex, Property, Qt, QRunnable, Signal, QSize, Slot, QThreadPool
 from PySide6.QtGui import QGuiApplication, QImage
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickImageProvider
+
+from base import threads, logger
+from magic import Video
 
 
 
@@ -13,7 +16,7 @@ from PySide6.QtQuick import QQuickImageProvider
 # list to see if the result is still needed. If so, it set the QImage to
 # Frame, remove anything later than the frame in linked list and trigger a
 # rerender
-Frame = QImage(QSize(1, 1), QImage.Format_Alpha8)
+Frame = QImage(QSize(1, 1), QImage.Format.Format_Alpha8)
 Frame.fill(0)
 # { "frame": 0, "prev": None }
 FramesPending = None
@@ -21,10 +24,14 @@ FrameLock = QMutex()
 
 class ImageProvider(QQuickImageProvider):
     def __init__(self):
-        super(ImageProvider, self).__init__(QQuickImageProvider.ImageType.Image)
+        super().__init__(QQuickImageProvider.ImageType.Image)
 
-    def requestImage(self, id, requestedSize):
-        Frame, Frame.size()
+    def requestImage(self, id, size, requestedSize):
+        FrameLock.lock()
+        frame = Frame
+        FrameLock.unlock()
+
+        return frame
 
 
 
@@ -47,13 +54,13 @@ FrameCacheLock = QMutex()
 # Preloading frames is Qt.NormalPriority
 # Cache cleaning is Qt.HighPriority
 CacheThreadPool = QThreadPool()
-CacheThreadPool.setMaxThreadCount(8)
+CacheThreadPool.setMaxThreadCount(threads)
 CacheThreadPoolLock = QMutex()
 
 
 class RequestFrame(QRunnable):
     def __init__(self, frame, difference, show_difference, time_critical=False):
-        super(RequestFrame, self).__init__()
+        super().__init__()
 
         self.frame = frame
         self.difference = difference
@@ -75,9 +82,11 @@ class RequestFrame(QRunnable):
             if self.key in FrameCache and \
                self.frame in FrameCache[self.key] and \
                FrameCache[self.key][self.frame][1]:
+                logger.debug(f"Loading frame {self.frame} from cache")
                 img = FrameCache[self.key][self.frame][1]
             else:
-                img = TODO()
+                logger.debug(f"Loading frame {self.frame}")
+                img = video.get_frame(self.frame, self.difference, self.show_difference)
 
             self.update_Frame(img)
             self.update_FrameCache(img)
@@ -86,19 +95,25 @@ class RequestFrame(QRunnable):
             if self.key in FrameCache and \
                self.frame in FrameCache[self.key] and \
                FrameCache[self.key][self.frame][1]:
+                logger.debug(f"Preloading frame {self.frame} from cache")
+                img = FrameCache[self.key][self.frame][1]
 
                 self.update_Frame(img)
             else:
-                img = TODO()
+                logger.debug(f"Preloading frame {self.frame}")
+                img = video.get_frame(self.frame, self.difference, self.show_difference)
 
                 self.update_Frame(img)
                 self.update_FrameCache(img)
 
     def update_Frame(self, img):
+        global Frame
+
         FrameLock.lock()
         head = FramesPending
         while head:
             if head["frame"] == self.frame:
+                logger.debug(f"Rendering frame {self.frame}")
                 Frame = img
                 backend.imageReady.emit()
                 head["prev"] = None
@@ -107,7 +122,9 @@ class RequestFrame(QRunnable):
             head = head["prev"]
         FrameLock.unlock()
 
-    def uodate_FrameCache(self, img):
+    def update_FrameCache(self, img):
+        global FrameCacheHead
+
         head = None
 
         FrameCacheLock.lock()
@@ -123,17 +140,17 @@ class RequestFrame(QRunnable):
         # Clean cache
         if head and head % FrameCacheCleaningFrequency == 0:
             CacheThreadPoolLock.lock()
-            CacheThreadPool.start(CleanCache(self.key, head - FrameCacheCleaningFrequency),
-                                  priority=QThread.Priority.HighPriority)
+            CacheThreadPool.start(CleanCache(self.key, head - FrameCacheCleaningFrequency), priority=4)
             CacheThreadPoolLock.unlock()
 
 class CleanCache(QRunnable):
     def __init__(self, key, before):
-        super(CleanCache, self).__init__()
+        super().__init__()
         self.key = key
         self.before = before
 
     def run(self):
+        logger.debug(f"Cleaning cache")
         FrameCacheLock.lock()
         for key in list(FrameCache.keys()):
             if key != self.key:
@@ -149,16 +166,18 @@ class Backend(QObject):
     def __init__(self, frames, active):
         QObject.__init__(self)
 
-        self.activeChanged.connect(self.newFrame)
-        self.differenceChanged.connect(self.newSettings)
-        self.showDifferenceChanged.connect(self.newSettings)
-
         self.frames = frames
         self.previous_active = active
         self.active = active
 
+        self.activeChanged.connect(self.newFrame)
+        self.differenceChanged.connect(self.newSettings)
+        self.showDifferenceChanged.connect(self.newSettings)
+
+        self.newFrame()
+
     # Frames
-    _frames = 0
+    _frames = None
     def frames_(self):
         return self._frames
     def setFrames(self, frames):
@@ -168,8 +187,8 @@ class Backend(QObject):
     frames = Property(int, frames_, setFrames, notify=framesChanged)
 
     # Frame
-    previous_active = 0
-    _active = 0
+    previous_active = None
+    _active = None
     def active_(self):
         return self._active
     def setActive(self, active):
@@ -197,63 +216,67 @@ class Backend(QObject):
     showDifferenceChanged = Signal()
     showDifference = Property(bool, showDifference_, setShowDifference, notify=showDifferenceChanged)
 
-    @Slot
+    @Slot()
     def newFrame(self):
+        global FramesPending
+
+        logger.debug("New frame requested")
+        logger.debug(f"  active: {self.active}  previous_active: {self.previous_active}")
         locked = FrameLock.tryLock()
-        CacheThreadPool.lock()
-        CacheThreadPool.start(RequestFrame(self.active, self.difference, self.show_difference, time_critical=True),
-                              priority=QThread.Priority.TimeCriticalPriority)
+        CacheThreadPoolLock.lock()
+        CacheThreadPool.start(RequestFrame(self.active, self.difference, self.showDifference, time_critical=True), priority=6)
         if not locked:
             FrameLock.lock()
         FramesPending = { "frame": self.active, "prev": FramesPending }
         FrameLock.unlock()
 
         if self.previous_active and self.previous_active < self.active:
-            for f in range(self.active + 1, min(self.frames, self.active + 7)):
-                CacheThreadPool.start(RequestFrame(f, self.difference, self.show_difference),
-                                      priority=QThread.NormalPriority)
+            for f in range(self.active + 1, min(self.frames, self.active + 5)):
+                CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
         elif self.previous_active and self.previous_active > self.active:
-            for f in range(self.active - 1, max(-1, self.active - 7), -1):
-                CacheThreadPool.start(RequestFrame(f, self.difference, self.show_difference),
-                                      priority=QThread.NormalPriority)
+            for f in range(self.active - 1, max(-1, self.active - 5), -1):
+                CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
         else:
             for f in range(self.active + 1, min(self.frames, self.active + 4)):
-                CacheThreadPool.start(RequestFrame(f, self.difference, self.show_difference),
-                                      priority=QThread.NormalPriority)
+                CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
             for f in range(self.active - 1, max(-1, self.active - 4), -1):
-                CacheThreadPool.start(RequestFrame(f, self.difference, self.show_difference),
-                                      priority=QThread.NormalPriority)
+                CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
 
         self.previous_active = self.active
-        CacheThreadPool.unlock()
+        CacheThreadPoolLock.unlock()
 
-    @Slot
+    @Slot()
     def newSettings(self):
+        global FramesPending
+
+        logger.debug("New settings requested")
+        logger.debug(f"  active: {self.active}  difference: {self.difference}  showDifference: {self.showDifference}")
         locked = FrameLock.tryLock()
-        CacheThreadPool.lock()
-        CacheThreadPool.start(RequestFrame(self.frame, self.difference, self.show_difference, time_critical=True),
-                              priority=QThread.Priority.TimeCriticalPriority)
+        CacheThreadPoolLock.lock()
+        CacheThreadPool.clear()
+        CacheThreadPool.start(RequestFrame(self.frames, self.difference, self.showDifference, time_critical=True), priority=6)
         if not locked:
             FrameLock.lock()
         FramesPending = { "frame": self.active, "prev": None }
         FrameLock.unlock()
 
-        for f in range(self.active + 1, min(self.frames, self.active + 4)):
-            CacheThreadPool.start(RequestFrame(f, self.difference, self.show_difference),
-                                  priority=QThread.NormalPriority)
-        for f in range(self.active - 1, max(-1, self.active - 4), -1):
-            CacheThreadPool.start(RequestFrame(f, self.difference, self.show_difference),
-                                  priority=QThread.NormalPriority)
+        for f in range(self.active + 1, min(self.frames, self.active + 3)):
+            CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
+        for f in range(self.active - 1, max(-1, self.active - 3), -1):
+            CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
 
-        CacheThreadPool.unlock()
+        self.previous_active = self.active
+        CacheThreadPoolLock.unlock()
 
     imageReady = Signal()
 
 
 
-def load(args):
+def start(argv, args):
     global backend
+    global video
     
+    logger.debug("Loading application")
     os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
     os.environ["QT_QUICK_CONTROLS_MATERIAL_THEME"] = "Dark"
     os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
@@ -264,12 +287,15 @@ def load(args):
     # Passing argv to QCoreApplication because it enables Qt-specific options
     # like --platform, --plugin, interestingly also --qwindowicon,
     # --qwindowtitle, etc.
-    app = QGuiApplication([])
+    app = QGuiApplication(argv)
     engine = QQmlApplicationEngine()
+
+    # Load video
+    video = Video(args.video, args.clip, args.first, args.last, args.active)
 
     # Add image provider and backend to root
     image_provider = ImageProvider()
-    engine.addImageProvider("backend", ImageProvider())
+    engine.addImageProvider("backend", image_provider)
     backend = Backend(args.last - args.first, args.active - args.first)
     engine.rootContext().setContextProperty("backend", backend)
 
@@ -277,4 +303,5 @@ def load(args):
     qml_file = Path(__file__).with_name("autoclip.qml").as_posix()
     engine.load(qml_file)
 
-    return app
+    logger.debug("Starting event loop")
+    app.exec()

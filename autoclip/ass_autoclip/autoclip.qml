@@ -1,27 +1,3 @@
-// vsquickview
-// Copyright (c) Akatsumekusa and contributors
-
-/* Permission is hereby granted, free of charge, to any person obtaining
- * a copy of this software and associated documentation files (the
- * "Software"), to deal in the Software without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
- * 
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- * 
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- */
-
 import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
@@ -32,31 +8,21 @@ ApplicationWindow {
     width: 1280
     height: 720
     visible: true
-    visibility: Window.FullScreen
+    visibility: Window.Maximized
 
-    title: "vsquickview"
+    title: "AutoClip"
     
     Material.theme: Material.Dark
 
-    onClosing: (close) => {
-        window.visible = false
-        close.accepted = false
-    }
+    // onClosing: (close) => {
+    // }
 
-    Connections {
-        target: windowcontrol
-        function onShow() {
-            window.visible = true
-        }
-        function onHide() {
-            window.visible = false
-        }
-    }
-
+    property int image_number: 0
     Connections {
         target: backend
-        function onImageChanged() {
-            image.source = "image://backend/" + Math.random().toExponential()
+        function onImageReady() {
+            image_number++
+            image.source = "image://backend/" + image_number
         }
     }
     
@@ -66,89 +32,18 @@ ApplicationWindow {
         anchors.horizontalCenterOffset: 0
         anchors.verticalCenterOffset: 0
 
+        property real scale: 1
         width: sourceSize.width * scale
         height: sourceSize.height * scale
-        source: "image://backend/" + Math.random().toExponential()
-        property real scale: 1
+        source: "image://backend/" + image_number
+        asynchronous: false
         smooth: false
         cache: false
-    }
-
-    property bool showLabelText: false
-    property string extraLabelText: ""
-    function updateLabelText() {
-        if(extraLabelText) {
-            label.text = extraLabelText
-        }
-        else if(showLabelText) {
-            label.text = "Index " + backend.index.toString() + (backend.name ? ": " + backend.name : "") + " / Frame " + backend.frame.toString() + (backend.frameInPreviewGroup() ? " (Preview Group)" : "")
-        }
-        else {
-            label.text = ""
-        }
-    }
-    Connections {
-        target: window
-        function onShowLabelTextChanged() {
-            updateLabelText()
-        }
-        function onExtraLabelTextChanged() {
-            updateLabelText()
-        }
-    }
-    Connections {
-        target: backend
-        function onIndexChanged() {
-            updateLabelText()
-        }
-    }
-    Connections {
-        target: backend
-        function onFrameChanged() {
-            updateLabelText()
-        }
-    }
-    Connections {
-        target: backend
-        function onNameChanged() {
-            updateLabelText()
-        }
-    }
-    Connections {
-        target: backend
-        function onPreviewGroupChanged() {
-            updateLabelText()
-        }
-    }
-
-    Label {
-        id: label
-        font.pixelSize: 35
-        color: "#B0FFFFFF"
-        antialiasing: true
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 54
-        anchors.left: parent.left
-        anchors.leftMargin: 84
-
-        text: ""
-        onTextChanged: {
-            if(text) {
-                visible = true
-            }
-            else {
-                visible = false
-            }
-        }
-
-        background: Rectangle {
-            color: "#40000000"
-        }
     }
     
     MouseArea {
         id: mousearea
-        z: 100
+        z: 10
         focus: true
         anchors.fill: parent
 
@@ -160,30 +55,15 @@ ApplicationWindow {
         property real offset_before_start_y
         property real start_x
         property real start_y
-        
-        property bool altPressed: false
+
+        property int previous_visibility: Window.AutomaticVisibility
 
         onPressed: (mouse) => {
-            if(true) {
-                altPressed = false
-            }
-
-            if(mouse.button === Qt.LeftButton || mouse.button === Qt.MiddleButton) {
-                pan = true
-                offset_before_start_x = image.anchors.horizontalCenterOffset
-                offset_before_start_y = image.anchors.verticalCenterOffset
-                start_x = mouseX
-                start_y = mouseY
-            }
-
-            else if(mouse.button === Qt.RightButton) {
-                if(!(mouse.modifiers & Qt.ShiftModifier)) {
-                    backend.cycleIndex()
-                }
-                else {
-                    backend.cycleIndexBackwards()
-                }
-            }
+            pan = true
+            offset_before_start_x = image.anchors.horizontalCenterOffset
+            offset_before_start_y = image.anchors.verticalCenterOffset
+            start_x = mouseX
+            start_y = mouseY
         }
         onPositionChanged: (mouse) => {
             if(pan) {
@@ -198,16 +78,12 @@ ApplicationWindow {
             }
         }
         onReleased: (mouse) => {
-            if(pan && (mouse.button === Qt.LeftButton || mouse.button === Qt.MiddleButton)) {
+            if(pan) {
                 pan = false
             }
         }
 
         onWheel: (wheel) => {
-            if(true) {
-                altPressed = false
-            }
-
             let image_x = image.x
             let image_y = image.y
             let image_width = image.width
@@ -232,23 +108,8 @@ ApplicationWindow {
             }
         }
 
-        property int previous_visibility: Window.AutomaticVisibility
-        property string gotoFrame: "NaN"
-        onGotoFrameChanged: {
-            if(gotoFrame !== "NaN") {
-                extraLabelText = "Goto frame " + gotoFrame
-            }
-            else {
-                extraLabelText = ""
-            }
-        }
-
         Keys.onPressed: (event) => {
-            if(true) {
-                altPressed = false
-            }
-
-            if(event.key === Qt.Key_F11 || event.key === Qt.Key_F) {
+            if(event.key === Qt.Key_F11) {
                 if(window.visibility === Window.Windowed ||
                    window.visibility === Window.Maximized) {
                     previous_visibility = window.visibility
@@ -259,186 +120,70 @@ ApplicationWindow {
                 }
             }
 
-            else if(event.key === Qt.Key_Space) {
-                if(!(event.modifiers & Qt.ShiftModifier)) {
-                    backend.cycleIndex()
-                }
-                else {
-                    backend.cycleIndexBackwards()
-                }
-            }
-            else if(event.key === Qt.Key_Up) {
-                backend.nextIndex()
-            }
-            else if(event.key === Qt.Key_Down) {
-                backend.prevIndex()
-            }
-
-            else if(event.key === Qt.Key_Alt) {
-                if(event.modifiers === Qt.AltModifier) {
-                    altPressed = true
-                }
-            }
-
             else if(event.key === Qt.Key_Right) {
-                if(event.modifiers === Qt.ShiftModifier) {
-                    backend.nextTwelveFrames()
-                }
-                else if(event.modifiers === Qt.ControlModifier) {
-                    backend.nextPreviewGroupFrame()
-                }
-                else {
-                    backend.nextFrame()
-                }
+                backend.active = Math.min(backend.active + 1, backend.frames - 1)
             }
             else if(event.key === Qt.Key_Left) {
-                if(event.modifiers === Qt.ShiftModifier) {
-                    backend.prevTwelveFrames()
-                }
-                else if(event.modifiers === Qt.ControlModifier) {
-                    backend.prevPreviewGroupFrame()
-                }
-                else {
-                    backend.prevFrame()
-                }
-            }
-
-            else if(event.key === Qt.Key_G) {
-                gotoFrame = ""
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_0) {
-                if(gotoFrame === "0");
-                else {
-                    gotoFrame = gotoFrame + "0"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_1) {
-                if(gotoFrame === "0") {
-                    gotoFrame = "1"
-                }
-                else {
-                    gotoFrame = gotoFrame + "1"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_2) {
-                if(gotoFrame === "0") {
-                    gotoFrame = "2"
-                }
-                else {
-                    gotoFrame = gotoFrame + "2"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_3) {
-                if(gotoFrame === "0") {
-                    gotoFrame = "3"
-                }
-                else {
-                    gotoFrame = gotoFrame + "3"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_4) {
-                if(gotoFrame === "0") {
-                    gotoFrame = "4"
-                }
-                else {
-                    gotoFrame = gotoFrame + "4"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_5) {
-                if(gotoFrame === "0") {
-                    gotoFrame = "5"
-                }
-                else {
-                    gotoFrame = gotoFrame + "5"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_6) {
-                if(gotoFrame === "0") {
-                    gotoFrame = "6"
-                }
-                else {
-                    gotoFrame = gotoFrame + "6"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_7) {
-                if(gotoFrame === "0") {
-                    gotoFrame = "7"
-                }
-                else {
-                    gotoFrame = gotoFrame + "7"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_8) {
-                if(gotoFrame === "0") {
-                    gotoFrame = "8"
-                }
-                else {
-                    gotoFrame = gotoFrame + "8"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_9) {
-                if(gotoFrame === "0") {
-                    gotoFrame = "9"
-                }
-                else {
-                    gotoFrame = gotoFrame + "9"
-                }
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_Backspace) {
-                gotoFrame = gotoFrame.substring(0, gotoFrame.length - 1)
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_Escape) {
-                gotoFrame = "NaN"
-            }
-            else if(gotoFrame !== "NaN" && event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                backend.switchFrame(+gotoFrame)
-                gotoFrame = "NaN"
-            }
-
-            else if(event.key === Qt.Key_0) {
-                backend.switchIndex(0)
-            }
-            else if(event.key === Qt.Key_1) {
-                backend.switchIndex(1)
-            }
-            else if(event.key === Qt.Key_2) {
-                backend.switchIndex(2)
-            }
-            else if(event.key === Qt.Key_3) {
-                backend.switchIndex(3)
-            }
-            else if(event.key === Qt.Key_4) {
-                backend.switchIndex(4)
-            }
-            else if(event.key === Qt.Key_5) {
-                backend.switchIndex(5)
-            }
-            else if(event.key === Qt.Key_6) {
-                backend.switchIndex(6)
-            }
-            else if(event.key === Qt.Key_7) {
-                backend.switchIndex(7)
-            }
-            else if(event.key === Qt.Key_8) {
-                backend.switchIndex(8)
-            }
-            else if(event.key === Qt.Key_9) {
-                backend.switchIndex(9)
-            }
-
-            else if(event.key === Qt.Key_R) {
-                backend.toggleFrameInPreviewGroup()
+                backend.active = Math.max(0, backend.active - 1)
             }
 
             else {
                 event.accepted = false
             }
         }
-        Keys.onReleased: (event) => {
-            if(altPressed && event.key === Qt.Key_Alt) {
-                window.showLabelText = !window.showLabelText
-                altPressed = false
-            }
-        }
     }
+
+
+
+
+
+    // Slider {
+    //     id: frame
+    //     x: 100
+    //     y: 100
+    //     z: 11
+
+    //     from: 0
+    //     to: backend.frames
+    //     value: backend.active
+    //     stepSize: 1
+    //     snapMode: Slider.SnapAlways
+    // }
+
+    // Slider {
+    //     id: differnce
+    //     x: 100
+    //     y: 200
+    //     z: 11
+
+    //     from: 0
+    //     to: 10000
+    //     value: backend.difference * 10000
+    //     stepSize: 0.05
+    // }
+
+    //    Label {
+    //        id: label
+    //        font.pixelSize: 35
+    //        color: "#B0FFFFFF"
+    //        antialiasing: true
+    //        anchors.bottom: parent.bottom
+    //        anchors.bottomMargin: 54
+    //        anchors.left: parent.left
+    //        anchors.leftMargin: 84
+
+    //        text: ""
+    //        onTextChanged: {
+    //            if(text) {
+    //                visible = true
+    //            }
+    //            else {
+    //                visible = false
+    //            }
+    //        }
+
+    //        background: Rectangle {
+    //            color: "#40000000"
+    //        }
+    //    }
 }
