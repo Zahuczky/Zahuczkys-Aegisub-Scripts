@@ -1,6 +1,6 @@
 import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtQuick.Controls.Material 2.15
+import QtQuick.Controls.Basic 2.15
 import QtQuick.Window 2.15
 
 ApplicationWindow {
@@ -11,8 +11,7 @@ ApplicationWindow {
     visibility: Window.Maximized
 
     title: "AutoClip"
-    
-    Material.theme: Material.Dark
+    color: "#101818"
 
     // onClosing: (close) => {
     // }
@@ -25,6 +24,12 @@ ApplicationWindow {
             image.source = "image://backend/" + image_number
         }
     }
+
+    // Component.onCompleted: {
+    //     for(let i = 0; i < 103; i++) {
+    //         backend.active = i
+    //     }
+    // }
     
     Image {
         id: image
@@ -106,6 +111,10 @@ ApplicationWindow {
                 image.anchors.horizontalCenterOffset = image.anchors.horizontalCenterOffset - (mouseX - image_x - image_width/2) * (image.scale / scale - 1)
                 image.anchors.verticalCenterOffset = image.anchors.verticalCenterOffset - (mouseY - image_y - image_height/2) * (image.scale / scale - 1)
             }
+            else {
+                image.anchors.horizontalCenterOffset = image.anchors.horizontalCenterOffset - (window.width/2 - image_x - image_width/2) * (image.scale / scale - 1)
+                image.anchors.verticalCenterOffset = image.anchors.verticalCenterOffset - (window.height/2 - image_y - image_height/2) * (image.scale / scale - 1)
+            }
         }
 
         Keys.onPressed: (event) => {
@@ -137,30 +146,40 @@ ApplicationWindow {
 
 
 
-    // Slider {
-    //     id: frame
-    //     x: 100
-    //     y: 100
-    //     z: 11
+    Slider {
+        id: frame
+        x: 100
+        y: 100
+        width: 500
+        z: 11
 
-    //     from: 0
-    //     to: backend.frames
-    //     value: backend.active
-    //     stepSize: 1
-    //     snapMode: Slider.SnapAlways
-    // }
+        from: 0
+        to: backend.frames - 1
+        value: backend.active
+        stepSize: 1
+        snapMode: Slider.SnapAlways
 
-    // Slider {
-    //     id: differnce
-    //     x: 100
-    //     y: 200
-    //     z: 11
+        onValueChanged: {
+            backend.active = this.value
+        }
+    }
 
-    //     from: 0
-    //     to: 10000
-    //     value: backend.difference * 10000
-    //     stepSize: 0.05
-    // }
+    Slider {
+        id: differnce
+        x: 100
+        y: 200
+        width: 500
+        z: 11
+
+        from: 0
+        to: 2000
+        value: backend.difference * 10000
+        stepSize: 50
+
+        onValueChanged: {
+            backend.difference = this.value / 10000
+        }
+    }
 
     //    Label {
     //        id: label

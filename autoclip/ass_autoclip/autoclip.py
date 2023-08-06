@@ -1,9 +1,11 @@
+from dataclasses import dataclass
 import os
 from pathlib import Path
-from PySide6.QtCore import QObject, QMutex, Property, Qt, QRunnable, Signal, QSize, Slot, QThreadPool
+from PySide6.QtCore import QMutex, QObject, Property, Qt, QReadWriteLock, QRunnable, Signal, QSize, Slot, QThreadPool
 from PySide6.QtGui import QGuiApplication, QImage
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickImageProvider
+import typing
 
 from base import threads, logger
 from magic import Video
@@ -18,9 +20,12 @@ from magic import Video
 # rerender
 Frame = QImage(QSize(1, 1), QImage.Format.Format_Alpha8)
 Frame.fill(0)
+# For doublelock Writing, always get FramesPendingLock first and then
+# FrameLock
+FrameLock = QMutex()
 # { "frame": 0, "prev": None }
 FramesPending = None
-FrameLock = QMutex()
+FramesPendingLock = QReadWriteLock()
 
 class ImageProvider(QQuickImageProvider):
     def __init__(self):
@@ -35,7 +40,12 @@ class ImageProvider(QQuickImageProvider):
 
 
 
-# { "Setting1": { [frame]: (order, QImage), [frame]: (order, QImage) } }
+@dataclass
+class FrameItem:
+    image: typing.Optional[QImage]
+    order: typing.Optional[int]
+    lock: QMutex
+# { "Setting1": [ [frame]: Frame, [frame]: Frame ] }
 # For setting, every setting is a unique key. work in ThreadPool will dump
 # their result in the table of the settings they use. After that regular
 # thread cleaning will remove any caches that's not using the current setting.
@@ -46,102 +56,143 @@ FrameCache = {}
 def KeyFromSetting(difference, show_difference):
     return (difference, show_difference)
 FrameCacheHead = 0
-FrameCacheSize = 10
+FrameCacheHeadLock = QMutex()
+FrameCacheMinimumSize = 20
 FrameCacheCleaningFrequency = 10
-FrameCacheLock = QMutex()
+# 𝐹𝑖𝑛𝑒-𝑔𝑟𝑎𝑖𝑛𝑒𝑑 𝑙𝑜𝑐𝑘𝑖𝑛𝑔 in frames so write lock will only be used when cleaning
+# or new setting
+FrameCacheLock = QReadWriteLock()
 
 # Loading requested frame is QThread.TimeCriticalPriority
 # Preloading frames is Qt.NormalPriority
 # Cache cleaning is Qt.HighPriority
 CacheThreadPool = QThreadPool()
 CacheThreadPool.setMaxThreadCount(threads)
-CacheThreadPoolLock = QMutex()
 
 
 class RequestFrame(QRunnable):
-    def __init__(self, frame, difference, show_difference, time_critical=False):
+    def __init__(self, frame, frames, difference, show_difference, time_critical=False):
         super().__init__()
 
         self.frame = frame
+        self.frames = frames
         self.difference = difference
         self.show_difference = show_difference
         self.key = KeyFromSetting(self.difference, self.show_difference)
-
-        # This is the only case in the script that a single thread acquire a
-        # second lock before releasing previous lock
-        FrameCacheLock.lock()
-        if self.key not in FrameCache:
-            FrameCache[self.key] = {}
-        FrameCache[self.key][self.frame] = (FrameCacheHead, None)
-        FrameCacheLock.unlock()
-
         self.time_critical = time_critical
 
     def run(self):
         if self.time_critical:
-            if self.key in FrameCache and \
-               self.frame in FrameCache[self.key] and \
-               FrameCache[self.key][self.frame][1]:
+            img = None
+            locked = False
+            locked2 = False
+
+            if (locked := FrameCacheLock.tryLockForRead()) and \
+               self.key in FrameCache and \
+               (locked2 := FrameCache[self.key][self.frame].lock.tryLock()) and \
+               FrameCache[self.key][self.frame].image:
                 logger.debug(f"Loading frame {self.frame} from cache")
-                img = FrameCache[self.key][self.frame][1]
+                img = FrameCache[self.key][self.frame].image
+
+                FrameCache[self.key][self.frame].lock.unlock()
+                FrameCacheLock.unlock()
+
             else:
+                if locked2:
+                    FrameCache[self.key][self.frame].lock.unlock()
+                if locked:
+                    FrameCacheLock.unlock()
+
                 logger.debug(f"Loading frame {self.frame}")
                 img = video.get_frame(self.frame, self.difference, self.show_difference)
-
+            
             self.update_Frame(img)
+            self.update_key()
             self.update_FrameCache(img)
 
         else:
-            if self.key in FrameCache and \
-               self.frame in FrameCache[self.key] and \
-               FrameCache[self.key][self.frame][1]:
-                logger.debug(f"Preloading frame {self.frame} from cache")
-                img = FrameCache[self.key][self.frame][1]
+            self.update_key()
+
+            FrameCacheLock.lockForRead()
+            FrameCache[self.key][self.frame].lock.lock()
+
+            if FrameCache[self.key][self.frame].image:
+                logger.debug(f"Frame {self.frame} in cache")
+                img = FrameCache[self.key][self.frame].image
+
+                FrameCache[self.key][self.frame].lock.unlock()
 
                 self.update_Frame(img)
             else:
+                FrameCache[self.key][self.frame].lock.unlock()
+
                 logger.debug(f"Preloading frame {self.frame}")
                 img = video.get_frame(self.frame, self.difference, self.show_difference)
 
                 self.update_Frame(img)
                 self.update_FrameCache(img)
 
+            FrameCacheLock.unlock()
+
+    # Write locking FrameCacheLock inside method
+    def update_key(self):
+        FrameCacheLock.lockForRead()
+        if self.key not in FrameCache:
+            FrameCacheLock.unlock()
+            FrameCacheLock.lockForWrite()
+            if self.key not in FrameCache:
+                FrameCache[self.key] = []
+                for _ in range(self.frames):
+                    FrameCache[self.key].append(FrameItem(image=None, order=None, lock=QMutex()))
+        FrameCacheLock.unlock()
+
     def update_Frame(self, img):
         global Frame
 
-        FrameLock.lock()
+        FramesPendingLock.lockForRead()
         head = FramesPending
         while head:
             if head["frame"] == self.frame:
                 logger.debug(f"Rendering frame {self.frame}")
+                FrameLock.lock()
                 Frame = img
+                FrameLock.unlock()
                 backend.imageReady.emit()
                 head["prev"] = None
                 break
 
             head = head["prev"]
-        FrameLock.unlock()
 
+        FramesPendingLock.unlock()
+
+    # Only Locking Frame.lock inside method
+    # Read lock FrameCacheLock before calling
     def update_FrameCache(self, img):
         global FrameCacheHead
 
         head = None
 
-        FrameCacheLock.lock()
-        if self.key not in FrameCache:
-            FrameCache[self.key] = {}
-        if self.frame not in FrameCache[self.key] or \
-           FrameCache[self.key][self.frame][1] is None:
+        FrameCache[self.key][self.frame].lock.lock()
+
+        if not FrameCache[self.key][self.frame].image:
+            FrameCache[self.key][self.frame].image = img
+
+            FrameCacheHeadLock.lock()
             FrameCacheHead += 1
+            FrameCache[self.key][self.frame].order = FrameCacheHead
             head = FrameCacheHead
-        FrameCache[self.key][self.frame] = (FrameCacheHead, img)
-        FrameCacheLock.unlock()
+            FrameCacheHeadLock.unlock()
+
+        else:
+            FrameCacheHeadLock.lock()
+            FrameCache[self.key][self.frame].order = FrameCacheHead
+            FrameCacheHeadLock.unlock()
+
+        FrameCache[self.key][self.frame].lock.unlock()
 
         # Clean cache
         if head and head % FrameCacheCleaningFrequency == 0:
-            CacheThreadPoolLock.lock()
-            CacheThreadPool.start(CleanCache(self.key, head - FrameCacheCleaningFrequency), priority=4)
-            CacheThreadPoolLock.unlock()
+            CacheThreadPool.start(CleanCache(self.key, head - FrameCacheMinimumSize), priority=4)
 
 class CleanCache(QRunnable):
     def __init__(self, key, before):
@@ -151,13 +202,25 @@ class CleanCache(QRunnable):
 
     def run(self):
         logger.debug(f"Cleaning cache")
-        FrameCacheLock.lock()
+        FrameCacheLock.lockForRead()
         for key in list(FrameCache.keys()):
             if key != self.key:
-                del FrameCache[key]
-        for frame in list(FrameCache[key].keys()):
-            if FrameCache[key][frame][0] <= self.before:
-                del FrameCache[key][frame]
+
+                FrameCacheLock.unlock()
+                FrameCacheLock.lockForWrite()
+                for key in list(FrameCache.keys()):
+                    if key != self.key:
+                        del FrameCache[key]
+                FrameCacheLock.unlock()
+                FrameCacheLock.lockForRead()
+                break
+
+        for item in FrameCache[self.key]:
+            item.lock.lock()
+            if item.order and item.order <= self.before:
+                item.image = None
+                item.order = None
+            item.lock.unlock()
         FrameCacheLock.unlock()
 
 
@@ -222,28 +285,29 @@ class Backend(QObject):
 
         logger.debug("New frame requested")
         logger.debug(f"  active: {self.active}  previous_active: {self.previous_active}")
-        locked = FrameLock.tryLock()
-        CacheThreadPoolLock.lock()
-        CacheThreadPool.start(RequestFrame(self.active, self.difference, self.showDifference, time_critical=True), priority=6)
+        request_frame = RequestFrame(self.active, self.frames, self.difference, self.showDifference, time_critical=True)
+        locked = FramesPendingLock.tryLockForWrite()
+        CacheThreadPool.clear()
+        CacheThreadPool.start(request_frame, priority=6)
         if not locked:
-            FrameLock.lock()
+            FramesPendingLock.lockForWrite()
         FramesPending = { "frame": self.active, "prev": FramesPending }
-        FrameLock.unlock()
+        FramesPendingLock.unlock()
 
-        if self.previous_active and self.previous_active < self.active:
-            for f in range(self.active + 1, min(self.frames, self.active + 5)):
-                CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
-        elif self.previous_active and self.previous_active > self.active:
-            for f in range(self.active - 1, max(-1, self.active - 5), -1):
-                CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
-        else:
-            for f in range(self.active + 1, min(self.frames, self.active + 4)):
-                CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
-            for f in range(self.active - 1, max(-1, self.active - 4), -1):
-                CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
+        # Change to cache only on idle
+        # if self.previous_active and self.previous_active < self.active:
+        #     for f in range(self.active + 1, min(self.frames, self.active + 5)):
+        #         CacheThreadPool.start(RequestFrame(f, self.frames, self.difference, self.showDifference), priority=3)
+        # elif self.previous_active and self.previous_active > self.active:
+        #     for f in range(self.active - 1, max(-1, self.active - 5), -1):
+        #         CacheThreadPool.start(RequestFrame(f, self.frames, self.difference, self.showDifference), priority=3)
+        # else:
+        #     for f in range(self.active + 1, min(self.frames, self.active + 3)):
+        #         CacheThreadPool.start(RequestFrame(f, self.frames, self.difference, self.showDifference), priority=3)
+        #     for f in range(self.active - 1, max(-1, self.active - 3), -1):
+        #         CacheThreadPool.start(RequestFrame(f, self.frames, self.difference, self.showDifference), priority=3)
 
         self.previous_active = self.active
-        CacheThreadPoolLock.unlock()
 
     @Slot()
     def newSettings(self):
@@ -251,22 +315,22 @@ class Backend(QObject):
 
         logger.debug("New settings requested")
         logger.debug(f"  active: {self.active}  difference: {self.difference}  showDifference: {self.showDifference}")
-        locked = FrameLock.tryLock()
-        CacheThreadPoolLock.lock()
+        request_frame = RequestFrame(self.active, self.frames, self.difference, self.showDifference, time_critical=True)
+        locked = FramesPendingLock.tryLockForWrite()
         CacheThreadPool.clear()
-        CacheThreadPool.start(RequestFrame(self.frames, self.difference, self.showDifference, time_critical=True), priority=6)
+        CacheThreadPool.start(request_frame, priority=6)
         if not locked:
-            FrameLock.lock()
+            FramesPendingLock.lockForWrite()
         FramesPending = { "frame": self.active, "prev": None }
-        FrameLock.unlock()
+        FramesPendingLock.unlock()
 
-        for f in range(self.active + 1, min(self.frames, self.active + 3)):
-            CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
-        for f in range(self.active - 1, max(-1, self.active - 3), -1):
-            CacheThreadPool.start(RequestFrame(f, self.difference, self.showDifference), priority=3)
+        # Change to cache only on idle
+        # for f in range(self.active + 1, min(self.frames, self.active + 2)):
+        #     CacheThreadPool.start(RequestFrame(f, self.frames, self.difference, self.showDifference), priority=3)
+        # for f in range(self.active - 1, max(-1, self.active - 2), -1):
+        #     CacheThreadPool.start(RequestFrame(f, self.frames, self.difference, self.showDifference), priority=3)
 
         self.previous_active = self.active
-        CacheThreadPoolLock.unlock()
 
     imageReady = Signal()
 
@@ -277,8 +341,8 @@ def start(argv, args):
     global video
     
     logger.debug("Loading application")
-    os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
-    os.environ["QT_QUICK_CONTROLS_MATERIAL_THEME"] = "Dark"
+    # os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
+    # os.environ["QT_QUICK_CONTROLS_MATERIAL_THEME"] = "Dark"
     os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "0"
     QGuiApplication.setAttribute(Qt.AA_EnableHighDpiScaling, 0)
     QGuiApplication.setAttribute(Qt.AA_UseOpenGLES)

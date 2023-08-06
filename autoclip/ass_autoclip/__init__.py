@@ -2,6 +2,7 @@ import argparse as ap
 import math
 from pathlib import Path
 import signal
+import sys
 
 import autoclip
 
@@ -19,7 +20,7 @@ if __name__ == "__main__":
     parser.add_argument("-f", "--first", dest="first", help="First frame", metavar="FRAME", type=int, required=True)
     parser.add_argument("-l", "--last", dest="last", help="Last frame", metavar="FRAME", type=int, required=True)
     parser.add_argument("-a", "--active", dest="active", help="Current video frame in aegi", metavar="FRAME", type=int, required=True)
-    args, unknown_argv = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
 
     # target clip is the top left and bottom right coordinates of the clip in the format "x1 y1 x2 y2"
     # let's convert this into "width, height, x1, y1"
@@ -29,4 +30,4 @@ if __name__ == "__main__":
                  int(math.floor(float(args.clip[0]))),
                  int(math.floor(float(args.clip[1])))]
 
-    autoclip.start(unknown_argv, args)
+    autoclip.start(sys.argv, args)

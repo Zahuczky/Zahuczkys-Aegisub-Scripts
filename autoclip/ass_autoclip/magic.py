@@ -21,7 +21,7 @@ class Video:
         clip = clip[first:last]
         black_clip = clip.std.BlankClip(color=[0, 128, 128])
         maskk = replace_squaremask(clipa=black_clip, clipb=clip, mask_params=(clipping), ranges=(None, None))
-        ref_frame = maskk.std.FreezeFrames(first=[0], last=[maskk.num_frames - 1], replacement=[active])
+        ref_frame = maskk.std.FreezeFrames(first=[0], last=[maskk.num_frames - 1], replacement=[active - first])
         clip = vst.depth(clip, 16, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL)
 
         # Write-protected variables
