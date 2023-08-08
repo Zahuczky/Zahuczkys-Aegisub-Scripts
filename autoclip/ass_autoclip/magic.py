@@ -9,7 +9,7 @@ from vapoursynth import core
 from vsmasktools import replace_squaremask
 import vstools as vst
 
-from base import threads
+from .base import threads
 
 
 

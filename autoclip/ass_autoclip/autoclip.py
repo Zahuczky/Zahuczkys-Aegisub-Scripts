@@ -7,8 +7,8 @@ from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickImageProvider
 import typing
 
-from base import threads, logger
-from magic import Video
+from .base import threads, logger
+from .magic import Video
 
 
 
