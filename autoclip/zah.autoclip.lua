@@ -1,7 +1,7 @@
 script_name="AutoClip"
 script_description="Add clips automagically"
 script_author="Zahuczky"
-script_version="1.0.1"
+script_version="1.0.2"
 -- Even when this file doesn't change, version numbering is kept consistent with the python script.
 
 petzku = require 'petzku.util'
@@ -49,10 +49,7 @@ function autoclip(sub, sel, act)
 
     args = string.format("-i \"%s\" -f \"%s\" -l \"%s\" -c \"%s\" -a \"%s\" -o \"%s\"", video_path, start_frame, end_frame, clipstr, active_frame, clipfile)
 
-
-    pyscript = aegisub.decode_path("?user")..ps.."automation"..ps.."include"..ps.."zah"..ps.."autoclip"..ps.."autoclip.vpy"
-
-    petzku.io.run_cmd("python \""..pyscript.."\" "..args, false)
+    petzku.io.run_cmd("python -m ass_autoclip "..args, false)
 
     if file_exists(clipfile) == false then
         aegisub.debug.out("Something wen horribly wrong, and I have no idea exactly where.")

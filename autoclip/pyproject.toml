@@ -14,7 +14,7 @@ authors = [
   { name = "Akatsumekusa", email = "Akatsumekusa@protonmail.com" }
 ]
 classifiers = [
-  "License :: OSI Approved :: MIT License",
+  "License :: OSI Approved :: BSD License",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
