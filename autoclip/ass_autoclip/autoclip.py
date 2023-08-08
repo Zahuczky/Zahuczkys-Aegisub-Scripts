@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import os
 from pathlib import Path
 from PySide6.QtCore import QMutex, QObject, Property, Qt, QReadWriteLock, QRunnable, Signal, QSize, Slot, QThreadPool
-from PySide6.QtGui import QGuiApplication, QImage
+from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QImage
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickImageProvider
 import typing
@@ -244,8 +244,9 @@ class Backend(QObject):
     def frames_(self):
         return self._frames
     def setFrames(self, frames):
-        self._frames = frames
-        self.framesChanged.emit()
+        if frames != self._frames:
+            self._frames = frames
+            self.framesChanged.emit()
     framesChanged = Signal()
     frames = Property(int, frames_, setFrames, notify=framesChanged)
 
@@ -255,8 +256,9 @@ class Backend(QObject):
     def active_(self):
         return self._active
     def setActive(self, active):
-        self._active = active
-        self.activeChanged.emit()
+        if active != self._active:
+            self._active = active
+            self.activeChanged.emit()
     activeChanged = Signal()
     active = Property(int, active_, setActive, notify=activeChanged)
 
@@ -265,8 +267,9 @@ class Backend(QObject):
     def difference_(self):
         return self._difference
     def setDifference(self, difference):
-        self._difference = difference
-        self.differenceChanged.emit()
+        if difference != self._difference:
+            self._difference = difference
+            self.differenceChanged.emit()
     differenceChanged = Signal()
     difference = Property(float, difference_, setDifference, notify=differenceChanged)
 
@@ -294,7 +297,7 @@ class Backend(QObject):
         FramesPending = { "frame": self.active, "prev": FramesPending }
         FramesPendingLock.unlock()
 
-        # Change to cache only on idle
+        # XXX Change to cache only on idle
         # if self.previous_active and self.previous_active < self.active:
         #     for f in range(self.active + 1, min(self.frames, self.active + 5)):
         #         CacheThreadPool.start(RequestFrame(f, self.frames, self.difference, self.showDifference), priority=3)
@@ -324,7 +327,7 @@ class Backend(QObject):
         FramesPending = { "frame": self.active, "prev": None }
         FramesPendingLock.unlock()
 
-        # Change to cache only on idle
+        # XXX Change to cache only on idle
         # for f in range(self.active + 1, min(self.frames, self.active + 2)):
         #     CacheThreadPool.start(RequestFrame(f, self.frames, self.difference, self.showDifference), priority=3)
         # for f in range(self.active - 1, max(-1, self.active - 2), -1):
@@ -357,6 +360,13 @@ def start(argv, args):
     # Load video
     video = Video(args.video, args.clip, args.first, args.last, args.active)
 
+    # Load font
+    font = Path(__file__).with_name("assets").joinpath("NotoSansDisplay-Medium.ttf").as_posix()
+    font_id = QFontDatabase.addApplicationFont(font)
+    font = QFont(QFontDatabase.applicationFontFamilies(font_id)[0])
+    font.setWeight(QFont.Weight.Medium)
+    QGuiApplication.setFont(font)
+
     # Add image provider and backend to root
     image_provider = ImageProvider()
     engine.addImageProvider("backend", image_provider)
@@ -369,3 +379,6 @@ def start(argv, args):
 
     logger.debug("Starting event loop")
     app.exec()
+
+    # Export to file
+    video.apply_clips(args.output, backend.difference)

@@ -1,20 +1,26 @@
-import QtQuick 2.15
-import QtQuick.Controls 2.15
-import QtQuick.Controls.Basic 2.15
-import QtQuick.Window 2.15
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Controls.Basic
+import QtQuick.Window
+
 
 ApplicationWindow {
     id: window
-    width: 1280
-    height: 720
+    width: 1600
+    height: 900
+    minimumWidth: 1280
+    minimumHeight: 720
     visible: true
     visibility: Window.Maximized
 
     title: "AutoClip"
-    color: "#101818"
+    color: "#1B1B1B"
 
-    // onClosing: (close) => {
-    // }
+    property color background_colour: "#2E2E2E" // 19, 0, 0
+    property color inactive_colour: "#525252" // 35, 0, 0
+    property color active_colour: "#795158" // 39, 18, 3
+    property color active_colour_pressed: "#734C53" // 37, 18, 3
+    property color active_colour_highlighted: "#80585F" // 42, 18, 3
 
     property int image_number: 0
     Connections {
@@ -24,12 +30,6 @@ ApplicationWindow {
             image.source = "image://backend/" + image_number
         }
     }
-
-    // Component.onCompleted: {
-    //     for(let i = 0; i < 103; i++) {
-    //         backend.active = i
-    //     }
-    // }
     
     Image {
         id: image
@@ -38,6 +38,7 @@ ApplicationWindow {
         anchors.verticalCenterOffset: 0
 
         property real scale: 1
+        property list<real> scale_list: [2/3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
         width: sourceSize.width * scale
         height: sourceSize.height * scale
         source: "image://backend/" + image_number
@@ -47,10 +48,8 @@ ApplicationWindow {
     }
     
     MouseArea {
-        id: mousearea
-        z: 10
-        focus: true
         anchors.fill: parent
+        z: 10
 
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
@@ -96,13 +95,17 @@ ApplicationWindow {
             let scale = image.scale
 
             if(wheel.angleDelta.y > 0) {
-                if(scale < 12) {
-                    image.scale = scale + 1
+                for(var i = 0; i < image.scale_list.length - 1; i++) {
+                    if(scale === image.scale_list[i]) {
+                        image.scale = image.scale_list[i + 1]
+                    }
                 }
             }
             else if(wheel.angleDelta.y < 0) {
-                if(scale > 1) {
-                    image.scale = scale - 1
+                for(var i = 1; i < image.scale_list.length; i++) {
+                    if(scale === image.scale_list[i]) {
+                        image.scale = image.scale_list[i - 1]
+                    }
                 }
             }
 
@@ -129,80 +132,269 @@ ApplicationWindow {
                 }
             }
 
-            else if(event.key === Qt.Key_Right) {
-                backend.active = Math.min(backend.active + 1, backend.frames - 1)
-            }
-            else if(event.key === Qt.Key_Left) {
-                backend.active = Math.max(0, backend.active - 1)
-            }
-
             else {
                 event.accepted = false
             }
         }
     }
 
+    Rectangle {
+        id: frameBox
+        height: 42
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottomMargin: 27
+        anchors.leftMargin: 71
+        anchors.rightMargin: 71
+        z: 20
 
+        radius: 17
+        color: window.background_colour
 
+        MouseArea {
+            anchors.fill: parent
 
+            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
-    Slider {
-        id: frame
-        x: 100
-        y: 100
-        width: 500
-        z: 11
+            FrameSlider {
+                id: frame
+                anchors.fill: parent
+                anchors.leftMargin: 35
+                anchors.rightMargin: 35
+                z: 21
 
-        from: 0
-        to: backend.frames - 1
-        value: backend.active
-        stepSize: 1
-        snapMode: Slider.SnapAlways
+                frame: backend.active
+                frames: backend.frames - 1
 
-        onValueChanged: {
-            backend.active = this.value
+                onNewFrame: (frame_) => {
+                    backend.active = frame_
+                }
+
+                background_colour: window.background_colour
+                inactive_colour: window.inactive_colour
+                active_colour: window.active_colour
+                active_colour_pressed: window.active_colour_pressed
+            }
         }
     }
 
-    Slider {
-        id: differnce
-        x: 100
-        y: 200
-        width: 500
-        z: 11
+    Item {
+        id: differenceZone
+        anchors.top: parent.top
+        anchors.bottom: frameBox.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.topMargin: 27
+        anchors.bottomMargin: 11
+        anchors.leftMargin: 71
+        anchors.rightMargin: 71
+        z: 20
 
-        from: 0
-        to: 2000
-        value: backend.difference * 10000
-        stepSize: 50
+        Rectangle {
+            id: differenceBox
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: differenceZone.height / 2 - height / 2
+            width: 919
+            height: 83
 
-        onValueChanged: {
-            backend.difference = this.value / 10000
+            radius: 17
+            color: window.background_colour
+
+            MouseArea {
+                anchors.fill: parent
+
+                acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+                Row {
+                    anchors.fill: parent
+
+                    Item {
+                        width: 53
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+
+                        Hamburger {
+                            anchors.centerIn: parent
+                            anchors.horizontalCenterOffset: 1
+
+                            inactive_colour: window.inactive_colour
+                        }
+
+                        MouseArea {
+                            width: 30
+                            height: 30
+                            anchors.centerIn: parent
+                            anchors.horizontalCenterOffset: 1
+                            z: 30
+
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton
+
+                            property bool pan: false
+                            property real start_x
+                            property real start_y
+
+                            onPressed: (mouse) => {
+                                pan = true
+                                start_x = mouseX
+                                start_y = mouseY
+                            }
+                            onPositionChanged: (mouse) => {
+                                if(pan) {
+                                    differenceBox.anchors.horizontalCenterOffset = Math.min(Math.max(-differenceZone.width / 2 + differenceBox.width / 2, differenceBox.anchors.horizontalCenterOffset + mouseX - start_x), differenceZone.width / 2 - differenceBox.width / 2)
+                                    differenceBox.anchors.verticalCenterOffset = Math.min(Math.max(-differenceZone.height / 2 + differenceBox.height / 2, differenceBox.anchors.verticalCenterOffset + mouseY - start_y), differenceZone.height / 2 - differenceBox.height / 2)
+                                }
+                            }
+                            onReleased: (mouse) => {
+                                if(pan) {
+                                    pan = false
+                                }
+                            }
+                        }
+                    }
+
+                    Item {
+                        width: 758
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+                        anchors.topMargin: 10
+                        anchors.bottomMargin: 11
+
+                        ValueSlider {
+                            id: difference
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            z: 21
+
+                            name: "Difference"
+                            value: backend.difference * 10000
+                            from: 0
+                            to: 2000
+
+                            onNewValue: (value_) => {
+                                backend.difference = value_ / 10000
+                            }
+
+                            background_colour: window.background_colour
+                            inactive_colour: window.inactive_colour
+                            active_colour: window.active_colour
+                            active_colour_pressed: window.active_colour_pressed
+                            active_colour_highlighted: window.active_colour_highlighted
+                        }
+
+                        Row {
+                            height: 30
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+
+                            ValueSlider {
+                                id: disabled1
+                                width: parent.width / 2
+                                z: 21
+
+                                name: "(Disabled)"
+                                value: 0
+                                from: 0
+                                to: 1
+                                enabled: false
+
+                                onNewValue: (value_) => {
+                                    value = value_
+                                }
+
+                                background_colour: window.background_colour
+                                inactive_colour: window.inactive_colour
+                                active_colour: window.active_colour
+                                active_colour_pressed: window.active_colour_pressed
+                                active_colour_highlighted: window.active_colour_highlighted
+                            }
+
+                            ValueSlider {
+                                id: disabled2
+                                width: parent.width / 2
+                                z: 21
+
+                                name: "(Disabled)"
+                                value: 0
+                                from: 0
+                                to: 1
+                                enabled: false
+
+                                onNewValue: (value_) => {
+                                    value = value_
+                                }
+
+                                background_colour: window.background_colour
+                                inactive_colour: window.inactive_colour
+                                active_colour: window.active_colour
+                                active_colour_pressed: window.active_colour_pressed
+                                active_colour_highlighted: window.active_colour_highlighted
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 1
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+
+                        color: window.inactive_colour
+                    }
+
+
+                    Item {
+                        width: 106
+                        anchors.top: parent.top
+                        anchors.bottom: parent.bottom
+
+                        Text {
+                            id: applyText
+                            anchors.centerIn: parent
+                            anchors.horizontalCenterOffset: -0.5
+                            anchors.verticalCenterOffset: -0.5
+
+                            font.pointSize: 13
+                            color: window.active_colour
+
+                            text: "Apply"
+                        }
+
+                        MouseArea {
+                            width: 87
+                            height: 58
+                            anchors.centerIn: parent
+                            anchors.horizontalCenterOffset: -1
+                            z: 30
+
+                            acceptedButtons: Qt.LeftButton
+
+                            onPressed: (mouse) => {
+                                applyText.color = window.active_colour_highlighted
+                            }
+                            onCanceled: (mouse) => {
+                                applyText.color = window.active_colour
+                            }
+                            onReleased: (mouse) => {
+                                applyText.color = window.active_colour
+                            }
+                            onClicked: (mouse) => {
+                                window.close()
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
-    //    Label {
-    //        id: label
-    //        font.pixelSize: 35
-    //        color: "#B0FFFFFF"
-    //        antialiasing: true
-    //        anchors.bottom: parent.bottom
-    //        anchors.bottomMargin: 54
-    //        anchors.left: parent.left
-    //        anchors.leftMargin: 84
+    onWidthChanged: {
+        differenceBox.anchors.horizontalCenterOffset = Math.min(Math.max(-differenceZone.width / 2 + differenceBox.width / 2, differenceBox.anchors.horizontalCenterOffset), differenceZone.width / 2 - differenceBox.width / 2)
+    }
 
-    //        text: ""
-    //        onTextChanged: {
-    //            if(text) {
-    //                visible = true
-    //            }
-    //            else {
-    //                visible = false
-    //            }
-    //        }
-
-    //        background: Rectangle {
-    //            color: "#40000000"
-    //        }
-    //    }
+    onHeightChanged: {
+        differenceBox.anchors.verticalCenterOffset = Math.min(Math.max(-differenceZone.height / 2 + differenceBox.height / 2, differenceBox.anchors.verticalCenterOffset), differenceZone.height / 2 - differenceBox.height / 2)
+    }
 }

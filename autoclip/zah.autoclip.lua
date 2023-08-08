@@ -45,14 +45,14 @@ function autoclip(sub, sel, act)
 
     video_path = aegisub.project_properties().video_file
 
-    args = string.format("-i \"%s\" -f \"%s\" -l \"%s\" -c \"%s\" -a \"%s\"", video_path, start_frame, end_frame, clipstr, active_frame)
+    clipfile = aegisub.decode_path("?temp")..ps.."zahuczky"..ps.."autoclip.txt"
+
+    args = string.format("-i \"%s\" -f \"%s\" -l \"%s\" -c \"%s\" -a \"%s\" -o \"%s\"", video_path, start_frame, end_frame, clipstr, active_frame, clipfile)
 
 
     pyscript = aegisub.decode_path("?user")..ps.."automation"..ps.."include"..ps.."zah"..ps.."autoclip"..ps.."autoclip.vpy"
 
     petzku.io.run_cmd("python \""..pyscript.."\" "..args, false)
-
-    clipfile = aegisub.decode_path("?temp")..ps.."zahuczky"..ps.."autoclip.txt"
 
     if file_exists(clipfile) == false then
         aegisub.debug.out("Something wen horribly wrong, and I have no idea exactly where.")

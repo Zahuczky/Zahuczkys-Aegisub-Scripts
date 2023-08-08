@@ -109,42 +109,51 @@ class Video:
         bytes_per_line = width * 1
         return QImage(image.data, width, height, bytes_per_line, QImage.Format.Format_Grayscale8)
 
-    # TODO
-    def apply_clips(self):
-        # Get all frames and run the findcontours on all of them
-        ass_clip = []
-        for frame_number in range(self.clip.num_frames):
-            # Get the corresponding frame from the diff_clip2 clip
-            diff_frame = self.diff_clip2.get_frame(frame_number)
-            diff_image = self._vsvideoframe_to_image(diff_frame)
+    def apply_clips(self, file, difference):
+        file.parent.mkdir(parents=True, exist_ok=True)
+        with file.open("w") as f:
+            # Get all frames and run the findcontours on all of them
+            for frame in range(self.clip.num_frames):
+                # Get the diff_clip2 clip with the settings
+                i = 0
+                for i in range(threads):
+                    locked = self.diff_clip2_locks[i].tryLockForRead()
+                    if locked:
+                        if self.diff_clip2_differences[i] == difference:
+                            break
+                        else:
+                            self.diff_clip2_locks[i].unlock()
+                else:
+                    for i in range(threads):
+                        # There are equal number of threads and clip2s, so it is
+                        # guaranteed to at least get a lock
+                        locked = self.diff_clip2_locks[i].tryLockForWrite()
+                        if locked:
+                            self.diff_clip2s[i] = core.std.Expr([vst.depth(self.maskk, 32), vst.depth(self.ref_frame, 32)], f"x y - abs {difference} < 0 1 ?")
+                            self.diff_clip2s[i] = vst.depth(self.diff_clip2s[i], 16, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL)
 
-            _, thresh = cv2.threshold(diff_image, 60, 255, cv2.THRESH_BINARY)
+                            self.diff_clip2_differences[i] = difference
+                            break
 
-            # Find the contours in the thresholded image
-            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            if contours:
-                # Find the longest contour, this is janky but what do? Maybe I should combine them. TODO maybe
-                longest_contour = max(contours, key=len)
-                contour_string = self.assemble_contour_string(longest_contour.tolist())
-                ass_clip.append(contour_string + "\n")
-            else:
-                ass_clip.append("empty\n")
+                # Get the corresponding frame from the diff_clip2 clip
+                diff_frame = self.diff_clip2s[i].get_frame(frame)
+                self.diff_clip2_locks[i].unlock()
+                diff_image = self._vsvideoframe_to_image(diff_frame)
 
-        # Write the ass_clip to a file called zahuczky/autoclip.txt in the OS's temp folder.
-        tempdir = tempfile.gettempdir()
-        folder_path = os.path.join(tempdir, "zahuczky")
+                _, thresh = cv2.threshold(diff_image, 60, 255, cv2.THRESH_BINARY)
 
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+                # Find the contours in the thresholded image
+                contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        f = open(f"{folder_path}\\autoclip.txt", 'w')
-        for line in ass_clip:
-            f.write(f"{line}")
-        f.close
-
-        # pop up a windows that says "applying finished"
-        msg_box = QMessageBox()
-        msg_box.setText("Applying finished")
-        msg_box.buttonClicked.connect(self.on_message_box_button_clicked)
-        msg_box.exec()
+                if contours:
+                    # Find the longest contour, this is janky but what do? Maybe I should combine them. TODO maybe
+                    longest_contour = max(contours, key=len)
+                    f.write("\\iclip(m")
+                    for i, point in enumerate(longest_contour):
+                        x, y = point[0]
+                        f.write(f" {x} {y}")
+                        if i == 0:
+                            f.write(" l")
+                    f.write(")\n")
+                else:
+                    f.write("empty\n")
