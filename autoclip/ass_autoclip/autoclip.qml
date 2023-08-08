@@ -17,10 +17,10 @@ ApplicationWindow {
     color: "#1B1B1B"
 
     property color background_colour: "#2E2E2E" // 19, 0, 0
-    property color inactive_colour: "#525252" // 35, 0, 0
-    property color active_colour: "#795158" // 39, 18, 3
-    property color active_colour_pressed: "#734C53" // 37, 18, 3
-    property color active_colour_highlighted: "#80585F" // 42, 18, 3
+    property color inactive_colour: "#5C5C5C" // 39, 0, 0
+    property color active_colour: "#80585F" // 42, 18, 3
+    property color active_colour_pressed: "#7B535A" // 40, 18, 3
+    property color active_colour_highlighted: "#8B6269" // 46, 18, 3
 
     property int image_number: 0
     Connections {
