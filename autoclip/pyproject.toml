@@ -10,7 +10,7 @@ requires-python = ">=3.8"
 license = "BSD-3-Clause"
 keywords = ["VapourSynth"]
 authors = [
-  { name = "Zahuczky", email = "zozicska@outlook.hu" },
+  { name = "Zahuczky", email = "zahuczky@proton.me" },
   { name = "Akatsumekusa", email = "Akatsumekusa@protonmail.com" }
 ]
 classifiers = [
