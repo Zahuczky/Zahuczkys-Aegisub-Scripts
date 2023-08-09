@@ -1,7 +1,7 @@
 script_name="AutoClip"
 script_description="Add clips automagically"
 script_author="Zahuczky"
-script_version="1.0.3"
+script_version="1.0.6"
 -- Even when this file doesn't change, version numbering is kept consistent with the python script.
 
 petzku = require 'petzku.util'

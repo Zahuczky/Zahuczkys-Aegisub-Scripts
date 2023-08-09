@@ -2,6 +2,7 @@
     "files": [
         ".gitignore",
         "ass_autoclip/__init__.py",
+        "ass_autoclip/__main__.py",
         "ass_autoclip/autoclip.py",
         "ass_autoclip/autoclip.qml",
         "ass_autoclip/base.py",

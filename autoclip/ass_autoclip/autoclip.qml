@@ -55,30 +55,22 @@ ApplicationWindow {
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
         
         property bool pan: false
-        property real offset_before_start_x
-        property real offset_before_start_y
-        property real start_x
-        property real start_y
+        property real last_x
+        property real last_y
 
         property int previous_visibility: Window.AutomaticVisibility
 
         onPressed: (mouse) => {
             pan = true
-            offset_before_start_x = image.anchors.horizontalCenterOffset
-            offset_before_start_y = image.anchors.verticalCenterOffset
-            start_x = mouseX
-            start_y = mouseY
+            last_x = mouseX
+            last_y = mouseY
         }
         onPositionChanged: (mouse) => {
             if(pan) {
-                image.anchors.horizontalCenterOffset = mouseX - start_x + offset_before_start_x
-                image.anchors.verticalCenterOffset = mouseY - start_y + offset_before_start_y
-
-                if(Math.abs(Math.abs((window.width - image.width) / 2) - Math.abs(image.anchors.horizontalCenterOffset)) < 7 &&
-                   Math.abs(Math.abs((window.height - image.height) / 2) - Math.abs(image.anchors.verticalCenterOffset)) < 7) {
-                    image.anchors.horizontalCenterOffset = image.anchors.horizontalCenterOffset >= 0 ? -(window.width - image.width) / 2 : (window.width - image.width) / 2
-                    image.anchors.verticalCenterOffset = image.anchors.verticalCenterOffset >= 0 ? -(window.height - image.height) / 2 : (window.height - image.height) / 2
-                }
+                image.anchors.horizontalCenterOffset += mouseX - last_x
+                image.anchors.verticalCenterOffset += mouseY - last_y
+                last_x = mouseX
+                last_y = mouseY
             }
         }
         onReleased: (mouse) => {

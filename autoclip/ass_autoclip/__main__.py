@@ -21,9 +21,9 @@ args, _ = parser.parse_known_args()
 # target clip is the top left and bottom right coordinates of the clip in the format "x1 y1 x2 y2"
 # let's convert this into "width, height, x1, y1"
 args.clip = args.clip.split(" ")
-args.clip = [int(math.ceil(float(args.clip[2])) - math.floor(float(args.clip[0]))),
-                int(math.ceil(float(args.clip[3])) - math.floor(float(args.clip[1]))),
-                int(math.floor(float(args.clip[0]))),
-                int(math.floor(float(args.clip[1])))]
+args.clip = [int(math.floor(float(args.clip[0]) / 2) * 2),
+             int(math.floor(float(args.clip[1]) / 2) * 2),
+             int(math.ceil(float(args.clip[2]) / 2) * 2),
+             int(math.ceil(float(args.clip[3]) / 2) * 2)]
 
 autoclip.start(sys.argv, args)

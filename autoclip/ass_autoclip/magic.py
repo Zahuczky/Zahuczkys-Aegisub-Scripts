@@ -6,28 +6,34 @@ from PySide6.QtGui import QImage
 import tempfile
 import vapoursynth as vs
 from vapoursynth import core
-from vsmasktools import replace_squaremask
-import vstools as vst
 
-from .base import threads
+from .base import threads, logger
 
 
 
 class Video:
     def __init__(self, video, clipping, first, last, active):
-        # Load, cut and filter the video
-        # no touchie unless you really know what you're doing
-        clip = core.lsmas.LWLibavSource(video.expanduser().as_posix(), cachedir=tempfile.gettempdir())
-        clip = clip[first:last]
-        black_clip = clip.std.BlankClip(color=[0, 128, 128])
-        maskk = replace_squaremask(clipa=black_clip, clipb=clip, mask_params=(clipping), ranges=(None, None))
-        ref_frame = maskk.std.FreezeFrames(first=[0], last=[maskk.num_frames - 1], replacement=[active - first])
-        clip = vst.depth(clip, 16, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL)
+        # Load video
+        clip = core.lsmas.LWLibavSource(video.expanduser().as_posix(), cachedir=tempfile.gettempdir()) \
+                    [first:last] \
+                   .fmtc.bitdepth(bits=16) \
+                   .fmtc.resample(css="444", kernel="bilinear")
+
+        # clip the clip and take reference
+        diff_clips = clip.std.CropAbs(left=clipping[0], top=clipping[1], width=clipping[2] - clipping[0], height=clipping[3] - clipping[1]) \
+                         .std.SplitPlanes()
+        diff_clips[0] = diff_clips[0].fmtc.transfer(transs="709", fulls=False, transd="linear", fulld=True)
+        for i in range(3):
+            diff_clips.append(diff_clips[i].std.FreezeFrames(first=[0], last=[last-first-1], replacement=[active-first]))
+
+        # Convert to 8-bit RGB
+        clip = clip.fmtc.matrix(mat="709", col_fam=vs.RGB) \
+                   .fmtc.bitdepth(bits=8, dmode=2)
 
         # Write-protected variables
         self._clip = clip
-        self._maskk = maskk
-        self._ref_frame = ref_frame
+        self._diff_clips = diff_clips
+        self.clipping = clipping
 
         # Variables with RwLock
         self.diff_clip2s = [None] * threads
@@ -41,13 +47,12 @@ class Video:
     def clip(self):
         return self._clip
     @property
-    def maskk(self):
-        return self._maskk
-    @property
-    def ref_frame(self):
-        return self._ref_frame
+    def diff_clips(self):
+        return self._diff_clips
 
-    def get_frame(self, frame, difference, show_difference):
+    def get_frame(self, frame, difference, show_difference): # show_difference feature is removed
+        difference = int(difference * 65535)
+
         i = 0
         for i in range(threads):
             locked = self.diff_clip2_locks[i].tryLockForRead()
@@ -62,54 +67,47 @@ class Video:
                 # guaranteed to at least get a lock
                 locked = self.diff_clip2_locks[i].tryLockForWrite()
                 if locked:
-                    self.diff_clip2s[i] = core.std.Expr([vst.depth(self.maskk, 32), vst.depth(self.ref_frame, 32)], f"x y - abs {difference} < 0 1 ?")
-                    self.diff_clip2s[i] = vst.depth(self.diff_clip2s[i], 16, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL)
+                    # Thanks arch1t3cht for giving the ideas
+                    self.diff_clip2s[i] = core.std.Expr(self.diff_clips, f"x a - abs y b - abs max z c - abs max {difference} < 0 65535 ?") \
+                                              .fmtc.bitdepth(bits=8, dmode=2)
 
                     self.diff_clip2_differences[i] = difference
                     break
 
-        # Get frame
-        if not show_difference:
-            # Get the frame from the diff_clip2 clip
-            diff_frame = self.diff_clip2s[i].get_frame(frame)
-            self.diff_clip2_locks[i].unlock()
-            diff_image = self._vsvideoframe_to_image(diff_frame)
+        # Get the frame from the diff_clip2 clip
+        diff_frame = self.diff_clip2s[i].get_frame(frame)
+        self.diff_clip2_locks[i].unlock()
+        diff_image = np.array(diff_frame[0], dtype=np.uint8)
 
-            # Get the frame from original clip
-            vsframe = self.clip.get_frame(frame)
-            image = self._vsvideoframe_to_image(vsframe)
+        # Show difference (for debug use)
+        # return QImage(diff_image.data, self.clipping[2] - self.clipping[0], self.clipping[3] - self.clipping[1], QImage.Format.Format_Grayscale8)
 
-            # Apply thresholding to the grayscale image
-            _, thresh = cv2.threshold(diff_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # Get the frame from original clip
+        vsframe = self.clip.get_frame(frame)
+        r = np.array(vsframe[0], dtype=np.uint8).reshape((-1, 1))
+        g = np.array(vsframe[1], dtype=np.uint8).reshape((-1, 1))
+        b = np.array(vsframe[2], dtype=np.uint8).reshape((-1, 1))
+        image = np.hstack((r, g, b)).reshape((self.clip.height, self.clip.width, 3))
+        clipped_image = image[self.clipping[1]:self.clipping[3], self.clipping[0]:self.clipping[2]]
 
-            # Find the contours in the thresholded image
-            self.contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Apply thresholding to the grayscale image
+        _, thresh = cv2.threshold(diff_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
+        # Find the contours in the thresholded image
+        contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        if contours:
             # Find the longest contour, this is janky but what do? Maybe I should combine them. TODO maybe?
-            longest_contour = max(self.contours, key=cv2.contourArea)
+            longest_contour = max(contours, key=cv2.contourArea)
 
             # Draw the longest contour on the original image in red. The image is greyscale so it's black. lol. Should add all planes at some point,
             # maybe not read this clip from VS but just with cv2
-            cv2.drawContours(image, [longest_contour], -1, (0, 0, 255), 2)
+            cv2.drawContours(clipped_image, [longest_contour], -1, (253, 30, 32), 1) # 55, 78, 60
 
-        else: # show_difference
-            frame = self.diff_clip2s[i].get_frame(frame)
-            self.diff_clip2_locks[i].unlock()
-            image = self._vsvideoframe_to_image(vsframe)
-
-        return self._convert_image_to_qimage(image)
-
-    def _vsvideoframe_to_image(self, frame: vs.VideoFrame):
-        npframe = np.asarray(frame[0]) # I guess this is fastest way afterall, but it's only the luma plane. TODO Have to figure out how to merge the Y U V planes. I couldn't so far.
-        cvImage = cv2.convertScaleAbs(npframe, alpha=(255.0 / 65535.0)) # It's 16 bit initially, convert to 8 bit
-        return cvImage
-
-    def _convert_image_to_qimage(self, image):
-        height, width = image.shape
-        bytes_per_line = width * 1
-        return QImage(image.data, width, height, bytes_per_line, QImage.Format.Format_Grayscale8)
+        return QImage(image.data, self.clip.width, self.clip.height, QImage.Format.Format_RGB888)
 
     def apply_clips(self, file, difference):
+        logger.info("Saving clip data")
         file.parent.mkdir(parents=True, exist_ok=True)
         with file.open("w") as f:
             # Get all frames and run the findcontours on all of them
@@ -130,7 +128,7 @@ class Video:
                         locked = self.diff_clip2_locks[i].tryLockForWrite()
                         if locked:
                             self.diff_clip2s[i] = core.std.Expr([vst.depth(self.maskk, 32), vst.depth(self.ref_frame, 32)], f"x y - abs {difference} < 0 1 ?")
-                            self.diff_clip2s[i] = vst.depth(self.diff_clip2s[i], 16, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL)
+                            self.diff_clip2s[i] = vst.depth(self.diff_clip2s[i], 8, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL, dither_type=vst.DitherType.NONE)
 
                             self.diff_clip2_differences[i] = difference
                             break
