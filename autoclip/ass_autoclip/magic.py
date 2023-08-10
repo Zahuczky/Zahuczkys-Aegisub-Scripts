@@ -11,14 +11,13 @@ from vapoursynth import core
 from .base import threads, logger
 
 
-
 class Video:
     def __init__(self, video, clipping, first, last, active):
         # Load video
         clip = core.lsmas.LWLibavSource(video.expanduser().as_posix(), cachedir=tempfile.gettempdir()) \
                     [first:last] \
                    .fmtc.bitdepth(bits=16) \
-                   .fmtc.resample(css="444", kernel="bilinear")
+                   .fmtc.resample(css="444", kernel="bicubic")
 
         # clip the clip and take reference
         diff_clips = clip.std.CropAbs(left=clipping[0], top=clipping[1], width=clipping[2] - clipping[0], height=clipping[3] - clipping[1]) \
@@ -106,7 +105,7 @@ class Video:
 
         return QImage(image.data, self.clip.width, self.clip.height, QImage.Format.Format_RGB888)
 
-    def apply_clips(self, file, difference):
+    def apply_clips(self, file, settings):
         logger.info("Saving clip data")
         file.parent.mkdir(parents=True, exist_ok=True)
         with file.open("w") as f:
@@ -117,7 +116,7 @@ class Video:
                 for i in range(threads):
                     locked = self.diff_clip2_locks[i].tryLockForRead()
                     if locked:
-                        if self.diff_clip2_differences[i] == difference:
+                        if self.diff_clip2_settings[i] == settings:
                             break
                         else:
                             self.diff_clip2_locks[i].unlock()
@@ -127,21 +126,24 @@ class Video:
                         # guaranteed to at least get a lock
                         locked = self.diff_clip2_locks[i].tryLockForWrite()
                         if locked:
-                            self.diff_clip2s[i] = core.std.Expr([vst.depth(self.maskk, 32), vst.depth(self.ref_frame, 32)], f"x y - abs {difference} < 0 1 ?")
-                            self.diff_clip2s[i] = vst.depth(self.diff_clip2s[i], 8, range_out=vst.ColorRange.FULL, range_in=vst.ColorRange.FULL, dither_type=vst.DitherType.NONE)
+                            # Thanks arch1t3cht for giving the ideas
+                            self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
+                                                                f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?") \
+                                                      .fmtc.bitdepth(bits=8, dmode=2)
 
-                            self.diff_clip2_differences[i] = difference
+                            self.diff_clip2_settings[i] = settings
                             break
 
                 # Get the corresponding frame from the diff_clip2 clip
                 diff_frame = self.diff_clip2s[i].get_frame(frame)
                 self.diff_clip2_locks[i].unlock()
-                diff_image = self._vsvideoframe_to_image(diff_frame)
+                diff_image = np.array(diff_frame[0], dtype=np.uint8)
 
-                _, thresh = cv2.threshold(diff_image, 60, 255, cv2.THRESH_BINARY)
+                # Apply thresholding to the grayscale image
+                _, thresh = cv2.threshold(diff_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
                 # Find the contours in the thresholded image
-                contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
                 if contours:
                     # Find the longest contour, this is janky but what do? Maybe I should combine them. TODO maybe
@@ -149,7 +151,7 @@ class Video:
                     f.write("\\iclip(m")
                     for i, point in enumerate(longest_contour):
                         x, y = point[0]
-                        f.write(f" {x} {y}")
+                        f.write(f" {x + self.clipping[0]} {y + self.clipping[1]}")
                         if i == 0:
                             f.write(" l")
                     f.write(")\n")

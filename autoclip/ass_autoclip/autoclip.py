@@ -222,12 +222,10 @@ class CleanCache(QRunnable):
 
 
 class Backend(QObject):
-    def __init__(self, frames, active):
+    def __init__(self, frames):
         QObject.__init__(self)
 
         self.frames = frames
-        self.previous_active = active
-        self.active = active
 
         self.activeChanged.connect(self.newFrame)
         self.lumaThresholdChanged.connect(self.newSettings)
@@ -247,8 +245,8 @@ class Backend(QObject):
     frames = Property(int, frames_, setFrames, notify=framesChanged)
 
     # Frame
-    previous_active = None
-    _active = None
+    previous_active = 0
+    _active = 0
     def active_(self):
         return self._active
     def setActive(self, active):
@@ -348,7 +346,7 @@ def start(argv, args):
     # Add image provider and backend to root
     image_provider = ImageProvider()
     engine.addImageProvider("backend", image_provider)
-    backend = Backend(args.last - args.first, args.active - args.first)
+    backend = Backend(args.last - args.first)
     engine.rootContext().setContextProperty("backend", backend)
 
     # Load QML
@@ -360,4 +358,4 @@ def start(argv, args):
 
     # Export to file
     settings = Settings(backend.lumaThreshold, backend.chromaThreshold)
-    video.apply_clips(args.output, backend.settings)
+    video.apply_clips(args.output, settings)

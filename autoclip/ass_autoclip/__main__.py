@@ -15,7 +15,7 @@ parser.add_argument("-o", "--output", dest="output", help="Output file", metavar
 parser.add_argument("-c", "--clip", dest="clip", help="Clip", metavar="CLIP", type=str, required=True)
 parser.add_argument("-f", "--first", dest="first", help="First frame", metavar="FRAME", type=int, required=True)
 parser.add_argument("-l", "--last", dest="last", help="Last frame", metavar="FRAME", type=int, required=True)
-parser.add_argument("-a", "--active", dest="active", help="Current video frame in aegi", metavar="FRAME", type=int, required=True)
+parser.add_argument("-a", "--active", dest="active", help="Current frame", metavar="FRAME", type=int, required=True)
 args, _ = parser.parse_known_args()
 
 # target clip is the top left and bottom right coordinates of the clip in the format "x1 y1 x2 y2"

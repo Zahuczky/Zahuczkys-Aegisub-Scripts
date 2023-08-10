@@ -288,7 +288,7 @@ ApplicationWindow {
                             name: "Luma Threshold"
                             value: backend.lumaThreshold * 10000
                             from: 0
-                            to: 2000
+                            to: 4000
 
                             onNewValue: (value_) => {
                                 backend.lumaThreshold = value_ / 10000
