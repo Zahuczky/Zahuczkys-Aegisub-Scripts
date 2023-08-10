@@ -1,4 +1,5 @@
 import cv2
+import math
 import numpy as np
 from pathlib import Path
 from PySide6.QtCore import QReadWriteLock
@@ -37,7 +38,7 @@ class Video:
 
         # Variables with RwLock
         self.diff_clip2s = [None] * threads
-        self.diff_clip2_differences = [None] * threads
+        self.diff_clip2_settings = [None] * threads
         self.diff_clip2_locks = []
         for i in range(threads):
             self.diff_clip2_locks.append(QReadWriteLock())
@@ -50,14 +51,12 @@ class Video:
     def diff_clips(self):
         return self._diff_clips
 
-    def get_frame(self, frame, difference, show_difference): # show_difference feature is removed
-        difference = int(difference * 65535)
-
+    def get_frame(self, frame, settings):
         i = 0
         for i in range(threads):
             locked = self.diff_clip2_locks[i].tryLockForRead()
             if locked:
-                if self.diff_clip2_differences[i] == difference:
+                if self.diff_clip2_settings[i] == settings:
                     break
                 else:
                     self.diff_clip2_locks[i].unlock()
@@ -68,10 +67,11 @@ class Video:
                 locked = self.diff_clip2_locks[i].tryLockForWrite()
                 if locked:
                     # Thanks arch1t3cht for giving the ideas
-                    self.diff_clip2s[i] = core.std.Expr(self.diff_clips, f"x a - abs y b - abs max z c - abs max {difference} < 0 65535 ?") \
+                    self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
+                                                        f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?") \
                                               .fmtc.bitdepth(bits=8, dmode=2)
 
-                    self.diff_clip2_differences[i] = difference
+                    self.diff_clip2_settings[i] = settings
                     break
 
         # Get the frame from the diff_clip2 clip

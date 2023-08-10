@@ -30,6 +30,13 @@ ApplicationWindow {
             image.source = "image://backend/" + image_number
         }
     }
+
+    // For speedtest
+    // Component.onCompleted: {
+    //     for(var i = 0; i < backend.frames; i++) {
+    //         backend.active = i
+    //     }
+    // }
     
     Image {
         id: image
@@ -57,6 +64,8 @@ ApplicationWindow {
         property bool pan: false
         property real last_x
         property real last_y
+        property real lost_x
+        property real lost_y
 
         property int previous_visibility: Window.AutomaticVisibility
 
@@ -64,13 +73,29 @@ ApplicationWindow {
             pan = true
             last_x = mouseX
             last_y = mouseY
+            lost_x = 0
+            lost_y = 0
         }
         onPositionChanged: (mouse) => {
             if(pan) {
-                image.anchors.horizontalCenterOffset += mouseX - last_x
-                image.anchors.verticalCenterOffset += mouseY - last_y
+                image.anchors.horizontalCenterOffset += lost_x + mouseX - last_x
+                image.anchors.verticalCenterOffset += lost_y + mouseY - last_y
                 last_x = mouseX
                 last_y = mouseY
+
+                if(Math.abs(Math.abs((window.width - image.width) / 2) - Math.abs(image.anchors.horizontalCenterOffset)) < 7 &&
+                   Math.abs(Math.abs((window.height - image.height) / 2) - Math.abs(image.anchors.verticalCenterOffset)) < 7) {
+                    lost_x = image.anchors.horizontalCenterOffset
+                    lost_y = image.anchors.verticalCenterOffset
+                    image.anchors.horizontalCenterOffset = image.anchors.horizontalCenterOffset >= 0 ? Math.abs(window.width - image.width) / 2 : -Math.abs(window.width - image.width) / 2
+                    image.anchors.verticalCenterOffset = image.anchors.verticalCenterOffset >= 0 ? Math.abs(window.height - image.height) / 2 : -Math.abs(window.height - image.height) / 2
+                    lost_x -= image.anchors.horizontalCenterOffset
+                    lost_y -= image.anchors.verticalCenterOffset
+                }
+                else {
+                    lost_x = 0
+                    lost_y = 0
+                }
             }
         }
         onReleased: (mouse) => {
@@ -172,7 +197,7 @@ ApplicationWindow {
     }
 
     Item {
-        id: differenceZone
+        id: settingsZone
         anchors.top: parent.top
         anchors.bottom: frameBox.top
         anchors.left: parent.left
@@ -184,9 +209,9 @@ ApplicationWindow {
         z: 20
 
         Rectangle {
-            id: differenceBox
+            id: settingsBox
             anchors.centerIn: parent
-            anchors.verticalCenterOffset: differenceZone.height / 2 - height / 2
+            anchors.verticalCenterOffset: settingsZone.height / 2 - height / 2
             width: 919
             height: 83
 
@@ -214,10 +239,10 @@ ApplicationWindow {
                         }
 
                         MouseArea {
-                            width: 30
-                            height: 30
-                            anchors.centerIn: parent
-                            anchors.horizontalCenterOffset: 1
+                            anchors.fill: parent
+                            anchors.topMargin: 2
+                            anchors.bottomMargin: 2
+                            anchors.leftMargin: 2
                             z: 30
 
                             hoverEnabled: true
@@ -234,8 +259,8 @@ ApplicationWindow {
                             }
                             onPositionChanged: (mouse) => {
                                 if(pan) {
-                                    differenceBox.anchors.horizontalCenterOffset = Math.min(Math.max(-differenceZone.width / 2 + differenceBox.width / 2, differenceBox.anchors.horizontalCenterOffset + mouseX - start_x), differenceZone.width / 2 - differenceBox.width / 2)
-                                    differenceBox.anchors.verticalCenterOffset = Math.min(Math.max(-differenceZone.height / 2 + differenceBox.height / 2, differenceBox.anchors.verticalCenterOffset + mouseY - start_y), differenceZone.height / 2 - differenceBox.height / 2)
+                                    settingsBox.anchors.horizontalCenterOffset = Math.min(Math.max(-settingsZone.width / 2 + settingsBox.width / 2, settingsBox.anchors.horizontalCenterOffset + mouseX - start_x), settingsZone.width / 2 - settingsBox.width / 2)
+                                    settingsBox.anchors.verticalCenterOffset = Math.min(Math.max(-settingsZone.height / 2 + settingsBox.height / 2, settingsBox.anchors.verticalCenterOffset + mouseY - start_y), settingsZone.height / 2 - settingsBox.height / 2)
                                 }
                             }
                             onReleased: (mouse) => {
@@ -254,19 +279,19 @@ ApplicationWindow {
                         anchors.bottomMargin: 11
 
                         ValueSlider {
-                            id: difference
+                            id: lumaThreshold
                             anchors.top: parent.top
                             anchors.left: parent.left
                             anchors.right: parent.right
                             z: 21
 
-                            name: "Difference"
-                            value: backend.difference * 10000
+                            name: "Luma Threshold"
+                            value: backend.lumaThreshold * 10000
                             from: 0
                             to: 2000
 
                             onNewValue: (value_) => {
-                                backend.difference = value_ / 10000
+                                backend.lumaThreshold = value_ / 10000
                             }
 
                             background_colour: window.background_colour
@@ -276,55 +301,27 @@ ApplicationWindow {
                             active_colour_highlighted: window.active_colour_highlighted
                         }
 
-                        Row {
-                            height: 30
+                        ValueSlider {
+                            id: chromaThreshold
+                            anchors.bottom: parent.bottom
                             anchors.left: parent.left
                             anchors.right: parent.right
-                            anchors.bottom: parent.bottom
+                            z: 21
 
-                            ValueSlider {
-                                id: disabled1
-                                width: parent.width / 2
-                                z: 21
+                            name: "Chroma Threshold"
+                            value: backend.chromaThreshold * 10000
+                            from: 0
+                            to: 2000
 
-                                name: "(Disabled)"
-                                value: 0
-                                from: 0
-                                to: 1
-                                enabled: false
-
-                                onNewValue: (value_) => {
-                                    value = value_
-                                }
-
-                                background_colour: window.background_colour
-                                inactive_colour: window.inactive_colour
-                                active_colour: window.active_colour
-                                active_colour_pressed: window.active_colour_pressed
-                                active_colour_highlighted: window.active_colour_highlighted
+                            onNewValue: (value_) => {
+                                backend.chromaThreshold = value_ / 10000
                             }
 
-                            ValueSlider {
-                                id: disabled2
-                                width: parent.width / 2
-                                z: 21
-
-                                name: "(Disabled)"
-                                value: 0
-                                from: 0
-                                to: 1
-                                enabled: false
-
-                                onNewValue: (value_) => {
-                                    value = value_
-                                }
-
-                                background_colour: window.background_colour
-                                inactive_colour: window.inactive_colour
-                                active_colour: window.active_colour
-                                active_colour_pressed: window.active_colour_pressed
-                                active_colour_highlighted: window.active_colour_highlighted
-                            }
+                            background_colour: window.background_colour
+                            inactive_colour: window.inactive_colour
+                            active_colour: window.active_colour
+                            active_colour_pressed: window.active_colour_pressed
+                            active_colour_highlighted: window.active_colour_highlighted
                         }
                     }
 
@@ -356,7 +353,7 @@ ApplicationWindow {
 
                         MouseArea {
                             width: 87
-                            height: 58
+                            height: 59
                             anchors.centerIn: parent
                             anchors.horizontalCenterOffset: -1
                             z: 30
@@ -383,10 +380,10 @@ ApplicationWindow {
     }
 
     onWidthChanged: {
-        differenceBox.anchors.horizontalCenterOffset = Math.min(Math.max(-differenceZone.width / 2 + differenceBox.width / 2, differenceBox.anchors.horizontalCenterOffset), differenceZone.width / 2 - differenceBox.width / 2)
+        settingsBox.anchors.horizontalCenterOffset = Math.min(Math.max(-settingsZone.width / 2 + settingsBox.width / 2, settingsBox.anchors.horizontalCenterOffset), settingsZone.width / 2 - settingsBox.width / 2)
     }
 
     onHeightChanged: {
-        differenceBox.anchors.verticalCenterOffset = Math.min(Math.max(-differenceZone.height / 2 + differenceBox.height / 2, differenceBox.anchors.verticalCenterOffset), differenceZone.height / 2 - differenceBox.height / 2)
+        settingsBox.anchors.verticalCenterOffset = Math.min(Math.max(-settingsZone.height / 2 + settingsBox.height / 2, settingsBox.anchors.verticalCenterOffset), settingsZone.height / 2 - settingsBox.height / 2)
     }
 }

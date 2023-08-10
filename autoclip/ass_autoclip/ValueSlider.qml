@@ -20,7 +20,7 @@ Item {
 
     Text {
         id: label
-        width: 110
+        width: 192
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         z: 0
