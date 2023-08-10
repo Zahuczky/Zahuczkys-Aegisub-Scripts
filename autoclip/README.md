@@ -1,37 +1,39 @@
-# Autoclip
+## AutoClip
 
 *Automagically* clip out objects obstructing your sign.
 
-## Usage:
-- Create a sign.
-- Add a rectangular clip to the first line of the sign, that clip is going to be the watched area.
-- Anything entering that clip will be clipped out.
-- The frame where you stand in the video is going to be used as the "reference frame". Ideally, that should be a frame where your sign is not obstructed at all.
-  - The script looks at your reference frame, and clips out the changes compared to that in other frames. 
-- Run AutoClip from the Automation menu.
-- Fiddle with the sliders.
-- Click "Apply clips"
+### Install
 
-## Installation:
-- Install a recent version of [Python](https://www.python.org/downloads/ "Python"). (testing was done on 3.11.3, but should work on any recent 3.X)
-- Install [Vapoursynth](https://www.vapoursynth.com/ "Vapoursynth") >= R63.
-  - Most recent vs-tools requires R63. You might be able to circumvent this if you want to hold on to an older version, but no support is provided for that.
-  - It is advised to install vapoursynth from their site, rather than from pip. The version in pip is usually older. 
-- Download the contents of the /autoclip folder of this repo.
-- Place` autoclip/include/zah/autoclip/autoclip.vpy` into your `aegisub/automation/include/zah/autoclip/` folder.
-- Place `autoclip/zah.autoclip.lua` into  your `aegisub/automation/autoload` folder.
-- Place the `requirements.txt` *somewhere*.
-- Open a terminal and `cd` to wherever you put the `requirements.txt`.
-- Run `pip install -r requirements.txt`.
-- Run `vsrepo.py install lsmas`.
-- Install `ILL Library` and `PetzkuLib` from DependencyControl in Aegisub.
+*Lua*  
+* Add `https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json` to DependencyControl. You may manually edit DependencyControl's config using the [extraFeeds field](https://github.com/TypesettingTools/DependencyControl#1-global-configuration), or use garret's [DependencyControl Global Config](https://github.com/garret1317/aegisub-scripts#dependencycontrol-global-config) script.  
+* Install AutoClip from DependencyControl.  
+* If you prefer to manually install AutoClip, AutoClip's dependencies are `ILL.ILL`, `aka.config`, `aka.config2`, `aka.outcome`, `aka.unicode`, which is available at [TypesettingTools/ILL-Aegisub-Scripts](https://github.com/TypesettingTools/ILL-Aegisub-Scripts) and [Akatmks/Akatsumekusa-Aegisub-Scripts](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts).  
 
-## TODO
-- Handle moving signs/tracking data for those
-- Signs with multiple layers? I forgot about that but Im already writing this readme so *shrug*. 
-- More sliders (probably bunch of other VS filters to fine-tune the clip area)
+*Python*  
+* Install [Python](https://www.python.org/downloads/) and [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases).  
+* AutoClip requires additional VapourSynth plugins to be installed. Run `python3 vsrepo.py install lsmas fmtc` from VapourSynth's install path.  
+* If you are using a portable version of Python and VapourSynth, in Aegisub, Select „Automation > AutoClip > Configure python path“ and paste in the path to your python executable.  
+
+### Usage
+
+1. Time your sign to the whole cut.  
+You may already fbf or divide the lines into sections prior to clipping, in which case select all the lines that adds up to the cut. If you have layered the sign prior to clipping, you may only select one layer for AutoClip and copy the result to other layers afterwards.  
+2. Create a rect clip that covers your sign. This clip defines the area where AutoClip will be active. Anything outside this clip will not be clipped.  
+3. Seek the video to a frame where, ideally, the sign is unobscured from the foreground object.  
+4. Select „Automation > AutoClip > AutoClip“ and a new AutoClip window shall open.  
+5. In the new window, adjust the slider until you get a satisfactory clip and click „Apply“.  
+
+### License
+
+* *AutoClip is released by Zahuczkys and Akatsumekusa under [BSD 3-Clause License](LICENSE).*  
+* *AutoClip uses Noto Sans Display Medium in the UI. Noto Sans Display is released by Google under [SIL OFL 1.1 License](ass_autoclip/assets/LICENSE.OFL.txt).*  
+
+### TODO
+
+- Handle moving signs/tracking data for those  
+- Signs with multiple layers? I forgot about that but Im already writing this readme so *shrug*.  
+- More sliders (probably bunch of other VS filters to fine-tune the clip area)  
 - Simplifying the clips to curves and such.  
-- depctrl
-- Currently only the longest contour gets taken into account. Maybe combine them? Maybe a slider for this?
-- Figure out a way to get and combine every plane of the original video. 
+- Currently only the longest contour gets taken into account. Maybe combine them? Maybe a slider for this?  
+- Remove grain from Luma and dering on Chroma akanote.  
 

@@ -6,11 +6,6 @@ script_namespace = "zah.autoclip"
 -- Even when this file doesn't change, version numbering is kept consistent with the python script.
 
 local hasDepCtrl, DepCtrl = pcall(require, "l0.DependencyControl")
-local ILL
-local lfs
-local Aegi
-local Ass
-local Line
 if hasDepCtrl then
     DepCtrl = DepCtrl({
         name = script_name,
@@ -21,21 +16,40 @@ if hasDepCtrl then
         url = "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
         feed = "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
         {
-            { "ILL.ILL" }
+            { "ILL.ILL" },
+            { "aka.config" },
+            { "aka.outcome" }
         }
     })
-    ILL = DepCtrl:requireModules()
-    Aegi = ILL.Aegi
-    Ass = ILL.Ass
-    Line = ILL.Line
-else
-    ILL = require("ILL.ILL")
-    Aegi = ILL.Aegi
-    Ass = ILL.Ass
-    Line = ILL.Line
+    DepCtrl:requireModules()
 end
+local ILL = require("ILL.ILL")
+local Aegi, Ass, Line = ILL.Aegi, ILL.Ass, ILL.Line
 
+local aconfig = require("aka.config").make_editor({
+    display_name = "AutoClip",
+    presets = {
+        ["default"] = { ["python"] = "python3" }
+    },
+    default = "default"
+})
+local outcome = require("aka.outcome")
+local ok, err = outcome.ok, outcome.err
+local validation_func = function(config)
+    if type(config) == "table" and type(config["python"]) == "string" then
+        return ok(config)
+    else
+        return err("Key \"python\" is missing.")
+end end
+
+local config
 local function autoclip(sub, sel, act)
+    if not config then
+        config = aconfig:read_and_validate_config_if_empty_then_default_or_else_edit_and_save("zah.autoclip", validation_func)
+            :ifErr(aegisub.cancel)
+            :unwrap()
+    end
+
     local ass = Ass(sub, sel, act)
 
     local project_props = aegisub.project_properties()
@@ -106,24 +120,29 @@ local function autoclip(sub, sel, act)
 
     -- Run commands
     Aegi.progressTitle("Waiting for Python to complete")
-    local command = "python3 -m ass_autoclip --input \"" .. video_file .. "\"" ..
-                                           " --output \"" .. output_file .. "\"" ..
-                             string.format(" --clip \"%f %f %f %f\"", clip[1], clip[2], clip[3], clip[4]) ..
-                                           " --first " .. first ..
-                                           " --last " .. last ..
-                                           " --active " .. active
-    local code = os.execute(command)
-    if not (code == 0 or code == true) then
-        if code then
-            aegisub.debug.out("[zah.autoclip] Python returns with code " .. tostring(code) .. ".\n")
+    local command = " -m ass_autoclip --input '" .. video_file .. "'" ..
+                                    " --output '" .. output_file .. "'" ..
+                      string.format(" --clip '%f %f %f %f'", clip[1], clip[2], clip[3], clip[4]) ..
+                                    " --first " .. first ..
+                                    " --last " .. last ..
+                                    " --active " .. active
+    if jit.os == "Windows" then
+        command = "powershell -Command \"& '" .. config["python"] .. "'" .. command .. "\""
+    else
+        command = "'" .. config["python"] .. "'" .. command
+    end
+    local status, terminate, code = os.execute(command)
+    if not status then
+        if terminate == "exit" then
+            aegisub.debug.out("[zah.autoclip] Python exists with code " .. tostring(code) .. ".\n")
         else
-            aegisub.debug.out("[zah.autoclip] Error occurs when executing command:\n")
+            aegisub.debug.out("[zah.autoclip] Python terminated with signal " .. tostring(code) .. ".\n")
         end
         aegisub.debug.out("[zah.autoclip] " .. command .. "\n")
         aegisub.debug.out("[zah.autoclip] Attempting to continue.\n")
     end
 
-    Aegi.progressTitle("Applying clips")
+    Aegi.progressTitle("Seting clips")
     -- Open output file
     local f, error = io.open(output_file, "r")
     if not f then
@@ -147,8 +166,38 @@ local function autoclip(sub, sel, act)
     return ass:getNewSelection()
 end
 
+local function edit_config()
+    if not config then
+        config = aconfig:read_and_validate_config_if_empty_then_default_or_else_edit_and_save("zah.autoclip", validation_func)
+            :ifErr(aegisub.cancel)
+            :unwrap()
+    end
+
+    local dialog = { { class = "label",                     x = 0, y = 0, width = 30,
+                                                            label = "Enter path to your Python executable:" },
+                     { class = "edit", name = "python",     x = 0, y = 1, width = 30,
+                                                            text = config["python"] } }
+    local buttons = { "&Set", "Close" }
+    local button_ids = { ok = "&Set", yes = "&Set", save = "&Set", apply = "&Set", close = "Close", no = "Close", cancel = "Close" }
+
+    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
+
+    if button == false or button == "Close" then aegisub.cancel()
+    elseif button == "&Set" then
+        config = result_table
+        aconfig.write_config("zah.autoclip", config)
+            :ifErr(function()
+                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
+                aegisub.debug.out("[aka.config] " .. error .. "\n")
+                aegisub.cancel() end)
+end end
+
 if hasDepCtrl then
-    DepCtrl:registerMacro(autoclip)
+    DepCtrl:registerMacros({
+        { "AutoClip", script_description, autoclip },
+        { "Configure python path", "Configure python path", edit_config }
+    })
 else
-    aegisub.register_macro("AutoClip", script_description, autoclip)
+    aegisub.register_macro("AutoClip/AutoClip", script_description, autoclip)
+    aegisub.register_macro("AutoClip/Configure python path", "Configure python path", edit_config)
 end
