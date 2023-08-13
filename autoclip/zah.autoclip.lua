@@ -59,6 +59,7 @@ local function autoclip(sub, sel, act)
     -- Grab frame and clip information and check frame continuity across subtitle lines
     Aegi.progressTitle("Gathering frame information")
     local active = project_props.video_position
+    local frames = {}
     local first
     local last
     local active_clip
@@ -70,16 +71,20 @@ local function autoclip(sub, sel, act)
             first = aegisub.frame_from_ms(line.start_time)
             last = aegisub.frame_from_ms(line.end_time)
         else
-            if aegisub.frame_from_ms(line.start_time) ~= last then
-                aegisub.debug.out("[zah.autoclip] Selected lines must be time continuous.\n")
-                aegisub.debug.out("[zah.autoclip] The starting time of line " .. tostring(s) .. " does not match the ending time of previous line.\n")
-                aegisub.cancel()
-            end
-            last = aegisub.frame_from_ms(line.end_time)
+            first = first <= aegisub.frame_from_ms(line.start_time) and first or aegisub.frame_from_ms(line.start_time)
+            last = last >= aegisub.frame_from_ms(line.end_time) and last or aegisub.frame_from_ms(line.end_time)
         end
 
+        for j = aegisub.frame_from_ms(line.start_time), aegisub.frame_from_ms(line.end_time) - 1 do
+            if not frames[j] then
+                frames[j] = 1
+            else
+                frames[j] = frames[j] + 1
+        end end
+
         -- Get active_clip if the line is act
-        if ass:lineNumber(s) == act then
+        -- ass.i is an internal ILL variable. May break if ILL changes
+        if s + ass.i == act then
             Line.process(ass, line)
             if type(line.data["clip"]) == "table" then
                 active_clip = line.data["clip"]
@@ -102,6 +107,31 @@ local function autoclip(sub, sel, act)
                         line.data["clip"][4] == clip[4]) then
                     clip = false
     end end end end
+
+    -- Check frame continuity
+    local head
+    for i = first, last - 1 do
+        if not frames[i] then
+            for j = i, last - 1 do
+                if frames[j] then
+                    aegisub.debug.out("[zah.autoclip] Selected lines must be time continuous.\n")
+                    aegisub.debug.out("[zah.autoclip] The earliest frame in the selected line is frame " .. tostring(first) .. ", and the latest frame is frame " .. tostring(last - 1) .. ".\n")
+                    if i ~= j - 1 then
+                        aegisub.debug.out("[zah.autoclip] There is at least one gap from frame " .. tostring(i) .. " to frame " .. tostring(j - 1) .. " that no lines in the selection covers.\n")
+                    else
+                        aegisub.debug.out("[zah.autoclip] There is at least one gap at frame " .. tostring(i) .. " that no lines in the selection covers.\n")
+                    end
+                    aegisub.cancel()
+            end end
+        else
+            if head == nil then
+                head = frames[i]
+            elseif head ~= false and head ~= frames[i] then
+                aegisub.debug.out("[zah.autoclip] Number of layers mismatches.\n")
+                aegisub.debug.out("[zah.autoclip] There are " .. tostring(head) .. " layers on frame " .. tostring(i - 1) .. ", but there are " .. tostring(frames[i]) .. " layers on frame " .. tostring(i) .. ".\n")
+                aegisub.debug.out("[zah.autoclip] AutoClip will continue but please manually confirm the result after run.\n")
+                head = false
+    end end end
 
     -- Check active_clip and set to clip
     if active_clip then
@@ -151,6 +181,19 @@ local function autoclip(sub, sel, act)
         aegisub.cancel()
     end
 
+    -- Read the output file into frames table
+    frames = {}
+    head = first
+    local read
+    while true do
+        read = f:read("*l")
+        if not read then break end
+
+        frames[head] = read
+        head = head + 1
+    end
+
+    -- Apply the frames table to subtitle
     for line, s, i, n in ass:iterSel(false) do
         ass:progressLine(s, i, n)
 
@@ -159,7 +202,7 @@ local function autoclip(sub, sel, act)
         line.text.tagsBlocks[1]:remove("clip")
 
         Line.callBackFBF(ass, line, function(line_, i_, end_frame)
-            line_.text.tagsBlocks[1]:insert(f:read("*l"))
+            line_.text.tagsBlocks[1]:insert(frames[aegisub.frame_from_ms(line_.start_time)])
             ass:insertLine(line_, s) end)
     end
 
