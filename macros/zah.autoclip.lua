@@ -265,5 +265,5 @@ if hasDepCtrl then
     })
 else
     aegisub.register_macro("AutoClip/AutoClip", script_description, autoclip)
-    aegisub.register_macro("AutoClip/Configure python path", "Configure python path", edit_config)
+    aegisub.register_macro("AutoClip/Configure AutoClip", "Configure AutoClip", edit_config)
 end
