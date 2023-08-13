@@ -137,7 +137,7 @@
 		"zah.autoclip": {
 			"url": "@{baseUrl}#@{namespace}",
 			"author": "Zahuczky, Akatsumekusa",
-			"name": "Autoclip",
+			"name": "AutoClip",
 			"description": "Add clips to subtitles 𝓪𝓾𝓽𝓸𝓶𝓪𝓰𝓲𝓬𝓪𝓵𝓵𝔂",
 			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
 			"channels": {
