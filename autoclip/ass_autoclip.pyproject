@@ -1,0 +1,17 @@
+{
+    "files": [
+        ".gitignore",
+        "ass_autoclip/__init__.py",
+        "ass_autoclip/__main__.py",
+        "ass_autoclip/autoclip.py",
+        "ass_autoclip/autoclip.qml",
+        "ass_autoclip/base.py",
+        "ass_autoclip/FrameSlider.qml",
+        "ass_autoclip/Hamburger.qml",
+        "ass_autoclip/magic.py",
+        "ass_autoclip/ValueSlider.qml",
+        "LICENSE",
+        "pyproject.toml",
+        "README.md"
+    ]
+}
