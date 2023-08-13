@@ -149,7 +149,7 @@
 						{
 							"name": ".lua",
 							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "placeholder"
+							"sha1": "placeholderr"
 						}
 					],
 					"requiredModules": [
