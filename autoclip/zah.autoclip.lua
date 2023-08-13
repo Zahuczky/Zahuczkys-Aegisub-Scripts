@@ -79,7 +79,8 @@ local function autoclip(sub, sel, act)
         end
 
         -- Get active_clip if the line is act
-        if ass:lineNumber(s) == act then
+        -- ass.i is an internal ILL variable. May break if ILL changes
+        if s + ass.i == act then
             Line.process(ass, line)
             if type(line.data["clip"]) == "table" then
                 active_clip = line.data["clip"]
