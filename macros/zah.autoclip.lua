@@ -1,6 +1,6 @@
 script_name = "AutoClip"
 script_description = "Add clips to subtitles 𝓪𝓾𝓽𝓸𝓶𝓪𝓰𝓲𝓬𝓪𝓵𝓵𝔂"
-script_version = "2.0.1"
+script_version = "2.0.2"
 script_author = "Zahuczky, Akatsumekusa"
 script_namespace = "zah.autoclip"
 -- Even when this file doesn't change, version numbering is kept consistent with the python script. 
@@ -16,9 +16,23 @@ if hasDepCtrl then
         url = "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
         feed = "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
         {
-            { "ILL.ILL" },
-            { "aka.config" },
-            { "aka.outcome" }
+            {
+                "ILL.ILL",
+                version = "1.1.0",
+                url = "https://github.com/TypesettingTools/ILL-Aegisub-Scripts",
+                feed = "https://raw.githubusercontent.com/TypesettingTools/ILL-Aegisub-Scripts/main/DependencyControl.json"
+            },
+            {
+                "aka.config",
+                version = "1.0.8",
+                url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
+                feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
+            },						{
+                "aka.outcome",
+                version = "1.0.7",
+                url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
+                feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
+            }
         }
     })
     DepCtrl:requireModules()
