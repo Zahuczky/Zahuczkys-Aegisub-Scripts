@@ -43,18 +43,22 @@ local Aegi, Ass, Line = ILL.Aegi, ILL.Ass, ILL.Line
 local aconfig = require("aka.config").make_editor({
     display_name = "AutoClip",
     presets = {
-        ["default"] = { ["python"] = "python3" }
+        ["default"] = { ["python"] = "python3", ["disable_mismatch"] = false }
     },
     default = "default"
 })
 local outcome = require("aka.outcome")
 local ok, err = outcome.ok, outcome.err
 local validation_func = function(config)
-    if type(config) == "table" and type(config["python"]) == "string" then
-        return ok(config)
-    else
+    if type(config) ~= "table" then
+        return err("Missing root table.")
+    elseif type(config["python"]) ~= "string" then
         return err("Key \"python\" is missing.")
-end end
+    elseif type(config["disable_mismatch"]) ~= "boolean" then
+        return err("Key \"disable_mismatch\" is missing.")
+    end
+    return ok(config)
+end
 
 local config
 local function autoclip(sub, sel, act)
@@ -137,13 +141,14 @@ local function autoclip(sub, sel, act)
                     end
                     aegisub.cancel()
             end end
-        else
+        elseif not config["disable_mismatch"] then
             if head == nil then
                 head = frames[i]
             elseif head ~= false and head ~= frames[i] then
                 aegisub.debug.out("[zah.autoclip] Number of layers mismatches.\n")
                 aegisub.debug.out("[zah.autoclip] There are " .. tostring(head) .. " layers on frame " .. tostring(i - 1) .. ", but there are " .. tostring(frames[i]) .. " layers on frame " .. tostring(i) .. ".\n")
                 aegisub.debug.out("[zah.autoclip] AutoClip will continue but please manually confirm the result after run.\n")
+                aegisub.debug.out("[zah.autoclip] If you want to silence this warning, you can disable it in „AutoClip > Configure AutoClip“.\n")
                 head = false
     end end end
 
@@ -233,7 +238,11 @@ local function edit_config()
     local dialog = { { class = "label",                     x = 0, y = 0, width = 30,
                                                             label = "Enter path to your Python executable:" },
                      { class = "edit", name = "python",     x = 0, y = 1, width = 30,
-                                                            text = config["python"] } }
+                                                            text = config["python"] },
+                     { class = "label",                     x = 0, y = 2, width = 30,
+                                                            label = "Do you want to disable warning when the number of layers mismatches?" },
+                     { class = "checkbox", name = "disable_mismatch", x = 0, y = 3, width = 30,
+                                                            label = "Disable", value = config["disable_mismatch"] } }
     local buttons = { "&Set", "Close" }
     local button_ids = { ok = "&Set", yes = "&Set", save = "&Set", apply = "&Set", close = "Close", no = "Close", cancel = "Close" }
 
@@ -252,7 +261,7 @@ end end
 if hasDepCtrl then
     DepCtrl:registerMacros({
         { "AutoClip", script_description, autoclip },
-        { "Configure python path", "Configure python path", edit_config }
+        { "Configure AutoClip", "Configure AutoClip", edit_config }
     })
 else
     aegisub.register_macro("AutoClip/AutoClip", script_description, autoclip)
