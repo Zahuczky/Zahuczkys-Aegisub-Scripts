@@ -1,6 +1,6 @@
 script_name = "AutoClip"
 script_description = "Add clips to subtitles 𝓪𝓾𝓽𝓸𝓶𝓪𝓰𝓲𝓬𝓪𝓵𝓵𝔂"
-script_version = "2.0.0"
+script_version = "2.0.1"
 script_author = "Zahuczky, Akatsumekusa"
 script_namespace = "zah.autoclip"
 -- Even when this file doesn't change, version numbering is kept consistent with the python script.
