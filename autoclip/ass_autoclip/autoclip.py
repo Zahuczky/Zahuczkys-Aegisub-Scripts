@@ -7,7 +7,7 @@ from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickImageProvider
 import typing
 
-from .base import threads, logger, Settings
+from .base import logger, Settings, speedtesting, speedtesting_result, threads
 from .magic import Video
 
 
@@ -286,7 +286,8 @@ class Backend(QObject):
         settings = Settings(self.lumaThreshold, self.chromaThreshold)
         request_frame = RequestFrame(self.active, self.frames, settings, time_critical=True)
         locked = FramesPendingLock.tryLockForWrite()
-        CacheThreadPool.clear() # Comment if speedtesting
+        if not speedtesting:
+            CacheThreadPool.clear()
         CacheThreadPool.start(request_frame, priority=6)
         if not locked:
             FramesPendingLock.lockForWrite()
@@ -348,6 +349,7 @@ def start(argv, args):
     engine.addImageProvider("backend", image_provider)
     backend = Backend(args.last - args.first)
     engine.rootContext().setContextProperty("backend", backend)
+    engine.rootContext().setContextProperty("speedtesting", speedtesting)
 
     # Load QML
     qml_file = Path(__file__).with_name("autoclip.qml").as_posix()
@@ -356,6 +358,9 @@ def start(argv, args):
     logger.debug("Starting event loop")
     app.exec()
 
-    # Export to file
-    settings = Settings(backend.lumaThreshold, backend.chromaThreshold)
-    video.apply_clips(args.output, settings)
+    if not speedtesting:
+        # Export to file
+        settings = Settings(backend.lumaThreshold, backend.chromaThreshold)
+        video.apply_clips(args.output, settings)
+    else:
+        speedtesting_result()

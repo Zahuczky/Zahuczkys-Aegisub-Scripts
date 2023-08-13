@@ -15,19 +15,22 @@ class Video:
     def __init__(self, video, clipping, first, last, active):
         # Load video
         clip = core.lsmas.LWLibavSource(video.expanduser().as_posix(), cachedir=tempfile.gettempdir()) \
-                    [first:last] \
-                   .fmtc.bitdepth(bits=16) \
-                   .fmtc.resample(css="444", kernel="bicubic")
+                    [first:last]
 
         # clip the clip and take reference
         diff_clips = clip.std.CropAbs(left=clipping[0], top=clipping[1], width=clipping[2] - clipping[0], height=clipping[3] - clipping[1]) \
+                         .fmtc.bitdepth(bits=16, fulld=True) \
+                         .dfttest.DFTTest() \
+                         .fmtc.resample(css="444", kernel="bicubic") \
                          .std.SplitPlanes()
-        diff_clips[0] = diff_clips[0].fmtc.transfer(transs="709", fulls=False, transd="linear", fulld=True)
+        diff_clips[0] = diff_clips[0].fmtc.transfer(transs="709", transd="linear")
         for i in range(3):
             diff_clips.append(diff_clips[i].std.FreezeFrames(first=[0], last=[last-first-1], replacement=[active-first]))
 
         # Convert to 8-bit RGB
-        clip = clip.fmtc.matrix(mat="709", col_fam=vs.RGB) \
+        clip = clip.fmtc.bitdepth(bits=16) \
+                   .fmtc.resample(css="444", kernel="bilinear") \
+                   .fmtc.matrix(mat="709", col_fam=vs.RGB) \
                    .fmtc.bitdepth(bits=8, dmode=2)
 
         # Write-protected variables

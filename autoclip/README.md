@@ -11,7 +11,7 @@
 
 *Python*  
 * Install [Python](https://www.python.org/downloads/) and [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases).  
-* AutoClip requires additional VapourSynth plugins to be installed. Run `python3 vsrepo.py install lsmas fmtc` from VapourSynth's install path.  
+* AutoClip requires additional VapourSynth plugins to be installed. Run `python3 vsrepo.py install lsmas fmtc dfttest` from VapourSynth's install path.  
 * If you are using a portable version of Python and VapourSynth, in Aegisub, Select „Automation > AutoClip > Configure python path“ and paste in the path to your python executable.  
 
 ### Usage
@@ -35,5 +35,3 @@ You may already fbf or divide the lines into sections prior to clipping, in whic
 - More sliders (probably bunch of other VS filters to fine-tune the clip area)  
 - Simplifying the clips to curves and such.  
 - Currently only the longest contour gets taken into account. Maybe combine them? Maybe a slider for this?  
-- Remove grain from Luma and dering on Chroma akanote.  
-

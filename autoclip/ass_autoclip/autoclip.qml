@@ -31,12 +31,13 @@ ApplicationWindow {
         }
     }
 
-    // For speedtest
-    // Component.onCompleted: {
-    //     for(var i = 0; i < backend.frames; i++) {
-    //         backend.active = i
-    //     }
-    // }
+    Component.onCompleted: {
+        if(speedtesting) {
+            for(var i = 0; i < backend.frames; i++) {
+                backend.active = i
+            }
+        }
+    }
     
     Image {
         id: image
