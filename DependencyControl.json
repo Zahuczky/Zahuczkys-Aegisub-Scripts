@@ -19,11 +19,11 @@
 		"petzku-scripts": "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json",
 		"zahuczky-scripts": "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
 		"zeref-aegisub-scripts": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json",
-		"akatsumekusa-aegisub-scripts": "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
-	    	"phoscity-scripts": "https://raw.githubusercontent.com/PhosCity/Aegisub-Scripts/main/DependencyControl.json",
-	    	"zeref-scripts": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json",
-	    	"arch1t3cht-scripts": "https://raw.githubusercontent.com/TypesettingTools/arch1t3cht-Aegisub-Scripts/main/DependencyControl.json",
-	    	"ILL": "https://raw.githubusercontent.com/TypesettingTools/ILL-Aegisub-Scripts/main/DependencyControl.json"
+		"akatsumekusa-aegisub-scripts": "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json",
+	    "phoscity-scripts": "https://raw.githubusercontent.com/PhosCity/Aegisub-Scripts/main/DependencyControl.json",
+	    "zeref-scripts": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json",
+	    "arch1t3cht-scripts": "https://raw.githubusercontent.com/TypesettingTools/arch1t3cht-Aegisub-Scripts/main/DependencyControl.json",
+	    "ILL": "https://raw.githubusercontent.com/TypesettingTools/ILL-Aegisub-Scripts/main/DependencyControl.json"
 	},
 	"macros": {
 		"zah.pers-mo_BETA": {
@@ -132,6 +132,46 @@
 					"Fix handling of tracking data when using Aegisub built-in frame API",
 					"Refactor internal handling of timecodes"
 				]
+			}
+		},
+		"zah.autoclip": {
+			"url": "@{baseUrl}#@{namespace}",
+			"author": "Zahuczky, Akatsumekusa",
+			"name": "Autoclip",
+			"description": "Add clips to subtitles 𝓪𝓾𝓽𝓸𝓶𝓪𝓰𝓲𝓬𝓪𝓵𝓵𝔂",
+			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+			"channels": {
+				"main": {
+					"version": "2.0.1",
+					"released": "2023-08-13",
+					"default": true,
+					"files": [
+						{
+							"name": ".lua",
+							"url": "@{fileBaseUrl}@{fileName}",
+							"sha1": "placeholder"
+						}
+					],
+					"requiredModules": [
+						{
+							"moduleName": "ILL.ILL",
+							"url": "https://github.com/TypesettingTools/ILL-Aegisub-Scripts",
+							"version": "1.1.0",
+							"feed": "https://raw.githubusercontent.com/TypesettingTools/ILL-Aegisub-Scripts/main/DependencyControl.json"
+						},
+						{
+							"moduleName": "aka.config",
+							"url": "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
+							"version": "1.0.8",
+							"feed": "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
+						},						{
+							"moduleName": "aka.outcome",
+							"url": "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
+							"version": "1.0.7",
+							"feed": "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
+						}
+					]
+				}
 			}
 		}
 	}
