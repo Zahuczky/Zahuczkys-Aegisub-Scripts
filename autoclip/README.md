@@ -17,7 +17,7 @@
 ### Usage
 
 1. Time your sign to the whole cut.  
-If you fbf or divide the lines into sections prior to clipping, or you split the lines into multiple layers, select all the lines that makes up the sign. AutoClip will recognise lines not based on their order, but their start and end frame.  
+If you fbf or divide the lines into sections prior to clipping, or you split the lines into multiple layers, select all the lines that make up the sign. AutoClip will recognise lines not based on their order, but their start and end time.  
 2. Create a rect clip that covers your sign. This clip defines the area where AutoClip will be active. Anything outside this clip will not be clipped.  
 3. Seek the video to a frame where, ideally, the sign is unobscured from the foreground object.  
 4. Select „Automation > AutoClip > AutoClip“ and a new AutoClip window shall open.  
