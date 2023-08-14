@@ -27,7 +27,8 @@ if hasDepCtrl then
                 version = "1.0.8",
                 url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
                 feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
-            },						{
+            },
+            {
                 "aka.outcome",
                 version = "1.0.7",
                 url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",

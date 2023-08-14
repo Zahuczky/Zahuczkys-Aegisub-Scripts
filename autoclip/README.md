@@ -1,12 +1,12 @@
 ## AutoClip
 
-*Automagically* clip out objects obstructing your sign.
+*Automagically* clip out objects obstructing your sign.  
 
 ### Install
 
 *Lua*   
 * Install AutoClip from DependencyControl.  
-* If you prefer to manually install AutoClip, AutoClip's dependencies are `ILL.ILL`, `aka.config`, `aka.config2`, `aka.outcome`, `aka.unicode`, which is available at [TypesettingTools/ILL-Aegisub-Scripts](https://github.com/TypesettingTools/ILL-Aegisub-Scripts) and from DependencyControl, and [Akatmks/Akatsumekusa-Aegisub-Scripts](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts) which you have to install yourself.  
+* If you prefer to manually install AutoClip, AutoClip's direct dependencies are [`ILL.ILL`](https://github.com/TypesettingTools/ILL-Aegisub-Scripts), [`aka.config`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), and [`aka.outcome`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts).  
 
 *Python*  
 * Install [Python](https://www.python.org/downloads/) and [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases).  
@@ -16,11 +16,11 @@
 ### Usage
 
 1. Time your sign to the whole cut.  
-You may already fbf or divide the lines into sections prior to clipping, in which case select all the lines that adds up to the cut.  
+If you fbf or divide the lines into sections prior to clipping, or you split the lines into multiple layers, select all the lines that makes up the sign. AutoClip will recognise lines not based on their order, but their start and end frame.  
 2. Create a rect clip that covers your sign. This clip defines the area where AutoClip will be active. Anything outside this clip will not be clipped.  
 3. Seek the video to a frame where, ideally, the sign is unobscured from the foreground object.  
 4. Select „Automation > AutoClip > AutoClip“ and a new AutoClip window shall open.  
-5. In the new window, adjust the slider until you get a satisfactory clip and click „Apply“.  
+5. In the new window, adjust the sliders until you get a satisfactory clip and click „Apply“.  
 
 ### License
 
@@ -33,3 +33,4 @@ You may already fbf or divide the lines into sections prior to clipping, in whic
 - More sliders (probably bunch of other VS filters to fine-tune the clip area)  
 - Simplifying the clips to curves and such.  
 - Currently only the longest contour gets taken into account. Maybe combine them? Maybe a slider for this?  
+- Add clips to existing clips on the line.  
