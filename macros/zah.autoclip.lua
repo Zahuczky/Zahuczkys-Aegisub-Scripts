@@ -72,6 +72,10 @@ local function autoclip(sub, sel, act)
     local ass = Ass(sub, sel, act)
 
     local project_props = aegisub.project_properties()
+    if not project_props.video_file then
+        aegisub.debug.out("[zah.autoclip] AutoClip requires a video to be loaded for clipping.\n")
+        aegisub.cancel()
+    end
     local video_file = project_props.video_file
     local output_file = aegisub.decode_path("?temp/zah.autoclip" .. string.sub(tostring(math.random()), 2))
 
@@ -86,40 +90,40 @@ local function autoclip(sub, sel, act)
     for line, s, i, n in ass:iterSel(false) do
         ass:progressLine(s, i, n)
 
+        line.start_frame = aegisub.frame_from_ms(line.start_time)
+        line.end_frame = aegisub.frame_from_ms(line.end_time)
+
         if not first then
-            first = aegisub.frame_from_ms(line.start_time)
-            last = aegisub.frame_from_ms(line.end_time)
+            first = line.start_frame
+            last = line.end_frame
         else
-            first = first <= aegisub.frame_from_ms(line.start_time) and first or aegisub.frame_from_ms(line.start_time)
-            last = last >= aegisub.frame_from_ms(line.end_time) and last or aegisub.frame_from_ms(line.end_time)
+            first = first <= line.start_frame and first or line.start_frame
+            last = last >= line.end_frame and last or line.end_frame
         end
 
-        for j = aegisub.frame_from_ms(line.start_time), aegisub.frame_from_ms(line.end_time) - 1 do
+        for j = line.start_frame, line.end_frame - 1 do
             if not frames[j] then
                 frames[j] = 1
             else
                 frames[j] = frames[j] + 1
         end end
 
-        -- Get active_clip if the line is act
-        -- ass.i is an internal ILL variable. May break if ILL changes
-        if s + ass.i == act then
-            Line.process(ass, line)
-            if type(line.data["clip"]) == "table" then
-                active_clip = line.data["clip"]
-        end end
-
-        -- Get clip from line if active_clip is not set
-        if clip == nil then
-            if active_clip == nil then
-                Line.process(ass, line)
-                if type(line.data["clip"]) == "table" then
-                    clip = line.data["clip"]
-            end end
-        else
-            Line.process(ass, line)
-            if type(line.data["clip"]) == "table" then
-                -- There must be exactly one unique clip in the selected lines
+        Line.process(ass, line)
+        if type(line.data["clip"]) == "table" then
+            if line.start_frame <= active and active < line.end_frame then
+                if active_clip == nil then
+                    active_clip = line.data["clip"]
+                elseif type(active_clip) == "table" then
+                    if not (line.data["clip"][1] == active_clip[1] and
+                            line.data["clip"][2] == active_clip[2] and
+                            line.data["clip"][3] == active_clip[3] and
+                            line.data["clip"][4] == active_clip[4]) then
+                        active_clip = false
+            end end end
+                
+            if clip == nil then
+                clip = line.data["clip"]
+            elseif type(clip) == "table" then
                 if not (line.data["clip"][1] == clip[1] and
                         line.data["clip"][2] == clip[2] and
                         line.data["clip"][3] == clip[3] and
@@ -153,17 +157,33 @@ local function autoclip(sub, sel, act)
                 head = false
     end end end
 
+    -- Make sure active is inside [first:last]
+    if not (first <= active and active < last) then
+        aegisub.debug.out("[zah.autoclip] Video seek head outside the range of selected lines.\n")
+        aegisub.debug.out("[zah.autoclip] The selected lines start at frame " .. tostring(first) .. " and end at frame " .. tostring(last - 1) .. " but video seek head is at frame " .. tostring(active) .. ".\n")
+        aegisub.debug.out("[zah.autoclip] AutoClip uses video seek head as the reference frame and also by default takes the clipping area from lines containing video seek head.\n")
+        aegisub.cancel()
+    end
+
+    if active_clip == false then
+        aegisub.debug.out("[zah.autoclip] Multiple different rect clips found on lines containing the frame at video seek head.\n")
+        aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
+        aegisub.debug.out("[zah.autoclip] AutoClip by default takes this clip from lines containing the frame at video seek head. AutoClip expects one unique rect clip on the lines.\n")
+        aegisub.cancel()
+    end
     -- Check active_clip and set to clip
     if active_clip then
         clip = active_clip
     else
         if clip == nil then
             aegisub.debug.out("[zah.autoclip] No rect clips found in selected lines.\n")
-            aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it is active. This could be in active line or any selected lines.\n")
+            aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
+            aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallsbacks and checks for clips in every lines in the selection.\n")
             aegisub.cancel()
         elseif clip == false then
-            aegisub.debug.out("[zah.autoclip] No rect clip found in active line, and there are multiple different rect clips found on selected line.\n")
-            aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it is active.\n")
+            aegisub.debug.out("[zah.autoclip] No rect clip found in lines containing the frame at video seek head, and there are multiple different rect clips found on other selected line.\n")
+            aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
+            aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallsbacks and checks for clips in every lines in the selection.\n")
             aegisub.cancel()
         end
     end
