@@ -23,9 +23,9 @@ classifiers = [
   "Topic :: Multimedia :: Video"
 ]
 dependencies = [
-  "numpy>=1.24.3",
-  "opencv-python>=4.8.0.74",
-  "PySide6"
+  "numpy",
+  "PySide6",
+  "scikit-image"
 ]
 dynamic = ["version"]
 

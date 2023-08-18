@@ -87,7 +87,7 @@ local function autoclip(sub, sel, act)
     local last
     local active_clip
     local clip
-    for line, s, i, n in ass:iterSel(false) do
+    for line, s, i, n in ass:iterSel() do
         ass:progressLine(s, i, n)
 
         line.start_frame = aegisub.frame_from_ms(line.start_time)
@@ -152,8 +152,8 @@ local function autoclip(sub, sel, act)
             elseif head ~= false and head ~= frames[i] then
                 aegisub.debug.out("[zah.autoclip] Number of layers mismatches.\n")
                 aegisub.debug.out("[zah.autoclip] There are " .. tostring(head) .. " layers on frame " .. tostring(i - 1) .. ", but there are " .. tostring(frames[i]) .. " layers on frame " .. tostring(i) .. ".\n")
-                aegisub.debug.out("[zah.autoclip] AutoClip will continue but please manually confirm the result after run.\n")
-                aegisub.debug.out("[zah.autoclip] If you want to silence this warning, you can disable it in „AutoClip > Configure AutoClip“.\n")
+                aegisub.debug.out("[zah.autoclip] If this is intentional and you want to silence this warning, you can disable it in „AutoClip > Configure AutoClip“.\n")
+                aegisub.debug.out("[zah.autoclip] Continuing.\n")
                 head = false
     end end end
 
@@ -229,20 +229,32 @@ local function autoclip(sub, sel, act)
         read = f:read("*l")
         if not read then break end
 
-        frames[head] = read
+        if read == "empty" then
+            frames[head] = nil
+        else
+            frames[head] = read
+        end
         head = head + 1
+    end
+    if head ~= last then
+        aegisub.debug.out("[zah.autoclip] Output file contains less frames than expected.\n")
+        aegisub.debug.out("[zah.autoclip] AutoClip will continue but please manually confirm the result after run.\n")
     end
 
     -- Apply the frames table to subtitle
-    for line, s, i, n in ass:iterSel(false) do
+    for line, s, i, n in ass:iterSel() do
         ass:progressLine(s, i, n)
 
         ass:removeLine(line, s)
+        -- Internal ILL value, may break
+        line.isShape = false
         Line.process(ass, line)
         line.text.tagsBlocks[1]:remove("clip")
 
         Line.callBackFBF(ass, line, function(line_, i_, end_frame)
-            line_.text.tagsBlocks[1]:insert(frames[aegisub.frame_from_ms(line_.start_time)])
+            if frames[aegisub.frame_from_ms(line_.start_time)] then
+                line_.text.tagsBlocks[1]:insert(frames[aegisub.frame_from_ms(line_.start_time)])
+            end
             ass:insertLine(line_, s) end)
     end
 

@@ -29,6 +29,10 @@
 * *AutoClip is released by Zahuczkys and Akatsumekusa under [BSD 3-Clause License](LICENSE).*  
 * *AutoClip uses Noto Sans Display Medium in the UI. Noto Sans Display is released by Google under [SIL OFL 1.1 License](ass_autoclip/assets/LICENSE.OFL.txt).*  
 
+### Knwon bugs
+
+- AutoClip UI shows nested clips but nested clip doesn't work.
+
 ### TODO
 
 - Handle moving signs/tracking data for those  
