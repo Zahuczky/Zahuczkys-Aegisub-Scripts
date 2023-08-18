@@ -24,6 +24,7 @@ class Video:
         # clip the clip and take reference
         diff_clips = clip.std.CropAbs(left=clipping[0], top=clipping[1], width=clipping[2] - clipping[0], height=clipping[3] - clipping[1])
         if diff_clips.format.subsampling_h and diff_clips.format.subsampling_w:
+            # Thanks Zewia for recommending core.resize
             diff_clips = diff_clips.resize.Bicubic(format=vs.YUV420P16, range_in=vs.RANGE_LIMITED, range=vs.RANGE_FULL) \
                                    .dfttest.DFTTest() \
                                    .resize.Bicubic(format=vs.YUV444P16, matrix_in=vs.MATRIX_BT709, matrix=vs.MATRIX_BT709, transfer_in=vs.TRANSFER_BT709, transfer=vs.TRANSFER_LINEAR)
@@ -73,10 +74,10 @@ class Video:
                 # guaranteed to at least get a lock
                 locked = self.diff_clip2_locks[i].tryLockForWrite()
                 if locked:
-                    # Thanks arch1t3cht for giving the ideas
+                    # Thanks arch1t3cht for giving the ideas and thanks Zewia for improvements
                     self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
-                                                        f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?") \
-                                              .resize.Bilinear(format=vs.GRAY8, dither_type="none") \
+                                                        f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?", \
+                                                        format = vs.GRAY8) \
                                               .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
 
                     self.diff_clip2_settings[i] = settings
@@ -133,10 +134,10 @@ class Video:
                         # guaranteed to at least get a lock
                         locked = self.diff_clip2_locks[i].tryLockForWrite()
                         if locked:
-                            # Thanks arch1t3cht for giving the ideas
+                            # Thanks arch1t3cht for giving the ideas and thanks Zewia for improvements
                             self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
-                                                                f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?") \
-                                                      .resize.Bilinear(format=vs.GRAY8, dither_type="none") \
+                                                                f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?", \
+                                                                    format=vs.GRAY8) \
                                                       .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
 
                             self.diff_clip2_settings[i] = settings
