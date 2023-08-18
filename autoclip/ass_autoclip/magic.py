@@ -18,20 +18,21 @@ class Video:
                     [first:last]
 
         # clip the clip and take reference
-        diff_clips = clip.std.CropAbs(left=clipping[0], top=clipping[1], width=clipping[2] - clipping[0], height=clipping[3] - clipping[1]) \
-                         .fmtc.bitdepth(bits=16, fulld=True) \
-                         .dfttest.DFTTest() \
-                         .fmtc.resample(css="444", kernel="bicubic") \
-                         .std.SplitPlanes()
-        diff_clips[0] = diff_clips[0].fmtc.transfer(transs="709", transd="linear")
+        diff_clips = clip.std.CropAbs(left=clipping[0], top=clipping[1], width=clipping[2] - clipping[0], height=clipping[3] - clipping[1])
+        if diff_clips.format.subsampling_h and diff_clips.format.subsampling_w:
+            diff_clips = diff_clips.resize.Bicubic(format=vs.YUV420P16, range_in=vs.RANGE_LIMITED, range=vs.RANGE_FULL) \
+                                   .dfttest.DFTTest() \
+                                   .resize.Bicubic(format=vs.YUV444P16, matrix_in=vs.MATRIX_BT709, matrix=vs.MATRIX_BT709, transfer_in=vs.TRANSFER_BT709, transfer=vs.TRANSFER_LINEAR)
+        else:
+            diff_clips = diff_clips.resize.Bicubic(format=vs.YUV444P16, range_in=vs.RANGE_LIMITED, range=vs.RANGE_FULL) \
+                                   .dfttest.DFTTest() \
+                                   .resize.Bicubic(matrix_in=vs.MATRIX_BT709, matrix=vs.MATRIX_BT709, transfer_in=vs.TRANSFER_BT709, transfer=vs.TRANSFER_LINEAR)
+        diff_clips = diff_clips.std.SplitPlanes()
         for i in range(3):
             diff_clips.append(diff_clips[i].std.FreezeFrames(first=[0], last=[last-first-1], replacement=[active-first]))
 
         # Convert to 8-bit RGB
-        clip = clip.fmtc.bitdepth(bits=16) \
-                   .fmtc.resample(css="444", kernel="bilinear") \
-                   .fmtc.matrix(mat="709", col_fam=vs.RGB) \
-                   .fmtc.bitdepth(bits=8, dmode=2)
+        clip = clip.resize.Bilinear(format=vs.RGB24, matrix_in=vs.MATRIX_BT709, transfer_in=vs.TRANSFER_BT709, dither_type="none")
 
         # Write-protected variables
         self._clip = clip
@@ -71,7 +72,7 @@ class Video:
                     # Thanks arch1t3cht for giving the ideas
                     self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
                                                         f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?") \
-                                              .fmtc.bitdepth(bits=8, dmode=2)
+                                              .resize.Bilinear(format=vs.GRAY8, dither_type="none")
 
                     self.diff_clip2_settings[i] = settings
                     break
@@ -92,11 +93,8 @@ class Video:
         image = np.hstack((r, g, b)).reshape((self.clip.height, self.clip.width, 3))
         clipped_image = image[self.clipping[1]:self.clipping[3], self.clipping[0]:self.clipping[2]]
 
-        # Apply thresholding to the grayscale image
-        _, thresh = cv2.threshold(diff_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-        # Find the contours in the thresholded image
-        contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        # Find the contours in the image
+        contours, _ = cv2.findContours(diff_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         if contours:
             # Find the longest contour, this is janky but what do? Maybe I should combine them. TODO maybe?
@@ -132,7 +130,7 @@ class Video:
                             # Thanks arch1t3cht for giving the ideas
                             self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
                                                                 f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?") \
-                                                      .fmtc.bitdepth(bits=8, dmode=2)
+                                                      .resize.Bilinear(format=vs.GRAY8, dither_type="none")
 
                             self.diff_clip2_settings[i] = settings
                             break
@@ -142,11 +140,8 @@ class Video:
                 self.diff_clip2_locks[i].unlock()
                 diff_image = np.array(diff_frame[0], dtype=np.uint8)
 
-                # Apply thresholding to the grayscale image
-                _, thresh = cv2.threshold(diff_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-                # Find the contours in the thresholded image
-                contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                # Find the contours in the image
+                contours, _ = cv2.findContours(diff_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
                 if contours:
                     # Find the longest contour, this is janky but what do? Maybe I should combine them. TODO maybe
