@@ -117,7 +117,7 @@ class Video:
         with file.open("w") as f:
             # Get all frames and run the findcontours on all of them
             for frame in range(self.clip.num_frames):
-                logger.info(f"  Frame {frame}")
+                logger.info(f"Saving frame {frame}")
                 # Get the diff_clip2 clip with the settings
                 i = 0
                 for i in range(threads):

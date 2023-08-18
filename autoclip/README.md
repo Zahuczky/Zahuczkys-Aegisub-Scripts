@@ -31,7 +31,7 @@
 
 ### Knwon bugs
 
-- AutoClip UI shows nested clips but nested clip doesn't work.
+- AutoClip UI shows nested clips but nested clips don't work.
 
 ### TODO
 
