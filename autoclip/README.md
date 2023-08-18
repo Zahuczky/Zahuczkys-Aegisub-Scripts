@@ -37,6 +37,6 @@
 
 - Handle moving signs/tracking data for those  
 - More sliders (probably bunch of other VS filters to fine-tune the clip area)  
-- Simplifying the clips to curves and such.  
-- Currently only the longest contour gets taken into account. Maybe combine them? Maybe a slider for this?  
+- ~~Simplifying the clips to curves and such.~~  
+- ~~Currently only the longest contour gets taken into account. Maybe combine them? Maybe a slider for this?~~  
 - Add clips to existing clips on the line.  
