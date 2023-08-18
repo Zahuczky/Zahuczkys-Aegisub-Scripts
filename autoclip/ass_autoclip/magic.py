@@ -76,7 +76,7 @@ class Video:
                 if locked:
                     # Thanks arch1t3cht for giving the ideas and thanks Zewia for improvements
                     self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
-                                                        f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?", \
+                                                        f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 255 0 ?", \
                                                         format = vs.GRAY8) \
                                               .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
 
@@ -136,7 +136,7 @@ class Video:
                         if locked:
                             # Thanks arch1t3cht for giving the ideas and thanks Zewia for improvements
                             self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
-                                                                f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 65535 0 ?", \
+                                                                f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 255 0 ?", \
                                                                     format=vs.GRAY8) \
                                                       .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
 
