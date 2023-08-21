@@ -560,7 +560,7 @@ autoclip_main = function(sub, sel, act)
     local ass = Ass(sub, sel, act)
 
     local project_props = aegisub.project_properties()
-    if not project_props.video_file then
+    if not project_props.video_file or project_props.video_file == "" then
         aegisub.debug.out("[zah.autoclip] AutoClip requires a video to be loaded for clipping.\n")
         aegisub.cancel()
     end
