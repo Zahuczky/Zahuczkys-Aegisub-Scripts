@@ -22,6 +22,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Topic :: Multimedia :: Video"
 ]
+# Update the dependencies message in Lua and Python's __main__.py as well!
 dependencies = [
   "numpy",
   "PySide6",

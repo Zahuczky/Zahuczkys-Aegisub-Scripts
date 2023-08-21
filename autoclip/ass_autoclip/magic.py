@@ -116,34 +116,41 @@ class Video:
         logger.info("Saving clip data")
         file.parent.mkdir(parents=True, exist_ok=True)
         with file.open("w") as f:
+            f.write("{\n")
+            f.write("\t\"clip\": [\n")
+
+            # Get the diff_clip2 clip with the settings
+            i = 0
+            for i in range(threads):
+                locked = self.diff_clip2_locks[i].tryLockForRead()
+                if locked:
+                    if self.diff_clip2_settings[i] == settings:
+                        break
+                    else:
+                        self.diff_clip2_locks[i].unlock()
+            else:
+                for i in range(threads):
+                    # There are equal number of threads and clip2s, so it is
+                    # guaranteed to at least get a lock
+                    locked = self.diff_clip2_locks[i].tryLockForWrite()
+                    if locked:
+                        # Thanks arch1t3cht for giving the ideas and thanks Zewia for improvements
+                        self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
+                                                            f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 255 0 ?", \
+                                                                format=vs.GRAY8) \
+                                                    .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
+
+                        self.diff_clip2_settings[i] = settings
+                        break
+            self.diff_clip2_locks[i].unlock()
+
             # Get all frames and run the findcontours on all of them
             for frame in range(self.clip.num_frames):
                 logger.info(f"Saving frame {frame}")
-                # Get the diff_clip2 clip with the settings
-                i = 0
-                for i in range(threads):
-                    locked = self.diff_clip2_locks[i].tryLockForRead()
-                    if locked:
-                        if self.diff_clip2_settings[i] == settings:
-                            break
-                        else:
-                            self.diff_clip2_locks[i].unlock()
-                else:
-                    for i in range(threads):
-                        # There are equal number of threads and clip2s, so it is
-                        # guaranteed to at least get a lock
-                        locked = self.diff_clip2_locks[i].tryLockForWrite()
-                        if locked:
-                            # Thanks arch1t3cht for giving the ideas and thanks Zewia for improvements
-                            self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
-                                                                f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 255 0 ?", \
-                                                                    format=vs.GRAY8) \
-                                                      .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
-
-                            self.diff_clip2_settings[i] = settings
-                            break
+                f.write("\t\t")
 
                 # Get the corresponding frame from the diff_clip2 clip
+                self.diff_clip2_locks[i].lockForRead()
                 diff_frame = self.diff_clip2s[i].get_frame(frame)
                 self.diff_clip2_locks[i].unlock()
                 diff_image = np.array(diff_frame[0], dtype=np.uint8)
@@ -152,10 +159,10 @@ class Video:
                 contours = measure.find_contours(diff_image, level=0.5)
 
                 if contours:
-                    f.write("\\iclip(")
-                    for i in range(len(contours)):
-                        contour = np.ceil(contours[i], out=contours[i])
-                        if i == 0:
+                    f.write("\"")
+                    for j in range(len(contours)):
+                        contour = np.ceil(contours[j], out=contours[j])
+                        if j == 0:
                             f.write("m")
                         else:
                             f.write(" m")
@@ -226,13 +233,21 @@ class Video:
                             prev_y = y
 
 
-                        for j in range(contour.shape[0]):
-                            write(int(contour[j, 1]), int(contour[j, 0]))
+                        for k in range(contour.shape[0]):
+                            write(int(contour[k, 1]), int(contour[k, 0]))
 
                         # So it loops back to the starting point
                         write(int(contour[0, 1]), int(contour[0, 0]))
                         simplified_write_last()
 
-                    f.write(")\n")
+                    f.write("\"")
                 else:
-                    f.write("empty\n")
+                    f.write("false")
+
+                if frame != self.clip.num_frames - 1:
+                    f.write(",\n")
+                else:
+                    f.write("\n")
+
+            f.write("\t]\n")
+            f.write("}\n")
