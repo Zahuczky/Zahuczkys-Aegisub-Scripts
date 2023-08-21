@@ -42,6 +42,3 @@ path = "ass_autoclip/__init__.py"
 include = [
   "ass_autoclip/*"
 ]
-exclude = [
-  "zah.autoclip.lua"
-]

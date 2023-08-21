@@ -10,9 +10,8 @@
 
 *Python*  
 * Install [Python](https://www.python.org/downloads/) and [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases).  
-* Install AutoClip using `python3 -m pip install ass-autoclip`.  
-* AutoClip requires additional VapourSynth plugins to be installed. Run `python3 vsrepo.py install lsmas dfttest` from VapourSynth's install path.  
-* If you are using a portable version of Python and VapourSynth, in Aegisub, Select „Automation > AutoClip > Configure python path“ and paste in the path to your python executable.  
+
+There will be a setup wizard when you run AutoClip from Aegisub for the first time. Follow the setup wizard to install necessary pip and vsrepo packages.  
 
 ### Usage
 
