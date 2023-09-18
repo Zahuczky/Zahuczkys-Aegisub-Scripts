@@ -141,14 +141,14 @@
 			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
 			"channels": {
 				"main": {
-					"version": "2.0.2",
-					"released": "2023-08-13",
+					"version": "2.0.3\n2.0.3",
+					"released": "2023-08-21",
 					"default": true,
 					"files": [
 						{
 							"name": ".lua",
 							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "a9701c14164acd6e255cf887504956cc902a8522"
+							"sha1": "2662a47b77ef3a34b5e1494dfd7cede4ba293ce4"
 						}
 					],
 					"requiredModules": [

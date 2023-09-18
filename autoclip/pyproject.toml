@@ -22,10 +22,11 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Topic :: Multimedia :: Video"
 ]
+# Update the dependencies message in Lua and Python's __main__.py as well!
 dependencies = [
-  "numpy>=1.24.3",
-  "opencv-python>=4.8.0.74",
-  "PySide6"
+  "numpy",
+  "PySide6",
+  "scikit-image"
 ]
 dynamic = ["version"]
 
@@ -40,7 +41,4 @@ path = "ass_autoclip/__init__.py"
 [tool.hatch.build]
 include = [
   "ass_autoclip/*"
-]
-exclude = [
-  "zah.autoclip.lua"
 ]
