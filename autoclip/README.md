@@ -19,16 +19,16 @@ There will be a setup wizard when you run AutoClip from Aegisub for the first ti
 2. Seek the video to a reference frame where, ideally, the sign is unobscured from the foreground object.  
 3. Create a rect clip that covers your sign at the reference frame. This clip defines the area where AutoClip should be active. Anything outside this clip will not be clipped.  
 4. Select all the lines that make up the sign. This can include already fbfed or layered lines. AutoClip recognises lines not based on their order, but their start and end time.  
-5. With the video seek head at reference frame and all lines selected, run „Automation > AutoClip > AutoClip“ and a new AutoClip window shall open.  
+5. With the video seek head at the reference frame and all lines selected, run „Automation > AutoClip > AutoClip“ and a new AutoClip window shall open.  
 6. In the new window, adjust the sliders until you get a satisfactory clip. AutoClip tests the absolute difference of a pixel at current frame against reference frame, and clips away the pixel if it has difference above the specified thresholds.  
 7. Click „Apply“ to apply the clip to subtitle.  
 
 ### License
 
-* *AutoClip is released by Zahuczkys and Akatsumekusa under [BSD 3-Clause License](LICENSE).*  
+* *AutoClip is released by Zahuczky and Akatsumekusa under [BSD 3-Clause License](LICENSE).*  
 * *AutoClip uses Noto Sans Display Medium in the UI. Noto Sans Display is released by Google under [SIL OFL 1.1 License](ass_autoclip/assets/LICENSE.OFL.txt).*  
 
-### Knwon bugs
+### Known bugs
 
 - AutoClip UI shows nested clips but nested clips don't work.
 
