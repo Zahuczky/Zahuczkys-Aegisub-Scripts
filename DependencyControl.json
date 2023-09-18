@@ -141,7 +141,7 @@
 			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
 			"channels": {
 				"main": {
-					"version": "2.0.3\n2.0.3",
+					"version": "2.0.3",
 					"released": "2023-08-21",
 					"default": true,
 					"files": [
