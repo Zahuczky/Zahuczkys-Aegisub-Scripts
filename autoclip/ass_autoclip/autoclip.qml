@@ -6,10 +6,10 @@ import QtQuick.Window
 
 ApplicationWindow {
     id: window
-    width: 1600
-    height: 900
-    minimumWidth: 1280
-    minimumHeight: 720
+    width: 1280
+    height: 720
+    minimumWidth: 1024
+    minimumHeight: 576
     visible: true
     visibility: Window.Maximized
 
@@ -47,8 +47,8 @@ ApplicationWindow {
 
         property real scale: 1
         property list<real> scale_list: [2/3, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        width: sourceSize.width * scale
-        height: sourceSize.height * scale
+        width: sourceSize.width * scale / Screen.devicePixelRatio
+        height: sourceSize.height * scale / Screen.devicePixelRatio
         source: "image://backend/" + image_number
         asynchronous: false
         smooth: false
@@ -84,8 +84,8 @@ ApplicationWindow {
                 last_x = mouseX
                 last_y = mouseY
 
-                if(Math.abs(Math.abs((window.width - image.width) / 2) - Math.abs(image.anchors.horizontalCenterOffset)) < 7 &&
-                   Math.abs(Math.abs((window.height - image.height) / 2) - Math.abs(image.anchors.verticalCenterOffset)) < 7) {
+                if(Math.abs(Math.abs((window.width - image.width) / 2) - Math.abs(image.anchors.horizontalCenterOffset)) < 6 &&
+                   Math.abs(Math.abs((window.height - image.height) / 2) - Math.abs(image.anchors.verticalCenterOffset)) < 6) {
                     lost_x = image.anchors.horizontalCenterOffset
                     lost_y = image.anchors.verticalCenterOffset
                     image.anchors.horizontalCenterOffset = image.anchors.horizontalCenterOffset >= 0 ? Math.abs(window.width - image.width) / 2 : -Math.abs(window.width - image.width) / 2
@@ -158,16 +158,16 @@ ApplicationWindow {
 
     Rectangle {
         id: frameBox
-        height: 42
+        height: 34
         anchors.bottom: parent.bottom
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottomMargin: 27
-        anchors.leftMargin: 71
-        anchors.rightMargin: 71
+        anchors.bottomMargin: 21
+        anchors.leftMargin: 58
+        anchors.rightMargin: 58
         z: 20
 
-        radius: 17
+        radius: 14
         color: window.background_colour
 
         MouseArea {
@@ -178,8 +178,8 @@ ApplicationWindow {
             FrameSlider {
                 id: frame
                 anchors.fill: parent
-                anchors.leftMargin: 35
-                anchors.rightMargin: 35
+                anchors.leftMargin: 26
+                anchors.rightMargin: 26
                 z: 21
 
                 frame: backend.active
@@ -203,20 +203,20 @@ ApplicationWindow {
         anchors.bottom: frameBox.top
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.topMargin: 27
-        anchors.bottomMargin: 11
-        anchors.leftMargin: 71
-        anchors.rightMargin: 71
+        anchors.topMargin: 21
+        anchors.bottomMargin: 9
+        anchors.leftMargin: 58
+        anchors.rightMargin: 58
         z: 20
 
         Rectangle {
             id: settingsBox
             anchors.centerIn: parent
             anchors.verticalCenterOffset: settingsZone.height / 2 - height / 2
-            width: 919
-            height: 83
+            width: 735
+            height: 67.2
 
-            radius: 17
+            radius: 14
             color: window.background_colour
 
             MouseArea {
@@ -228,13 +228,13 @@ ApplicationWindow {
                     anchors.fill: parent
 
                     Item {
-                        width: 53
+                        width: 42
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
 
                         Hamburger {
                             anchors.centerIn: parent
-                            anchors.horizontalCenterOffset: 1
+                            anchors.horizontalCenterOffset: 2
 
                             inactive_colour: window.inactive_colour
                         }
@@ -272,16 +272,17 @@ ApplicationWindow {
                         }
                     }
 
-                    Item {
-                        width: 758
+                    Column {
+                        width: 608
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
-                        anchors.topMargin: 10
-                        anchors.bottomMargin: 11
+                        anchors.topMargin: 8.3
+                        anchors.bottomMargin: 8.6
+
+                        spacing: 0.3
 
                         ValueSlider {
                             id: lumaThreshold
-                            anchors.top: parent.top
                             anchors.left: parent.left
                             anchors.right: parent.right
                             z: 21
@@ -304,7 +305,6 @@ ApplicationWindow {
 
                         ValueSlider {
                             id: chromaThreshold
-                            anchors.bottom: parent.bottom
                             anchors.left: parent.left
                             anchors.right: parent.right
                             z: 21
@@ -336,15 +336,15 @@ ApplicationWindow {
 
 
                     Item {
-                        width: 106
+                        width: 84
                         anchors.top: parent.top
                         anchors.bottom: parent.bottom
 
                         Text {
                             id: applyText
                             anchors.centerIn: parent
-                            anchors.horizontalCenterOffset: -0.5
-                            anchors.verticalCenterOffset: -0.5
+                            anchors.horizontalCenterOffset: -1
+                            anchors.verticalCenterOffset: 0
 
                             font.pointSize: 13
                             color: window.active_colour
@@ -353,10 +353,10 @@ ApplicationWindow {
                         }
 
                         MouseArea {
-                            width: 87
-                            height: 59
+                            width: 72
+                            height: 51
                             anchors.centerIn: parent
-                            anchors.horizontalCenterOffset: -1
+                            anchors.horizontalCenterOffset: -3
                             z: 30
 
                             acceptedButtons: Qt.LeftButton

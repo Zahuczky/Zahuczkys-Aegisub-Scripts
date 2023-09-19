@@ -6,7 +6,7 @@
 
 *Lua*   
 * Install AutoClip from DependencyControl.  
-* If you prefer to manually install AutoClip, AutoClip's direct dependencies are [`ILL.ILL`](https://github.com/TypesettingTools/ILL-Aegisub-Scripts), [`aka.config`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), and [`aka.outcome`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts).  
+* If you prefer to manually install AutoClip, AutoClip's direct dependencies are [`ILL.ILL`](https://github.com/TypesettingTools/ILL-Aegisub-Scripts), [`aka.config`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), [`aka.outcome`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), [`aka.unsemantic`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), and [`petzku.util`](https://github.com/petzku/Aegisub-Scripts).  
 
 *Python*  
 * Install [Python](https://www.python.org/downloads/) and [VapourSynth](https://github.com/vapoursynth/vapoursynth/releases).  
