@@ -665,12 +665,12 @@ autoclip_main = function(sub, sel, act)
         if clip == nil then
             aegisub.debug.out("[zah.autoclip] No rect clips found in selected lines.\n")
             aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
-            aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallsbacks and checks for clips in every lines in the selection.\n")
+            aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallbacks and checks for clips in every lines in the selection.\n")
             aegisub.cancel()
         elseif clip == false then
             aegisub.debug.out("[zah.autoclip] No rect clip found in lines containing the frame at video seek head, and there are multiple different rect clips found on other selected line.\n")
             aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
-            aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallsbacks and checks for clips in every lines in the selection.\n")
+            aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallbacks and checks for clips in every lines in the selection.\n")
             aegisub.cancel()
         end
     end
