@@ -142,13 +142,13 @@
 			"channels": {
 				"main": {
 					"version": "2.0.4\n2.0.3",
-					"released": "2023-09-19",
+					"released": "2023-09-21",
 					"default": true,
 					"files": [
 						{
 							"name": ".lua",
 							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "4dec41342b4c02896810aa81167b1cf310455a43"
+							"sha1": "8fef8c7abc7099a9fc61e6c62ad2e15d48234fce"
 						}
 					],
 					"requiredModules": [
