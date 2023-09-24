@@ -24,18 +24,24 @@ parser.add_argument("-f", "--first", dest="first", help="First frame (Required)"
 parser.add_argument("-l", "--last", dest="last", help="Last fram (Required)e", metavar="FRAME", type=int)
 parser.add_argument("-a", "--active", dest="active", help="Current frame (Required)", metavar="FRAME", type=int)
 parser.add_argument("--supported-version", dest="supported_v", help="Last supported Version", metavar="VERSION", type=str)
-parser.add_argument("--check-dependencies", dest="check_dependencies", help="Check AutoClip Dependencies", action="store_true")
+parser.add_argument("--check-dependencies", dest="check_dependencies", help="Check AutoClip dependencies and return", action="store_true")
+parser.add_argument("--check-python-dependencies", dest="check_python_dependencies", help="Check AutoClip Python dependencies and return", action="store_true")
+parser.add_argument("--check-vs-dependencies", dest="check_vs_dependencies", help="Check AutoClip VapourSynth dependencies and return", action="store_true")
 parser.add_argument("--version", action="version", version=f"ass-autoclip {__version__}")
 args, _ = parser.parse_known_args()
 
-if args.check_dependencies:
-    assert(importlib.util.find_spec("vapoursynth") != None)
-    from vapoursynth import core
-    assert(hasattr(core, "lsmas"))
-    assert(hasattr(core, "dfttest"))
-    assert(importlib.util.find_spec("numpy") != None)
-    assert(importlib.util.find_spec("PySide6") != None)
-    assert(importlib.util.find_spec("skimage") != None)
+if args.check_dependencies or args.check_python_dependencies or args.check_vs_dependencies:
+    if args.check_dependencies or args.check_vs_dependencies:
+        assert(importlib.util.find_spec("vapoursynth") != None)
+        from vapoursynth import core
+        assert(hasattr(core, "lsmas"))
+        assert(hasattr(core, "dfttest"))
+
+    if args.check_dependencies or args.check_python_dependencies:
+        assert(importlib.util.find_spec("numpy") != None)
+        assert(importlib.util.find_spec("PySide6") != None)
+        assert(importlib.util.find_spec("skimage") != None)
+
     exit(0)
 
 # Check version
