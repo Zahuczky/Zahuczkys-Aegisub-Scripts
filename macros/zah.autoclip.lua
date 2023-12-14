@@ -153,9 +153,7 @@ local c = function(command_input)
     local command = ""
     if jit.os == "Windows" then
         if config["enable_python_virtual_env_activate"] then
-            -- Not sure if anyone's PC lacks permissions to run the python virtualenv powershell script
-            -- command = "$LASTEXITCODE=0; Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted -Force; & " .. exe_fmt("python_virtual_env_activate")
-            command = "$LASTEXITCODE=0; & " .. exe_fmt("python_virtual_env_activate")
+            command = "$LASTEXITCODE=0; Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted -Force; & " .. exe_fmt("python_virtual_env_activate")
         end
 
         for chunks in re_newline:gsplit(command_input, true) do
