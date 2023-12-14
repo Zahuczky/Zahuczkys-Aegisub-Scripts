@@ -169,7 +169,7 @@ local c = function(command_input)
         return "powershell -Command \"" .. command .. "\""
     else
         if config["enable_python_virtual_env_activate"] then
-            command = exe_fmt("python_virtual_env_activate")
+            command = "source " .. exe_fmt("python_virtual_env_activate")
         end
 
         for chunks in re_newline:gsplit(command_input, true) do
