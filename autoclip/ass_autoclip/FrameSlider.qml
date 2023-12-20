@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Basic
 
 Item {
-    height: 30
+    height: 24
 
     property int frame
     property int frames
@@ -16,9 +16,10 @@ Item {
 
     Text {
         id: text
-        width: 82
+        width: 64
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: 0.6
         z: 0
 
         font.pointSize: 13
@@ -47,9 +48,9 @@ Item {
 
         background: Rectangle {
             x: slider.leftPadding
-            y: slider.topPadding + slider.availableHeight / 2 - height / 2
+            y: slider.topPadding + slider.availableHeight / 2 - height / 2 + 0.8
             width: slider.availableWidth
-            height: 3
+            height: 2
 
             radius: height / 2
             color: parent.parent.inactive_colour
@@ -57,14 +58,14 @@ Item {
 
         handle: Rectangle {
             x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
-            y: slider.topPadding + slider.availableHeight / 2 - height / 2
-            width: 19
+            y: slider.topPadding + slider.availableHeight / 2 - height / 2 + 0.8
+            width: 15
             height: width
 
             radius: width / 2
             color: slider.pressed ? parent.parent.active_colour_pressed : parent.parent.active_colour
             border.width: 2
-            border.color: parent.parent.inactive_colour
+            border.color: parent.parent.background_colour
         }
     }
 }

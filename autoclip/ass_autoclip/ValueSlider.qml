@@ -3,7 +3,7 @@ import QtQuick.Controls
 import QtQuick.Controls.Basic
 
 Item {
-    height: 30
+    height: 25
 
     property string name
     property real value
@@ -20,7 +20,7 @@ Item {
 
     Text {
         id: label
-        width: 192
+        width: 154
         anchors.left: parent.left
         anchors.verticalCenter: parent.verticalCenter
         z: 0
@@ -33,7 +33,7 @@ Item {
 
     Text {
         id: edit
-        width: 54
+        width: 44
         anchors.left: label.right
         anchors.verticalCenter: parent.verticalCenter
         z: 0
@@ -88,9 +88,9 @@ Item {
         }
 
         background: Rectangle {
-            x: slider.leftPadding + 4
-            y: slider.topPadding + slider.availableHeight / 2 - height / 2 + 3
-            width: slider.availableWidth - 8
+            x: slider.leftPadding + 3
+            y: slider.topPadding + slider.availableHeight / 2 - height / 2 + 1.4
+            width: slider.availableWidth - 6
             height: 2
 
             radius: height / 2
@@ -99,8 +99,8 @@ Item {
 
         handle: Rectangle {
             x: slider.leftPadding + slider.visualPosition * (slider.availableWidth - width)
-            y: slider.topPadding + slider.availableHeight / 2 - height / 2 + 3
-            width: 16
+            y: slider.topPadding + slider.availableHeight / 2 - height / 2 + 1.4
+            width: 13
             height: width
 
             radius: width / 2
