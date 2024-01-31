@@ -1,11 +1,12 @@
 script_name = "AutoClip"
 script_description = "Add clips to subtitles 𝓪𝓾𝓽𝓸𝓶𝓪𝓰𝓲𝓬𝓪𝓵𝓵𝔂"
-script_version = "2.0.5"
+script_version = "2.0.6"
 script_author = "Zahuczky, Akatsumekusa"
 script_namespace = "zah.autoclip"
--- Even when this file doesn't change, version numbering is kept consistent with the python script.
+-- Lua version number is always kept aligned with version number in python script.
 
 local last_supported_script_version = "2.0.3"
+
 
 
 local DepCtrl = require("l0.DependencyControl")({
@@ -24,6 +25,12 @@ local DepCtrl = require("l0.DependencyControl")({
             feed = "https://raw.githubusercontent.com/TypesettingTools/ILL-Aegisub-Scripts/main/DependencyControl.json"
         },
         {
+            "aka.uikit",
+            version = "1.0.0",
+            url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
+            feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
+        },
+        {
             "aka.config",
             version = "1.0.0",
             url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
@@ -36,6 +43,9 @@ local DepCtrl = require("l0.DependencyControl")({
             feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
         },
         {
+            "lfs",
+        },
+        {
             "petzku.util",
             version = "0.4.0",
             url = "https://github.com/petzku/Aegisub-Scripts",
@@ -43,7 +53,7 @@ local DepCtrl = require("l0.DependencyControl")({
         },
         {
             "aka.unsemantic",
-            version = "1.0.0",
+            version = "1.1.0",
             url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
             feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
         },
@@ -54,15 +64,24 @@ local DepCtrl = require("l0.DependencyControl")({
 })
 DepCtrl:requireModules()
 
+
+
 local ILL = require("ILL.ILL")
-local Aegi, Ass, Line = ILL.Aegi, ILL.Ass, ILL.Line
+local Aegi, Ass, Line, Table = ILL.Aegi, ILL.Ass, ILL.Line, ILL.Table
+
+local uikit = require("aka.uikit")
+local adialog, abuttons, adisplay = uikit.dialog, uikit.buttons, uikit.display
+adialog.join = adialog.join_dialog
 
 local outcome = require("aka.outcome")
 local ok, err = outcome.ok, outcome.err
 
+local VSREPO_IN_PATH = "vsrepo in PATH (`$ vsrepo --help`)"
+local PATH_TO_VSREPO = "Path to vsrepo.py (`$ python vsrepo.py --help`)"
+
 local default_config = {
     ["python"] = "python3",
-    ["vsrepo_mode"] = "vsrepo in PATH (`$ vsrepo --help`)",
+    ["vsrepo_mode"] = VSREPO_IN_PATH,
     ["vsrepo"] = "vsrepo",
     ["disable_layer_mismatch"] = false,
     ["disable_version_notify"] = false
@@ -88,7 +107,7 @@ local validation_func = function(config)
     end
     if config["vsrepo_mode"] == nil then
         config["vsrepo_mode"] = default_config["vsrepo_mode"]
-    elseif config["vsrepo_mode"] ~= "vsrepo in PATH (`$ vsrepo --help`)" and config["vsrepo_mode"] ~= "Path to vsrepo.py (`$ python vsrepo.py --help`)" then
+    elseif config["vsrepo_mode"] ~= VSREPO_IN_PATH and config["vsrepo_mode"] ~= PATH_TO_VSREPO then
         return err("Invalid key \"vsrepo_mode\".")
     end
     if config["vsrepo"] == nil then
@@ -110,6 +129,8 @@ local validation_func = function(config)
 end
 local config
 
+local lfs = require("lfs")
+
 local V = require("aka.unsemantic").V
 local disable_version_notify_until_next_time = false
 
@@ -123,13 +144,13 @@ local c = function(command)
         local i = 1
         for chunks in re_newline:gsplit(command, true) do
             if i == 1 then
-                command = "& " .. chunks
+                command = "try { & " .. chunks
             else
                 command = command .. " ; if ($LASTEXITCODE -eq 0) {& " .. chunks .. "}"
             end
             i = i + 1
         end
-        command = command .. " ; exit $LASTEXITCODE"
+        command = command .. " ; exit $LASTEXITCODE } catch { exit 1 }"
         return "powershell -Command \"" .. command .. "\""
     else
         local i = 1
@@ -144,750 +165,465 @@ local c = function(command)
         return command
 end end
 
-local first_time_python_vsrepo
-local first_time_python_unix
-local first_time_python
-local first_time_python_vs_unix
-local first_time_vsrepo
-local edit_config
-local edit_config_unix
 
-local run_command_until
+local dialog_welcome = adialog.new({ width = 25 })
+                              :label({ label = "Welcome to AutoClip!" })
+local dialog_python = adialog.new({ width = 25 })
+                             :label({ label = "Enter name to Python if it is in PATH or path to Python executable:" })
+                             :edit({ name = "python" })
+local dialog_vsrepo = adialog.new({ width = 25 })
+                             :label({ label = "Select whether vsrepo is in PATH and enter either the name to vsrepo or path to vsrepo.py:" })
+                             :dropdown({ name = "vsrepo_mode", items = { VSREPO_IN_PATH, PATH_TO_VSREPO } })
+                             :edit({ name = "vsrepo" })
+local dialog_no_python_vs = adialog.new({ width = 25 })
+                                   :label({ label = "Unable to find Python with VapourSynth (`import vapoursynth`) at given name or path." })
+local dialog_no_vsrepo do
+    dialog_no_vsrepo = adialog.new({ width = 25 })
+    local subdialog = dialog_no_vsrepo:ifable({ name = "vsrepo", value = VSREPO_IN_PATH })
+    subdialog:label({ label = "Unable to find vsrepo with given name." })
+    local subdialog = dialog_no_vsrepo:ifable({ name = "vsrepo", value = PATH_TO_VSREPO })
+    subdialog:label({ label = "Unable to find vsrepo with given path." })
+end
+local dialog_two_warnings = adialog.new({ width = 25 })
+                                   :label({ label = "Do you want to disable warning when the number of layers mismatches?" })
+                                   :checkbox({ label = "Disable", name = "disable_layer_mismatch" })
+                                   :label({ label = "Do you want to disable warning when Python script is outdated?" })
+                                   :checkbox({ label = "Disable", name = "disable_version_notify" })
 
-local fisrt_time_dependencies
-local first_time_python_dependencies_unix
-local first_time_vs_dependencies_unix
-local update_vs_dependencies_unix
-local no_dependencies
-local no_python_dependencies_unix
-local no_vs_dependencies_unix
-local out_of_date_dependencies
-local out_of_date_dependencies_unix
-local update_dependencies
-local update_dependencies_unix
-local unsupported_dependencies
-local unsupported_dependencies_unix
+local buttons_set_cancel = abuttons.ok("&Set"):close("Cancel")
+local buttons_continue_cancel = abuttons.ok("&Continue"):close("Cancel")
+local buttons_apply_close = abuttons.ok("&Apply"):close("Close")
 
-first_time_python_vsrepo = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 25,
-                                                    label = "Welcome to AutoClip!" },
-        { class = "label",                          x = 0, y = 1, width = 25,
-                                                    label = "Enter name to Python if it is in PATH or path to Python executable:" },
-        { class = "edit", name = "python",          x = 0, y = 2, width = 25,
-                                                    text = config["python"] },
-        { class = "label",                          x = 0, y = 3, width = 25,
-                                                    label = "Select whether vsrepo is in PATH and enter either the name to vsrepo or path to vsrepo.py:" },
-        { class = "dropdown", name = "vsrepo_mode", x = 0, y = 4, width = 25,
-                                                    items = { "vsrepo in PATH (`$ vsrepo --help`)", "Path to vsrepo.py (`$ python vsrepo.py --help`)" }, value = config["vsrepo_mode"] },
-        { class = "edit", name = "vsrepo",          x = 0, y = 5, width = 25,
-                                                    text = config["vsrepo"] }
-    }
-    local buttons = { "&Set", "Cancel" }
-    local button_ids = { ok = "&Set", yes = "&Set", save = "&Set", apply = "&Set", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-    if button == false or button == "Cancel" then
-        return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Set" then
-        for k, v in pairs(result_table) do
+local display_configurator = function(dialog, buttons)
+    local button, result = adisplay(dialog:load_data(config),
+                                    buttons):resolve()
+    if buttons:is_ok(button) then
+        for k, v in pairs(result) do
             config[k] = v
         end
         aconfig.write_config("zah.autoclip", config)
             :ifErr(function()
                 aegisub.debug.out("[aka.config] Failed to write config to file.\n")
                 aegisub.debug.out("[aka.config] " .. error .. "\n") end)
-
         return ok()
-end end
-
-first_time_python_unix = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 25,
-                                                    label = "Welcome to AutoClip!" },
-        { class = "label",                          x = 0, y = 1, width = 25,
-                                                    label = "Enter name to Python if it is in PATH or path to Python executable:" },
-        { class = "edit", name = "python",          x = 0, y = 2, width = 25,
-                                                    text = config["python"] }
-    }
-    local buttons = { "&Set", "Cancel" }
-    local button_ids = { ok = "&Set", yes = "&Set", save = "&Set", apply = "&Set", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-    if button == false or button == "Cancel" then
+    else
         return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Set" then
-        for k, v in pairs(result_table) do
-            config[k] = v
-        end
-        aconfig.write_config("zah.autoclip", config)
-            :ifErr(function()
-                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
-                aegisub.debug.out("[aka.config] " .. error .. "\n") end)
-
-        return ok()
 end end
-
-first_time_python = function()
-    local dialog
-    local buttons
-    local button_ids
-    local button
-    local result_table
-    if os.execute(c("'" .. config["python"] .. "' --version")) then
+local display_verified_configurator = function(dialog, buttons, command_f)
+    if os.execute(c(command_f(config))) then
         return ok("Already satisfied")
     else
-        repeat
-            dialog = {
-                { class = "label",                          x = 0, y = 0, width = 25,
-                                                            label = "Unable to find Python with given name or path." },
-                { class = "label",                          x = 0, y = 1, width = 25,
-                                                            label = "Enter name to Python if it is in PATH or path to Python executable:" },
-                { class = "edit", name = "python",          x = 0, y = 2, width = 25,
-                                                            text = config["python"] }
-            }
-            buttons = { "&Continue", "Cancel" }
-            button_ids = { ok = "&Continue", yes = "&Continue", save = "&Continue", apply = "&Continue", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-
-            button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-            if button == false or button == "Cancel" then
-                return err("[zah.autoclip] Operation cancelled by user")
-            elseif button == "&Continue" then
-                config["python"] = result_table["python"]
-            end
-        until os.execute(c("'" .. config["python"] .. "' --version"))
-
-        aconfig.write_config("zah.autoclip", config)
-            :ifErr(function()
-                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
-                aegisub.debug.out("[aka.config] " .. error .. "\n") end)
-
-        return ok()
+        return adisplay(dialog:load_data(config),
+                        buttons)
+            :repeatUntil(function(button, result)
+                setmetatable(result, { __index = config })
+                if os.execute(c(command_f(result))) then
+                    return ok(result)
+                else
+                    return err(result)
+                end end)
+            :andThen(function(result)
+                for k, v in pairs(result) do
+                    config[k] = v
+                end
+                aconfig.write_config("zah.autoclip", config)
+                    :ifErr(function()
+                        aegisub.debug.out("[aka.config] Failed to write config to file.\n")
+                        aegisub.debug.out("[aka.config] " .. error .. "\n") end)
+                return ok() end)
 end end
 
-first_time_python_vs_unix = function()
-    local dialog
-    local buttons
-    local button_ids
-    local button
-    local result_table
-    if os.execute(c("'" .. config["python"] .. "' -c 'import vapoursynth'")) then
-        return ok("Already satisfied")
+local first_time_python_vsrepo_win = function()
+    return display_configurator(dialog_welcome:copy():join(dialog_python):join(dialog_vsrepo),
+                                buttons_set_cancel)
+end
+local first_time_python_unix = function()
+    return display_configurator(dialog_welcome:copy():join(dialog_python),
+                                buttons_set_cancel)
+end
+local check_python_with_vs = function()
+    return display_verified_configurator(dialog_no_python_vs:copy():join(dialog_python),
+                                         buttons_continue_cancel,
+                                         function(data)
+                                             return "'" .. data["python"] .. "' -c 'import vapoursynth'" end)
+end
+local check_vsrepo = function()
+    return display_verified_configurator(dialog_no_vsrepo:copy():join(dialog_vsrepo),
+                                         buttons_continue_cancel,
+                                         function(data)
+                                             return data["vsrepo_mode"] == VSREPO_IN_PATH and
+                                                    "'" .. data["vsrepo"] .. "' --help" or
+                                                    "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' --help" end)
+end
+local edit_config_win = function()
+    return display_configurator(dialog_python:copy():join(dialog_vsrepo):join(dialog_two_warnings),
+                                buttons_apply_close)
+end
+local edit_config_unix = function()
+    return display_configurator(dialog_python:copy():join(dialog_two_warnings),
+                                buttons_apply_close)
+end
+
+
+
+local dialog_execution_error_label_resolver = {}
+dialog_execution_error_label_resolver.resolve = function(item, dialog, x, y, width)
+    item = Table.copy(item)
+    item.class = "label"
+    if dialog["data"]["terminate"] == "exit" then
+        item.label = "Command execution exits with code " .. tostring(dialog["data"]["code"]) .. ":"
     else
-        repeat
-            dialog = {
-                { class = "label",                          x = 0, y = 0, width = 25,
-                                                            label = "Unable to find Python with VapourSynth at given name or path." },
-                { class = "label",                          x = 0, y = 1, width = 25,
-                                                            label = "Enter name to Python if it is in PATH or path to Python executable:" },
-                { class = "edit", name = "python",          x = 0, y = 2, width = 25,
-                                                            text = config["python"] }
-            }
-            buttons = { "&Continue", "Cancel" }
-            button_ids = { ok = "&Continue", yes = "&Continue", save = "&Continue", apply = "&Continue", close = "Cancel", no = "Cancel", cancel = "Cancel" }
+        item.label = "Command execution terminated with signal " .. tostring(dialog["data"]["code"]) .. ":"
+    end
+    item.x = x
+    item.y = y
+    item.width = width
+    table.insert(dialog, item)
+    return item.y + 1
+end
+local dialog_click_run_again = adialog.new({ width = 40 })
+                                      :label({ label = "You can edit the command below and click „Run Again“ to retry." })
+local dialog_command = adialog.new({ width = 40 })
+                              :textbox({ height = 12, name = "command" })
 
-            button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
+local buttons_run_again_cancel = abuttons.ok("&Run Again"):close("Cancel")
 
-            if button == false or button == "Cancel" then
-                return err("[zah.autoclip] Operation cancelled by user")
-            elseif button == "&Continue" then
-                config["python"] = result_table["python"]
-            end
-        until os.execute(c("'" .. config["python"] .. "' -c 'import vapoursynth'"))
-
-        aconfig.write_config("zah.autoclip", config)
-            :ifErr(function()
-                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
-                aegisub.debug.out("[aka.config] " .. error .. "\n") end)
-
-        return ok()
-end end
-
-first_time_vsrepo = function()
-    local dialog
-    local buttons
-    local button_ids
-    local button
-    local result_table
-    if os.execute(c(config["vsrepo_mode"] == "vsrepo in PATH (`$ vsrepo --help`)"
-                and "'" .. config["vsrepo"] .. "' --help"
-                 or "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' --help")) then
-        return ok("Already satisfied")
-    else
-        repeat
-            dialog = {
-                { class = "label",                          x = 0, y = 0, width = 25,
-                                                            label = "Unable to find vsrepo with given " .. (config["vsrepo_mode"] == "vsrepo in PATH (`$ vsrepo --help`)"
-                                                                                                        and "name" or "path") .. "." },
-                { class = "label",                          x = 0, y = 1, width = 25,
-                                                            label = "Select whether vsrepo is in PATH and enter either the name to vsrepo or path to vsrepo.py:" },
-                { class = "dropdown", name = "vsrepo_mode", x = 0, y = 2, width = 25,
-                                                            items = { "vsrepo in PATH (`$ vsrepo --help`)", "Path to vsrepo.py (`$ python vsrepo.py --help`)" }, value = config["vsrepo_mode"] },
-                { class = "edit", name = "vsrepo",          x = 0, y = 3, width = 25,
-                                                            text = config["vsrepo"] }
-            }
-            buttons = { "&Continue", "Cancel" }
-            button_ids = { ok = "&Continue", yes = "&Continue", save = "&Continue", apply = "&Continue", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-
-            button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-            if button == false or button == "Cancel" then
-                return err("[zah.autoclip] Operation cancelled by user")
-            elseif button == "&Continue" then
-                config["vsrepo_mode"] = result_table["vsrepo_mode"]
-                config["vsrepo"] = result_table["vsrepo"]
-            end
-        until os.execute(c(config["vsrepo_mode"] == "vsrepo in PATH (`$ vsrepo --help`)"
-                       and "'" .. config["vsrepo"] .. "' --help"
-                        or "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' --help"))
-
-        aconfig.write_config("zah.autoclip", config)
-            :ifErr(function()
-                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
-                aegisub.debug.out("[aka.config] " .. error .. "\n") end)
-
-        return ok()
-end end
-
-edit_config = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 25,
-                                                    label = "Enter name to Python if it is in PATH or path to Python executable:" },
-        { class = "edit", name = "python",          x = 0, y = 1, width = 25,
-                                                    text = config["python"] },
-        { class = "label",                          x = 0, y = 2, width = 25,
-                                                    label = "Select whether vsrepo is in PATH and enter either the name to vsrepo or path to vsrepo.py:" },
-        { class = "dropdown", name = "vsrepo_mode", x = 0, y = 3, width = 25,
-                                                    items = { "vsrepo in PATH (`$ vsrepo --help`)", "Path to vsrepo.py (`$ python vsrepo.py --help`)" }, value = config["vsrepo_mode"] },
-        { class = "edit", name = "vsrepo",          x = 0, y = 4, width = 25,
-                                                    text = config["vsrepo"] },
-        { class = "label",                          x = 0, y = 5, width = 25,
-                                                    label = "Do you want to disable warning when the number of layers mismatches?" },
-        { class = "checkbox", name = "disable_layer_mismatch", x = 0, y = 6, width = 25,
-                                                    label = "Disable", value = config["disable_layer_mismatch"] },
-        { class = "label",                          x = 0, y = 7, width = 25,
-                                                    label = "Do you want to disable warning when Python script is outdated?" },
-        { class = "checkbox", name = "disable_version_notify", x = 0, y = 8, width = 25,
-                                                    label = "Disable", value = config["disable_version_notify"] }
-    }
-    local buttons = { "&Apply", "Close" }
-    local button_ids = { ok = "&Apply", yes = "&Apply", save = "&Apply", apply = "&Apply", close = "Close", no = "Close", cancel = "Close" }
-
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-    if button == false or button == "Close" then
-        return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Apply" then
-        if config["disable_version_notify"] ~= result_table["disable_version_notify"] then
-            disable_version_notify_until_next_time = false
-        end
-
-        for k, v in pairs(result_table) do
-            config[k] = v
-        end
-        aconfig.write_config("zah.autoclip", config)
-            :ifErr(function()
-                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
-                aegisub.debug.out("[aka.config] " .. error .. "\n")
-                aegisub.cancel() end)
-
-        return ok()
-end end
-
-edit_config_unix = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 25,
-                                                    label = "Enter name to Python if it is in PATH or path to Python executable:" },
-        { class = "edit", name = "python",          x = 0, y = 1, width = 25,
-                                                    text = config["python"] },
-        { class = "label",                          x = 0, y = 2, width = 25,
-                                                    label = "Do you want to disable warning when the number of layers mismatches?" },
-        { class = "checkbox", name = "disable_layer_mismatch", x = 0, y = 3, width = 25,
-                                                    label = "Disable", value = config["disable_layer_mismatch"] },
-        { class = "label",                          x = 0, y = 4, width = 25,
-                                                    label = "Do you want to disable warning when Python script is outdated?" },
-        { class = "checkbox", name = "disable_version_notify", x = 0, y = 5, width = 25,
-                                                    label = "Disable", value = config["disable_version_notify"] }
-    }
-    local buttons = { "&Apply", "Close" }
-    local button_ids = { ok = "&Apply", yes = "&Apply", save = "&Apply", apply = "&Apply", close = "Close", no = "Close", cancel = "Close" }
-
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-    if button == false or button == "Close" then
-        return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Apply" then
-        if config["disable_version_notify"] ~= result_table["disable_version_notify"] then
-            disable_version_notify_until_next_time = false
-        end
-
-        for k, v in pairs(result_table) do
-            config[k] = v
-        end
-        aconfig.write_config("zah.autoclip", config)
-            :ifErr(function()
-                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
-                aegisub.debug.out("[aka.config] " .. error .. "\n")
-                aegisub.cancel() end)
-
-        return ok()
-end end
-
-run_command_until = function(command)
-    local run
-    local status
-    local terminate
-    local code
-    local log
-    local dialog
-    local buttons
-    local button_ids
-    local button
-    local result_table
-
-    while true do
-        run = command .. "\n'" .. config["python"] .. "' -m ass_autoclip --check-dependencies"
-        log, status, terminate, code = run_cmd(c(run), true)
+local display_runner_with_ignore = function(dialog, buttons)
+    local button, result = adisplay(dialog:load_data(config),
+                                    buttons):resolve()
+    if buttons:is_ok(button) then
+        local log, status, terminate, code = run_cmd(c(result["command"]), true)
         if status then
-            return ok()
+            return ok() -- WRONG USE E() XXX
+        else
+            dialog = adialog.new({ width = 40 })
+                            :load_data({ ["command"] = result["command"] })
+                            :load_data({ ["log"] = log, ["status"] = status, ["terminate"] = terminate, ["code"] = code })
+            table.insert(dialog, setmetatable({}, { __index = dialog_execution_error_label_resolver }))
+            dialog:textbox({ height = 12, name = "log" })
+                  :join(dialog_click_run_again)
+                  :join(dialog_command)
+
+            return adisplay(dialog, buttons_run_again_cancel)
+                :repeatUntil(function(button, result)
+                    local log, status, terminate, code = run_cmd(c(result["command"]), true)
+                    if status then
+                        return ok()
+                    else
+                        result["log"] = log result["status"] = status result["terminate"] = terminate result["code"] = code
+                        return err(result)
+                    end end)
         end
-
-        dialog = {
-            { class = "label",                          x = 0, y = 0, width = 40,
-                                                        label = terminate == "exit"
-                                                            and "Command execution exits with code " .. tostring(code) .. ":"
-                                                             or "Command execution terminated with signal " .. tostring(code) .. ":" },
-            { class = "textbox", name = "log",          x = 0, y = 1, width = 40, height = 12,
-                                                        text = log },
-            { class = "label",                          x = 0, y = 13, width = 40,
-                                                        label = "You may edit the command below to fix the problem and click „Run Again“ to retry." },
-            { class = "textbox", name = "command",      x = 0, y = 14, width = 40, height = 12,
-                                                        text = command }
-        }
-        buttons = { "&Run Again", "Cancel" }
-        button_ids = { ok = "&Run Again", yes = "&Run Again", save = "&Run Again", apply = "&Run Again", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-
-        button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-        if button == false or button == "Cancel" then
-            return err("[zah.autoclip] Operation cancelled by user")
-        elseif button == "&Run Again" then
-            command = result_table["command"]
-end end end
-
-fisrt_time_dependencies = function()
-    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-dependencies")) then
-        local dialog = {
-            { class = "label",                          x = 0, y = 0, width = 40,
-                                                        label = "AutoClip requires additional dependencies to be installed." },
-            { class = "label",                          x = 0, y = 1, width = 40,
-                                                        label = "Click „Run“ to execute the following commands. You may edit the command before running, or copy the command and execute it elsewhere." },
-            { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                        text = "'" .. config["python"] .. "' -m ensurepip\n" .. 
-                                                               "'" .. config["python"] .. "' -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
-                                                               "'" .. config["python"] .. "' -m pip install ass-autoclip --upgrade\n" ..
-                                                              (config["vsrepo_mode"] == "vsrepo in PATH (`$ vsrepo --help`)"
-                                                           and "'" .. config["vsrepo"] .. "' update\n" ..
-                                                               "'" .. config["vsrepo"] .. "' install lsmas dfttest\n"
-                                                            or "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' update\n" ..
-                                                               "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' install lsmas dfttest\n") }
-        }
-        local buttons = { "&Run", "Cancel" }
-        local button_ids = { ok = "&Run", yes = "&Run", save = "&Run", apply = "&Run", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-    
-        local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-    
-        if button == false or button == "Cancel" then
-            return err("[zah.autoclip] Operation cancelled by user")
-        elseif button == "&Run" then
-            return run_command_until(result_table["command"])
-        end
-    else
+    elseif buttons:is_close(button) then
+        return err("[zah.autoclip] Operation cancelled by user")
+    elseif button == "Remind Me Next Time" then
+        disable_version_notify_until_next_time = true
         return ok()
-end end
-
-first_time_python_dependencies_unix = function()
-    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-python-dependencies")) then
-        local dialog = {
-            { class = "label",                          x = 0, y = 0, width = 40,
-                                                        label = "AutoClip requires additional dependencies to be installed." },
-            { class = "label",                          x = 0, y = 1, width = 40,
-                                                        label = "Click „Run“ to execute the following commands. You may edit the command before running, or copy the command and execute it elsewhere." },
-            { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                        text = "'" .. config["python"] .. "' -m ensurepip\n" .. 
-                                                               "'" .. config["python"] .. "' -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
-                                                               "'" .. config["python"] .. "' -m pip install ass-autoclip --upgrade\n" }
-        }
-        local buttons = { "&Run", "Cancel" }
-        local button_ids = { ok = "&Run", yes = "&Run", save = "&Run", apply = "&Run", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-    
-        local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-    
-        if button == false or button == "Cancel" then
-            return err("[zah.autoclip] Operation cancelled by user")
-        elseif button == "&Run" then
-            return run_command_until(result_table["command"])
-        end
-    else
+    elseif button == "Do Not Show Again" then
+        config["disable_version_notify"] = true
+        aconfig.write_config("zah.autoclip", config)
+            :ifErr(function()
+                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
+                aegisub.debug.out("[aka.config] " .. error .. "\n") end)
         return ok()
-end end
-
-first_time_vs_dependencies_unix = function()
-    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies")) then
-        local dialog = {
-            { class = "label",                          x = 0, y = 0, width = 30,
-                                                        label = "AutoClip requires additional VapourSynth plugins to be installed:" },
-            { class = "label",                          x = 0, y = 1, width = 30,
-                                                        label = "Please follow the links below and install the required plugins." },
-            { class = "textbox", name = "command",      x = 0, y = 2, width = 30, height = 7,
-                                                        text = "lsmas (https://github.com/AkarinVS/L-SMASH-Works)\n" .. 
-                                                               "dfttest (https://github.com/HomeOfVapourSynthEvolution/VapourSynth-DFTTest)\n" }
-        }
-        local buttons = { "Cancel" }
-        local button_ids = { close = "Cancel", no = "Cancel", cancel = "Cancel" }
-    
-        local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-    
-        if button == false or button == "Cancel" then
-            return err("[zah.autoclip] Operation cancelled by user")
-        end
     else
-        return ok()
+        error("[zah.autoclip] Reach if else end")
 end end
+local display_runner = display_runner_with_ignore
 
-update_vs_dependencies_unix = function()
-    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies")) then
-        local dialog = {
-            { class = "label",                          x = 0, y = 0, width = 30,
-                                                        label = "The newly installed version of AutoClip requires VapourSynth plugins to be installed:" },
-            { class = "label",                          x = 0, y = 1, width = 30,
-                                                        label = "Please follow the links below and install or update the required plugins." },
-            { class = "textbox", name = "command",      x = 0, y = 2, width = 30, height = 7,
-                                                        text = "lsmas (https://github.com/AkarinVS/L-SMASH-Works)\n" .. 
-                                                               "dfttest (https://github.com/HomeOfVapourSynthEvolution/VapourSynth-DFTTest)\n" }
-        }
-        local buttons = { "Cancel" }
-        local button_ids = { close = "Cancel", no = "Cancel", cancel = "Cancel" }
-    
-        local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-    
-        if button == false or button == "Cancel" then
-            return err("[zah.autoclip] Operation cancelled by user")
-        end
-    else
-        return ok()
-end end
+local dialog_requires_install = adialog.new({ width = 40 })
+                                       :label({ label = "AutoClip requires additional dependencies to be installed." })
+local dialog_click_run = adialog.new({ width = 40 })
+                                :label({ label = "Click „Run“ to execute the following commands. You may edit the command before running, or copy the command and execute it in terminal." })
+local dialog_failed_to_execute = adialog.new({ width = 40 })
+                                        :label({ label = "Failed to execute AutoClip." })
+local dialog_click_run_and_reinstall = adialog.new({ width = 40 })
+                                              :label({ label = "Click „Run“ to execute the following commands and reinstall AutoClip. You may edit the command before running, or copy the command and execute it in terminal." })
+local dialog_out_of_date = adialog.new({ width = 40 })
+                                  :label({ label = "AutoClip dependencies are out of date." })
+local dialog_click_run_command_and_update = adialog.new({ width = 40 })
+                                                   :label({ label = "Click „Run Command“ to execute the following commands and update AutoClip. You may edit the command before running, or copy the command and execute it in terminal." })
+local dialog_unsupported = adialog.new({ width = 40 })
+                                  :label({ label = "AutoClip dependencies are out of date and no longer supported." })
 
-no_dependencies = function()
+local dialog_requires_vs_dependencies = adialog.new({ width = 30 })
+                                               :label({ label = "AutoClip requires additional VapourSynth plugins to be installed." })
+local dialog_follow_install = adialog.new({ width = 30 })
+                                               :label({ label = "Please follow the links below and install the required plugins." })
+local dialog_update_requires_vs_dependencies = adialog.new({ width = 30 })
+                                               :label({ label = "The newly installed version requires additional VapourSynth plugins to be installed." })
+
+local buttons_run_cancel = abuttons.ok("&Run"):close("Cancel")
+local buttons_cancel = abuttons.close("Cancel")
+local buttons_run_command_ignore_cancel = abuttons.ok("&Run Command")("Remind Me Next Time")("Do Not Show Again"):close("Cancel")
+local buttons_run_command_cancel = abuttons.ok("&Run Command"):close("Cancel")
+
+local data_command_win = { ["command"] = function(_, data)
+                                             return "'" .. data["python"] .. "' -m ensurepip\n" .. 
+                                                    "'" .. data["python"] .. "' -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
+                                                    "'" .. data["python"] .. "' -m pip install ass-autoclip --upgrade --force-reinstall\n" ..
+                                                    (data["vsrepo_mode"] == VSREPO_IN_PATH and
+                                                     "'" .. data["vsrepo"] .. "' update\n" ..
+                                                     "'" .. data["vsrepo"] .. "' install lsmas dfttest\n" ..
+                                                     "'" .. data["vsrepo"] .. "' upgrade lsmas dfttest\n" or
+                                                     "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' update\n" ..
+                                                     "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' install lsmas dfttest\n" ..
+                                                     "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' upgrade lsmas dfttest\n") end }
+local data_command_python_unix = { ["command"] = function(_, data)
+                                                     return "'" .. data["python"] .. "' -m ensurepip\n" .. 
+                                                            "'" .. data["python"] .. "' -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
+                                                            "'" .. data["python"] .. "' -m pip install ass-autoclip --upgrade --force-reinstall\n" end }
+local data_command_vs_unix = { ["command"] = "lsmas (https://github.com/AkarinVS/L-SMASH-Works)\n" .. 
+                                             "dfttest (https://github.com/HomeOfVapourSynthEvolution/VapourSynth-DFTTest)\n" }
+local data_command_update_win = { ["command"] = function(_, data)
+                                                    return "'" .. data["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" ..
+                                                           (data["vsrepo_mode"] == VSREPO_IN_PATH and
+                                                            "'" .. data["vsrepo"] .. "' update\n" ..
+                                                            "'" .. data["vsrepo"] .. "' install lsmas dfttest\n" ..
+                                                            "'" .. data["vsrepo"] .. "' upgrade lsmas dfttest\n" or
+                                                            "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' update\n" ..
+                                                            "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' install lsmas dfttest\n" ..
+                                                            "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' upgrade lsmas dfttest\n") end }
+local data_command_python_update_unix = { ["command"] = function(_, data)
+                                                            return "'" .. data["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" end }
+
+local first_time_dependencies_win = function()
     local dialog
-    local buttons
-    local button_ids
-    local button
-    local result_table
+    local result
     while not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-dependencies")) do
-        dialog = {
-            { class = "label",                          x = 0, y = 0, width = 40,
-                                                        label = "Failed to execute AutoClip." },
-            { class = "label",                          x = 0, y = 1, width = 40,
-                                                        label = "Click „Run Command“ to execute the following commands and reinstall AutoClip. You may edit the command before running, or copy the command and execute it elsewhere." },
-            { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                        text = "'" .. config["python"] .. "' -m ensurepip\n" .. 
-                                                               "'" .. config["python"] .. "' -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
-                                                               "'" .. config["python"] .. "' -m pip install ass-autoclip --force-reinstall\n" ..
-                                                              (config["vsrepo_mode"] == "vsrepo in PATH (`$ vsrepo --help`)"
-                                                           and "'" .. config["vsrepo"] .. "' update\n" ..
-                                                               "'" .. config["vsrepo"] .. "' install lsmas dfttest\n" ..
-                                                               "'" .. config["vsrepo"] .. "' upgrade lsmas dfttest\n"
-                                                            or "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' update\n" ..
-                                                               "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' install lsmas dfttest\n" ..
-                                                               "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' upgrade lsmas dfttest\n") }
-        }
-        buttons = { "&Run Command", "Cancel" }
-        button_ids = { ok = "&Run Command", yes = "&Run Command", save = "&Run Command", apply = "&Run Command", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-        
-        button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-        
-        if button == false or button == "Cancel" then
-            return err("[zah.autoclip] Operation cancelled by user")
-        elseif button == "&Run Command" then
-            return run_command_until(result_table["command"])
-    end end
+        if not dialog then
+            dialog = adialog.new({ width = 40 })
+                            :join(dialog_requires_install)
+                            :join(dialog_click_run)
+                            :join(dialog_command)
+                            :load_data(data_command_win)
+        end
+        result = display_runner(dialog, buttons_run_cancel)
+        if result:isErr() then return result end
+    end
+    return result or ok("Already satisfied")
+end
+
+local first_time_python_dependencies_unix = function()
+    local dialog
+    local result
+    while not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-python-dependencies")) do
+        if not dialog then
+            dialog = adialog.new({ width = 40 })
+                            :join(dialog_requires_install)
+                            :join(dialog_click_run)
+                            :join(dialog_command)
+                            :load_data(data_command_python_unix)
+        end
+        result = display_runner(dialog, buttons_run_cancel)
+        if result:isErr() then return result end
+    end
+    return result or ok("Already satisfied")
+end
+
+local first_time_vs_dependencies_unix = function()
+    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies")) then
+        adisplay(adialog.new({ width = 30 })
+                              :join(dialog_requires_vs_dependencies)
+                              :join(dialog_follow_install)
+                              :join(dialog_command)
+                              :load_data(data_command_vs_unix),
+                 buttons_cancel):resolve()
+        return err()
+    end
     return ok("Already satisfied")
 end
 
-no_python_dependencies_unix = function()
-    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-python-dependencies")) then
-        local dialog = {
-            { class = "label",                          x = 0, y = 0, width = 40,
-                                                        label = "Failed to execute AutoClip." },
-            { class = "label",                          x = 0, y = 1, width = 40,
-                                                        label = "Click „Run Command“ to execute the following commands and reinstall AutoClip. You may edit the command before running, or copy the command and execute it elsewhere." },
-            { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                        text = "'" .. config["python"] .. "' -m ensurepip\n" .. 
-                                                               "'" .. config["python"] .. "' -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
-                                                               "'" .. config["python"] .. "' -m pip install ass-autoclip --force-reinstall\n" }
-        }
-        local buttons = { "&Run Command", "Cancel" }
-        local button_ids = { ok = "&Run Command", yes = "&Run Command", save = "&Run Command", apply = "&Run Command", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-    
-        local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-    
-        if button == false or button == "Cancel" then
-            return err("[zah.autoclip] Operation cancelled by user")
-        elseif button == "&Run Command" then
-            return run_command_until(result_table["command"])
+local no_dependencies_win = function()
+    local dialog
+    local result
+    while not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-dependencies")) do
+        if not dialog then
+            dialog = adialog.new({ width = 40 })
+                            :join(dialog_failed_to_execute)
+                            :join(dialog_click_run_and_reinstall)
+                            :join(dialog_command)
+                            :load_data(data_command_win)
         end
-    else
-        return ok()
-end end
+        result = display_runner(dialog, buttons_run_cancel)
+        if result:isErr() then return result end
+    end
+    return result or ok("Already satisfied")
+end
 
-no_vs_dependencies_unix = function()
+local no_python_dependencies_unix = function()
+    local dialog
+    local result
+    while not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-python-dependencies")) do
+        if not dialog then
+            dialog = adialog.new({ width = 40 })
+                            :join(dialog_failed_to_execute)
+                            :join(dialog_click_run_and_reinstall)
+                            :join(dialog_command)
+                            :load_data(data_command_python_unix)
+        end
+        result = display_runner(dialog, buttons_run_cancel)
+        if result:isErr() then return result end
+    end
+    return result or ok("Already satisfied")
+end
+
+local no_vs_dependencies_unix = function()
     if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies")) then
-        local dialog = {
-            { class = "label",                          x = 0, y = 0, width = 30,
-                                                        label = "Failed to execute AutoClip:" },
-            { class = "label",                          x = 0, y = 1, width = 30,
-                                                        label = "Please follow the links below and install the required VapourSynth plugins." },
-            { class = "textbox", name = "command",      x = 0, y = 2, width = 30, height = 7,
-                                                        text = "lsmas (https://github.com/AkarinVS/L-SMASH-Works)\n" .. 
-                                                               "dfttest (https://github.com/HomeOfVapourSynthEvolution/VapourSynth-DFTTest)\n" }
-        }
-        local buttons = { "Cancel" }
-        local button_ids = { close = "Cancel", no = "Cancel", cancel = "Cancel" }
-    
-        local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-    
-        if button == false or button == "Cancel" then
-            return err("[zah.autoclip] Operation cancelled by user")
-        end
-    else
-        return ok()
-end end
+        adisplay(adialog.new({ width = 30 })
+                        :join(dialog_failed_to_execute)
+                        :join(dialog_follow_install)
+                        :join(dialog_command)
+                        :load_data(data_command_vs_unix),
+                 buttons_cancel):resolve()
+        return err()
+    end
+    return ok("Already satisfied")
+end
 
-out_of_date_dependencies = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 40,
-                                                    label = "AutoClip dependencies are out of date." },
-        { class = "label",                          x = 0, y = 1, width = 40,
-                                                    label = "Click „Run Command“ to execute the following commands and update AutoClip. You may edit the command before running, or copy the command and execute it elsewhere." },
-        { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                    text = "'" .. config["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" ..
-                                                          (config["vsrepo_mode"] == "vsrepo in PATH (`$ vsrepo --help`)"
-                                                       and "'" .. config["vsrepo"] .. "' update\n" ..
-                                                           "'" .. config["vsrepo"] .. "' upgrade lsmas dfttest\n"
-                                                        or "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' update\n" ..
-                                                           "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' upgrade lsmas dfttest\n") }
-    }
-    local buttons = { "&Run Command", "Remind Me Next Time", "Do Not Show Again", "Cancel" }
-    local button_ids = { ok = "&Run Command", yes = "&Run Command", save = "&Run Command", apply = "&Run Command", close = "Cancel", no = "Cancel", cancel = "Cancel" }
+local out_of_date_dependencies_win = function()
+    local dialog = adialog.new({ width = 40 })
+                          :join(dialog_out_of_date)
+                          :join(dialog_click_run_command_and_update)
+                          :join(dialog_command)
+                          :load_data(data_command_update_win)
+    return display_runner_with_ignore(dialog, buttons_run_command_ignore_cancel)
+end
 
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
+local out_of_date_python_dependencies_unix = function()
+    local dialog = adialog.new({ width = 40 })
+                          :join(dialog_out_of_date)
+                          :join(dialog_click_run_command_and_update)
+                          :join(dialog_command)
+                          :load_data(data_command_python_update_unix)
+    return display_runner_with_ignore(dialog, buttons_run_command_ignore_cancel)
+end
 
-    if button == false or button == "Cancel" then
-        return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Run Command" then
-        return run_command_until(result_table["command"])
-    elseif button == "Remind Me Next Time" then
-        disable_version_notify_until_next_time = true
-        return ok()
-    elseif button == "Do Not Show Again" then
-        config["disable_version_notify"] = true
-        aconfig.write_config("zah.autoclip", config)
-            :ifErr(function()
-                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
-                aegisub.debug.out("[aka.config] " .. error .. "\n")
-                aegisub.cancel() end)
-        return ok()
-end end
+local update_dependencies_win = function()
+    local dialog = adialog.new({ width = 40 })
+                          :join(dialog_click_run)
+                          :join(dialog_command)
+                          :load_data(data_command_update_win)
+    return display_runner_with_ignore(dialog, buttons_run_cancel)
+end
 
-out_of_date_dependencies_unix = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 40,
-                                                    label = "AutoClip dependencies are out of date." },
-        { class = "label",                          x = 0, y = 1, width = 40,
-                                                    label = "Click „Run Command“ to execute the following commands and update AutoClip. You may edit the command before running, or copy the command and execute it elsewhere." },
-        { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                    text = "'" .. config["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" }
-    }
-    local buttons = { "&Run Command", "Remind Me Next Time", "Do Not Show Again", "Cancel" }
-    local button_ids = { ok = "&Run Command", yes = "&Run Command", save = "&Run Command", apply = "&Run Command", close = "Cancel", no = "Cancel", cancel = "Cancel" }
+local update_python_dependencies_unix = function()
+    local dialog = adialog.new({ width = 40 })
+                          :join(dialog_click_run)
+                          :join(dialog_command)
+                          :load_data(data_command_python_update_unix)
+    return display_runner_with_ignore(dialog, buttons_run_cancel)
+end
 
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
+local update_precheck_vs_dependencies_unix = function()
+    return os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies"))
+end
 
-    if button == false or button == "Cancel" then
-        return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Run Command" then
-        return run_command_until(result_table["command"])
-            :andThen(update_vs_dependencies_unix)
-    elseif button == "Remind Me Next Time" then
-        disable_version_notify_until_next_time = true
-        return ok()
-    elseif button == "Do Not Show Again" then
-        config["disable_version_notify"] = true
-        aconfig.write_config("zah.autoclip", config)
-            :ifErr(function()
-                aegisub.debug.out("[aka.config] Failed to write config to file.\n")
-                aegisub.debug.out("[aka.config] " .. error .. "\n")
-                aegisub.cancel() end)
-        return ok()
-end end
+local update_vs_dependencies_unix = function()
+    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies")) then
+        adisplay(adialog.new({ width = 30 })
+                        :join(dialog_update_requires_vs_dependencies)
+                        :join(dialog_follow_install)
+                        :join(dialog_command)
+                        :load_data(data_command_vs_unix),
+                 buttons_cancel):resolve()
+        return err()
+    end
+    return ok("Already satisfied")
+end
 
-update_dependencies = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 40,
-                                                    label = "Update dependencies." },
-        { class = "label",                          x = 0, y = 1, width = 40,
-                                                    label = "Click „Run“ to execute the following commands. You may edit the command before running, or copy the command and execute it elsewhere." },
-        { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                    text = "'" .. config["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" ..
-                                                          (config["vsrepo_mode"] == "vsrepo in PATH (`$ vsrepo --help`)"
-                                                       and "'" .. config["vsrepo"] .. "' update\n" ..
-                                                           "'" .. config["vsrepo"] .. "' upgrade lsmas dfttest\n"
-                                                        or "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' update\n" ..
-                                                           "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' upgrade lsmas dfttest\n") }
-    }
-    local buttons = { "&Run", "Close" }
-    local button_ids = { ok = "&Run", yes = "&Run", save = "&Run", apply = "&Run", close = "Close", no = "Close", cancel = "Close" }
+local unsupported_dependencies_win = function()
+    local dialog = adialog.new({ width = 40 })
+                          :join(dialog_unsupported)
+                          :join(dialog_click_run_command_and_update)
+                          :join(dialog_command)
+                          :load_data(data_command_update_win)
+    return display_runner(dialog, buttons_run_command_cancel)
+end
 
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-    if button == false or button == "Close" then
-        return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Run" then
-        return run_command_until(result_table["command"])
-end end
-
-update_dependencies_unix = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 40,
-                                                    label = "Update dependencies." },
-        { class = "label",                          x = 0, y = 1, width = 40,
-                                                    label = "Click „Run“ to execute the following commands. You may edit the command before running, or copy the command and execute it elsewhere." },
-        { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                    text = "'" .. config["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" }
-    }
-    local buttons = { "&Run", "Close" }
-    local button_ids = { ok = "&Run", yes = "&Run", save = "&Run", apply = "&Run", close = "Close", no = "Close", cancel = "Close" }
-
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-    if button == false or button == "Close" then
-        return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Run" then
-        return run_command_until(result_table["command"])
-            :andThen(update_vs_dependencies_unix)
-end end
-
-unsupported_dependencies = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 40,
-                                                    label = "AutoClip dependencies are out of date and no longer supported." },
-        { class = "label",                          x = 0, y = 1, width = 40,
-                                                    label = "Click „Run Command“ to execute the following commands and update AutoClip. You may edit the command before running, or copy the command and execute it elsewhere." },
-        { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                    text = "'" .. config["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" ..
-                                                          (config["vsrepo_mode"] == "vsrepo in PATH (`$ vsrepo --help`)"
-                                                       and "'" .. config["vsrepo"] .. "' update\n" ..
-                                                           "'" .. config["vsrepo"] .. "' upgrade lsmas dfttest\n"
-                                                        or "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' update\n" ..
-                                                           "'" .. config["python"] .. "' '" .. config["vsrepo"] .. "' upgrade lsmas dfttest\n") }
-    }
-    local buttons = { "&Run Command", "Cancel" }
-    local button_ids = { ok = "&Run Command", yes = "&Run Command", save = "&Run Command", apply = "&Run Command", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-    if button == false or button == "Cancel" then
-        return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Run Command" then
-        return run_command_until(result_table["command"])
-end end
-
-out_of_date_dependencies_unix = function()
-    local dialog = {
-        { class = "label",                          x = 0, y = 0, width = 40,
-                                                    label = "AutoClip dependencies are out of date and no longer supported." },
-        { class = "label",                          x = 0, y = 1, width = 40,
-                                                    label = "Click „Run Command“ to execute the following commands and update AutoClip. You may edit the command before running, or copy the command and execute it elsewhere." },
-        { class = "textbox", name = "command",      x = 0, y = 2, width = 40, height = 12,
-                                                    text = "'" .. config["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" }
-    }
-    local buttons = { "&Run Command", "Cancel" }
-    local button_ids = { ok = "&Run Command", yes = "&Run Command", save = "&Run Command", apply = "&Run Command", close = "Cancel", no = "Cancel", cancel = "Cancel" }
-
-    local button, result_table = aegisub.dialog.display(dialog, buttons, button_ids)
-
-    if button == false or button == "Cancel" then
-        return err("[zah.autoclip] Operation cancelled by user")
-    elseif button == "&Run Command" then
-        return run_command_until(result_table["command"])
-            :andThen(update_vs_dependencies_unix)
-end end
+local unsupported_python_dependencies_unix = function()
+    local dialog = adialog.new({ width = 40 })
+                          :join(dialog_unsupported)
+                          :join(dialog_click_run_command_and_update)
+                          :join(dialog_command)
+                          :load_data(data_command_python_update_unix)
+    return display_runner(dialog, buttons_run_command_cancel)
+end
 
 
-local first_time_python_vsrepo_main
-local no_dependencies_main
-local autoclip_main
-local edit_config_main
-local update_dependencies_main
 
-first_time_python_vsrepo_main = function()
+local first_time_python_vsrepo_main = function()
     if not config then
-        aconfig.read_config_string("zah.autoclip")
-            :ifOk(function()
-                config = aconfig:read_and_validate_config_if_empty_then_default_or_else_edit_and_save("zah.autoclip", validation_func)
-                    :ifErr(aegisub.cancel)
-                    :unwrap() end)
-            :ifErr(function()
-                config = aconfig:read_and_validate_config_if_empty_then_default_or_else_edit_and_save("zah.autoclip", validation_func)
-                    :ifErr(aegisub.cancel)
-                    :unwrap()
-                if jit.os == "Windows" then
-                    first_time_python_vsrepo()
-                        :ifErr(aegisub.cancel)
-                    first_time_python()
-                        :ifErr(aegisub.cancel)
-                    first_time_vsrepo()
-                        :ifErr(aegisub.cancel)
-                    fisrt_time_dependencies()
-                        :ifErr(aegisub.cancel)
-                else
-                    first_time_python_unix()
-                        :ifErr(aegisub.cancel)
-                    first_time_python_vs_unix()
-                        :ifErr(aegisub.cancel)
-                    first_time_python_dependencies_unix()
-                        :ifErr(aegisub.cancel)
-                    first_time_vs_dependencies_unix()
-                        :ifErr(aegisub.cancel)
-                end end)
-end end
+        if lfs.attributes(aconfig.config_dir .. "/zah.autoclip.json", "mode") then
+            config = aconfig:read_and_validate_config_if_empty_then_default_or_else_edit_and_save("zah.autoclip", validation_func)
+                :ifErr(aegisub.cancel)
+                :unwrap()
+        else
+            config = aconfig:read_and_validate_config_if_empty_then_default_or_else_edit_and_save("zah.autoclip", validation_func)
+                :ifErr(aegisub.cancel)
+                :unwrap()
 
-no_dependencies_main = function()
+            if jit.os == "Windows" then
+                ok():andThen(first_time_python_vsrepo_win)
+                    :andThen(check_python_with_vs)
+                    :andThen(check_vsrepo)
+                    :andThen(first_time_dependencies_win)
+                    :ifErr(aegisub.cancel)
+            else
+                ok():andThen(first_time_python_unix)
+                    :andThen(check_python_with_vs)
+                    :andThen(first_time_python_dependencies_unix)
+                    :andThen(first_time_vs_dependencies_unix)
+                    :ifErr(aegisub.cancel)
+end end end end
+
+local no_dependencies_main = function()
     if os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-dependencies")) then
-        return ok("Already satisfied")
+        return "Already satisfied"
     else
         if jit.os == "Windows" then
-            first_time_python()
-                :ifErr(aegisub.cancel)
-            first_time_vsrepo()
-                :ifErr(aegisub.cancel)
-            no_dependencies()
+            ok():andThen(check_python_with_vs)
+                :andThen(check_vsrepo)
+                :andThen(no_dependencies_win)
                 :ifErr(aegisub.cancel)
         else
-            first_time_python_vs_unix()
+            ok():andThen(check_python_with_vs)
+                :andThen(no_python_dependencies_unix)
+                :andThen(no_vs_dependencies_unix)
                 :ifErr(aegisub.cancel)
-            no_python_dependencies_unix()
-                :ifErr(aegisub.cancel)
-            no_vs_dependencies_unix()
-                :ifErr(aegisub.cancel)
-        end
-        return ok()
-end end
+end end end
 
-autoclip_main = function(sub, sel, act)
+local out_of_date_dependencies_main = function()
+    if jit.os == "Windows" then
+        ok():andThen(out_of_date_dependencies_win)
+            :ifErr(aegisub.cancel)
+    else
+        if update_precheck_vs_dependencies_unix() then
+            ok():andThen(out_of_date_python_dependencies_unix)
+                :andThen(update_vs_dependencies_unix)
+                :ifErr(aegisub.cancel)
+        else
+            ok():andThen(out_of_date_python_dependencies_unix)
+                :andThen(no_vs_dependencies_unix)
+                :ifErr(aegisub.cancel)
+end end end
+
+local unsupported_dependencies_main = function()
+    if jit.os == "Windows" then
+        ok():andThen(unsupported_dependencies_win)
+            :ifErr(aegisub.cancel)
+    else
+        if update_precheck_vs_dependencies_unix() then
+            ok():andThen(unsupported_python_dependencies_unix)
+                :andThen(update_vs_dependencies_unix)
+                :ifErr(aegisub.cancel)
+        else
+            ok():andThen(unsupported_python_dependencies_unix)
+                :andThen(no_vs_dependencies_unix)
+                :ifErr(aegisub.cancel)
+end end end
+
+local autoclip_main = function(sub, sel, act)
     first_time_python_vsrepo_main()
 
     local ass = Ass(sub, sel, act)
@@ -1038,9 +774,7 @@ autoclip_main = function(sub, sel, act)
 
     Aegi.progressTitle("Parsing output from Python")
     if not status then
-        if no_dependencies_main()
-            :ifErr(aegisub.cancel)
-            :unwrap() ~= "Already satisfied" then
+        if no_dependencies_main() ~= "Already satisfied" then
             goto run_again
         end
 
@@ -1073,21 +807,9 @@ autoclip_main = function(sub, sel, act)
     if type(output["clip"]) ~= "table" then
         if output["current_version"] then
             if V(output["current_version"]) < V(last_supported_script_version) then
-                if jit.os == "Windows" then
-                    unsupported_dependencies()
-                        :ifErr(aegisub.cancel)
-                else
-                    unsupported_dependencies_unix()
-                        :ifErr(aegisub.cancel)
-                end
+                unsupported_dependencies_main()
             elseif V(output["current_version"]) < V(script_version) then
-                if jit.os == "Windows" then
-                    out_of_date_dependencies()
-                        :ifErr(aegisub.cancel)
-                else
-                    out_of_date_dependencies_unix()
-                        :ifErr(aegisub.cancel)
-                end
+                out_of_date_dependencies_main()
             else
                 error("Unexpected error")
             end
@@ -1128,29 +850,31 @@ autoclip_main = function(sub, sel, act)
     return ass:getNewSelection()
 end
 
-update_dependencies_main = function()
+local update_dependencies_main = function()
     first_time_python_vsrepo_main()
 
     if jit.os == "Windows" then
-        update_dependencies()
+        ok():andThen(update_dependencies_win)
             :ifErr(aegisub.cancel)
     else
-        update_dependencies_unix()
-            :ifErr(aegisub.cancel)
-end end
+        if update_precheck_vs_dependencies_unix() then
+            ok():andThen(update_python_dependencies_unix)
+                :andThen(update_vs_dependencies_unix)
+                :ifErr(aegisub.cancel)
+        else
+            ok():andThen(update_python_dependencies_unix)
+                :andThen(no_vs_dependencies_unix)
+                :ifErr(aegisub.cancel)
+end end end
 
-edit_config_main = function()
-    if not config then
-        config = aconfig:read_and_validate_config_if_empty_then_default_or_else_edit_and_save("zah.autoclip", validation_func)
-            :ifErr(aegisub.cancel)
-            :unwrap()
-    end
+local edit_config_main = function()
+    first_time_python_vsrepo_main()
 
     if jit.os == "Windows" then
-        edit_config()
+        ok():andThen(edit_config_win)
             :ifErr(aegisub.cancel)
     else
-        edit_config_unix()
+        ok():andThen(edit_config_unix)
             :ifErr(aegisub.cancel)
 end end
 
