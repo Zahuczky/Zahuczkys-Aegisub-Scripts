@@ -30,7 +30,7 @@
 			"author": "Zahuczky",
 			"name": "Aegisub-Color-Tracking",
 			"description": "Tracking the color from a given pixel or tracking data",
-			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/aegi-color-track/@{namespace}",
 			"channels": {
 				"main": {
 					"version": "2.0.2",
@@ -83,7 +83,7 @@
 			"author": "Zahuczky, Akatsumekusa",
 			"name": "AutoClip",
 			"description": "Add clips to subtitles 𝓪𝓾𝓽𝓸𝓶𝓪𝓰𝓲𝓬𝓪𝓵𝓵𝔂",
-			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/autoclip/@{namespace}",
 			"channels": {
 				"main": {
 					"version": "2.0.5",
