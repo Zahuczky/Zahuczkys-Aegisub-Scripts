@@ -6,14 +6,14 @@ This repository contains a collection of scripts for the subtitle editor Aegisub
 ## [Autoclip](/autoclip)
 Automagically clip out objects obstructing your sign.
 
-![Autoclip gif](https://files.zahuczky.com/autoclip.gif)
+![Autoclip gif](/misc/autoclip.gif)
 
 
 ## [Aegisub Color Tracking](/macros/aegi-color-track)
 
 Tracking the color of a pixel or moving object in a video.
 
-![Color Tracking gif](https://files.zahuczky.com/colortrack.gif)
+![Color Tracking gif](/misc/colortrack.gif)
 
 
 ## Aegisub Perspective Motion
