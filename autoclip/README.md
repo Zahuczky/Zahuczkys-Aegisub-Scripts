@@ -2,6 +2,8 @@
 
 *Automagically* clip out objects obstructing your sign.  
 
+![Autoclip gif](/misc/autoclip.gif)
+
 ### Recommended installation procedure (not following these may lead to errors)
 
 - **Prerequisites**
