@@ -75,6 +75,9 @@
 				"2.0.2": [
 					"Fix handling of tracking data when using Aegisub built-in frame API",
 					"Refactor internal handling of timecodes"
+				],
+				"2.1.0": [
+					"Add alpha tracking mode"
 				]
 			}
 		},
