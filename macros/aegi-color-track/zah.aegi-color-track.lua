@@ -3,7 +3,7 @@ local tr = aegisub.gettext
 script_name = tr"Aegisub-Color-Tracking"
 script_description = tr"Tracking the color from a given pixel or tracking data"
 script_author = "Zahuczky, garret"
-script_version = "2.0.2"
+script_version = "2.1.0"
 script_namespace = "zah.aegi-color-track"
 
 -- Conditional depctrl support. Will work without depctrl.
@@ -30,32 +30,61 @@ end
 
 local GUI = {
     main= {
-      data_label = {class= "label",  x= 0, y= 0, width= 1, height= 1, label= "Tracking data"},
-      data = {class= "textbox", name="data",  x= 0, y= 1, width= 2, height= 3},
-      pixel_label = {class= "label",  x= 0, y= 4, width= 1, height= 1, label= "Defined pixel to track:"},
-      pixX = {class= "intedit", config=true,  x= 0, y= 5, width= 1, height= 1, value= 0},
-      pixY = {class= "intedit", config=true,  x= 0, y= 6, width= 1, height= 1, value= 0},
-      posx_label = {class= "label",  x= 1, y= 5, width= 1, height= 1, label= "Position X"},
-      posy_label = {class= "label",  x= 1, y= 6, width= 1, height= 1, label= "Position Y"},
-      c = {class= "checkbox", x= 0, y= 7, width= 1, config=true, height= 1, label= "\\c (fill)", value= true},
-      c2 = {class= "checkbox", x= 1, y= 7, width= 1, config=true, height= 1, label= "\\2c (secondary)", value= false},
-      c3 = {class= "checkbox", x= 0, y= 8, width= 1, config=true, height= 1, label= "\\3c (border)", value= false},
-      c4 = {class= "checkbox", x= 1, y= 8, width= 1, config=true, height= 1, label= "\\4c (shadow)", value= false},
-      setting = {class= "dropdown",  x= 0, y= 9, width= 2, height= 1, config=true, items= {"Defined pixels","Tracking Data"}, value= "Defined pixels"}
+      mode_label = {class= "label",  x= 0, y= 0, width= 1, height= 1, label= "Color mode"},
+      data_label = {class= "label",  x= 0, y= 1, width= 1, height= 1, label= "Tracking data"},
+      data = {class= "textbox", name="data",  x= 0, y= 2, width= 2, height= 3},
+      pixel_label = {class= "label",  x= 0, y= 5, width= 1, height= 1, label= "Defined pixel to track:"},
+      pixX = {class= "intedit", config=true,  x= 0, y= 6, width= 1, height= 1, value= 0},
+      pixY = {class= "intedit", config=true,  x= 0, y= 7, width= 1, height= 1, value= 0},
+      posx_label = {class= "label",  x= 1, y= 6, width= 1, height= 1, label= "Position X"},
+      posy_label = {class= "label",  x= 1, y= 7, width= 1, height= 1, label= "Position Y"},
+      c = {class= "checkbox", x= 0, y= 8, width= 1, config=true, height= 1, label= "\\c (fill)", value= true},
+      c2 = {class= "checkbox", x= 1, y= 8, width= 1, config=true, height= 1, label= "\\2c (secondary)", value= false},
+      c3 = {class= "checkbox", x= 0, y= 9, width= 1, config=true, height= 1, label= "\\3c (border)", value= false},
+      c4 = {class= "checkbox", x= 1, y= 9, width= 1, config=true, height= 1, label= "\\4c (shadow)", value= false},
+      setting = {class= "dropdown",  x= 0, y= 10, width= 2, height= 1, config=true, items= {"Defined pixels","Tracking Data"}, value= "Defined pixels"}
+      },
+
+      alpha = {
+        mode_label = {class= "label",  x= 0, y= 0, width= 1, height= 1, label= "Alpha mode"},
+        data_label = {class= "label",  x= 0, y= 1, width= 1, height= 1, label= "Tracking data"},
+        data = {class= "textbox", name="data",  x= 0, y= 2, width= 2, height= 3},
+        pixel_label = {class= "label",  x= 0, y= 5, width= 1, height= 1, label= "Defined pixel to track:"},
+        pixX = {class= "intedit", config=true,  x= 0, y= 6, width= 1, height= 1, value= 0},
+        pixY = {class= "intedit", config=true,  x= 0, y= 7, width= 1, height= 1, value= 0},
+        posx_label = {class= "label",  x= 1, y= 6, width= 1, height= 1, label= "Position X"},
+        posy_label = {class= "label",  x= 1, y= 7, width= 1, height= 1, label= "Position Y"},
+        opaque_label = {class= "label",  x= 0, y= 8, width= 1, height= 1, label= "Sign color"},
+        startc = {class= "color", config=true,  x= 1, y= 8, width= 1, height= 1},
+        transparent_label = {class= "label",  x= 0, y= 9, width= 1, height= 1, label= "Background color"},
+        endc = {class= "color", config=true,  x= 1, y= 9, width= 1, height= 1},
+        all = {class= "checkbox", x= 0, y= 10, width= 1, config=true, height= 1, label= "\\alpha (all)", value= true},
+        a = {class= "checkbox", x= 0, y= 11, width= 1, config=true, height= 1, label= "\\1a (fill)", value= true},
+        a2 = {class= "checkbox", x= 1, y= 11, width= 1, config=true, height= 1, label= "\\2a (secondary)", value= false},
+        a3 = {class= "checkbox", x= 0, y= 12, width= 1, config=true, height= 1, label= "\\3a (border)", value= false},
+        a4 = {class= "checkbox", x= 1, y= 12, width= 1, config=true, height= 1, label= "\\4a (shadow)", value= false},
+        setting = {class= "dropdown",  x= 0, y= 13, width= 2, height= 1, config=true, items= {"Defined pixels","Tracking Data"}, value= "Defined pixels"}
       }
 
 }
+
+
 
 -- GUI inicialization with config
 local function showDialog(macro)
   local options = ConfigHandler(GUI, depCtrl.configFile, false, script_version, depCtrl.configDir)
   options:read()
   options:updateInterface(macro)
-  local btn, res = aegisub.dialog.display(GUI[macro])
+  if macro == "main" then
+    buttons = {tr"OK", tr"Cancel", "Alpha"}
+  else
+    buttons = {tr"OK", tr"Cancel", "Color"}
+  end
+  local btn, res = aegisub.dialog.display(GUI[macro], buttons)
   if btn then
     options:updateConfiguration(res, macro)
     options:write()
-    return res
+    return btn, res
   end
 end
 
@@ -165,13 +194,79 @@ local function getColors(startFrame, endFrame, numOfFrames, XPixels, YPixels)
   end
 end
 
+-- convert "color" (html style) to R G B values
+local function hexToRGB(hex)
+  hex = hex:gsub("#", "")
+  return tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
+end
+
+-- calculate perceived brightness of an RGB color
+local function perceivedBrightness(r, g, b)
+  return 0.299 * r + 0.587 * g + 0.114 * b
+end
+
+-- calculate alpha value
+local function calculateAlpha(signColor, backgroundColor, currentColor)
+  -- Convert hex colors to RGB
+  local sr, sg, sb = hexToRGB(signColor)
+  local br, bg, bb = hexToRGB(backgroundColor)
+  local cr, cg, cb = hexToRGB(currentColor)
+  
+  -- Calculate perceived brightness
+  local signBrightness = perceivedBrightness(sr, sg, sb)
+  local backgroundBrightness = perceivedBrightness(br, bg, bb)
+  local currentBrightness = perceivedBrightness(cr, cg, cb)
+  
+  -- Calculate alpha value
+  if currentBrightness == signBrightness then
+      return 0
+  elseif currentBrightness == backgroundBrightness then
+      return 255
+  else
+      local alpha = 255 * (backgroundBrightness - currentBrightness) / (backgroundBrightness - signBrightness)
+      alpha = 255 - math.max(0, math.min(255, alpha))
+      return string.format("%02X", alpha)
+  end
+end
+
+local function assToHtmlColor(assColor)
+  -- Remove the "&H" prefix and the trailing "&"
+  assColor = assColor:gsub("&H", ""):gsub("&", "")
+  
+  -- Extract the BB, GG, and RR components
+  local bb = assColor:sub(1, 2)
+  local gg = assColor:sub(3, 4)
+  local rr = assColor:sub(5, 6)
+  
+  -- Construct the HTML color code
+  local htmlColor = "#" .. rr .. gg .. bb
+  return htmlColor
+end
+
+MODE = "Color"
+
 -- Main function
 function colortrack(subtitles, selected_lines, active_line)
   -- Assume the whole selection is the same length
   local line = subtitles[selected_lines[1]]
   -- Start gui
-  local res = showDialog("main")
-  if not (res) then
+  local pressed, res = showDialog("main")
+  
+  while pressed == "Alpha" or pressed == "Color" do
+    if pressed == "Alpha" then
+      MODE = "Alpha"
+      pressed, res = showDialog("alpha")
+    elseif pressed == "Color" then
+      MODE = "Color"
+      pressed, res = showDialog("main")
+    end
+  end
+
+  if pressed == "Cancel" then
+    return aegisub.cancel()
+  end
+  
+  if not res then
     return aegisub.cancel()
   end
 
@@ -252,24 +347,55 @@ function colortrack(subtitles, selected_lines, active_line)
   -- Creating a single string from the colors
   local transform = ""
   -- stylua: ignore start
-  if colors[1] then
-    if res.c then transform = transform.."\\c"..colors[1] end
-    if res.c2 then transform = transform.."\\2c"..colors[1] end
-    if res.c3 then transform = transform.."\\3c"..colors[1] end
-    if res.c4 then transform = transform.."\\4c"..colors[1] end
-  end
-  for i=2, numOfFrames do
-    local color = colors[i]
-    -- color could be nil if the tracking point is outside video frame
-    if color then
-    transform = transform.."\\t("..makeTransformTimes(i-1)
-      if res.c then transform = transform.."\\c"..color end
-      if res.c2 then transform = transform.."\\2c"..color end
-      if res.c3 then transform = transform.."\\3c"..color end
-      if res.c4 then transform = transform.."\\4c"..color end
-    transform = transform .. ")"
+  if MODE == "Color" then
+    if colors[1] then
+      if res.c then transform = transform.."\\c"..colors[1] end
+      if res.c2 then transform = transform.."\\2c"..colors[1] end
+      if res.c3 then transform = transform.."\\3c"..colors[1] end
+      if res.c4 then transform = transform.."\\4c"..colors[1] end
     end
-  -- stylua: ignore end
+    for i=2, numOfFrames do
+      local color = colors[i]
+      -- color could be nil if the tracking point is outside video frame
+      if color then
+      transform = transform.."\\t("..makeTransformTimes(i-1)
+        if res.c then transform = transform.."\\c"..color end
+        if res.c2 then transform = transform.."\\2c"..color end
+        if res.c3 then transform = transform.."\\3c"..color end
+        if res.c4 then transform = transform.."\\4c"..color end
+      transform = transform .. ")"
+      end
+    end
+  end
+  if MODE == "Alpha" then
+    if res.all then
+      res.a = false
+      res.a2 = false
+      res.a3 = false
+      res.a4 = false
+    end
+    if colors[1] then
+      alpha = calculateAlpha(res.startc, res.endc, assToHtmlColor(colors[1]))
+      if res.all then transform = transform.."\\alpha&H"..alpha.."&" end
+      if res.a then transform = transform.."\\1a&H"..alpha.."&" end
+      if res.a2 then transform = transform.."\\2a&H"..alpha.."&" end
+      if res.a3 then transform = transform.."\\3a&H"..alpha.."&" end
+      if res.a4 then transform = transform.."\\4a&H"..alpha.."&" end
+    end
+    for i=2, numOfFrames do
+      local color = colors[i]
+      -- color could be nil if the tracking point is outside video frame
+      if color then
+        alpha = calculateAlpha(res.startc, res.endc, assToHtmlColor(color))
+        transform = transform.."\\t("..makeTransformTimes(i-1)
+        if res.all then transform = transform.."\\alpha&H"..alpha.."&" end
+        if res.a then transform = transform.."\\1a&H"..alpha.."&" end
+        if res.a2 then transform = transform.."\\2a&H"..alpha.."&" end
+        if res.a3 then transform = transform.."\\3a&H"..alpha.."&" end
+        if res.a4 then transform = transform.."\\4a&H"..alpha.."&" end
+      transform = transform .. ")"
+      end
+    end
   end
 
   -- Put the string in the lines
