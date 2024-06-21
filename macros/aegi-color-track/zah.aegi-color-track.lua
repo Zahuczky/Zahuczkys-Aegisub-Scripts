@@ -308,8 +308,16 @@ function colortrack(subtitles, selected_lines, active_line)
       p = p + 1
     end
   elseif res.setting == "Defined pixels" then
-    XPixels = res.pixX
-    YPixels = res.pixY
+    -- if a single set of coordinates is present in the textbox, use it
+    local xCoord, yCoord = res.data:match "^%s*(%d*%.?%d*),(%d*%.?%d*)%s*$"
+
+    if xCoord and yCoord then
+      XPixels = math.floor(xCoord+0.5)
+      YPixels = math.floor(yCoord+0.5)
+    else
+      XPixels = res.pixX
+      YPixels = res.pixY
+    end
   end
 
   -- if res.setting == "Middle of Rect. Clip" then
