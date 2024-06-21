@@ -33,14 +33,14 @@
 			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/aegi-color-track/@{namespace}",
 			"channels": {
 				"main": {
-					"version": "2.1.0",
-					"released": "2024-06-16",
+					"version": "2.2.0",
+					"released": "2024-06-21",
 					"default": true,
 					"files": [
 						{
 							"name": ".lua",
 							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "95642136f70f3086f5dcbe2a50eb014800962736"
+							"sha1": "170d2c211daf796fa020c5e91b4b0f4f0c154b29"
 						}
 					],
 					"requiredModules": [
@@ -67,7 +67,7 @@
 					"Various fixes by Petzku"
 				],
 				"2.0.0": [
-					"Complete restrocture by garret, no more png dissecting, support for new API version in arch1 builds."
+					"Complete restructure by garret, no more png dissecting, support for new API version in arch1 builds."
 				],
 				"2.0.1": [
 					"Adding progress reporting"
@@ -78,6 +78,9 @@
 				],
 				"2.1.0": [
 					"Add alpha tracking mode"
+				],
+				"2.2.0": [
+					"Only insert transforms on frames where the color/alpha changes"
 				]
 			}
 		},

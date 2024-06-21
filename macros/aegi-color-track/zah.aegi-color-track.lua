@@ -348,26 +348,31 @@ function colortrack(subtitles, selected_lines, active_line)
   local transform = ""
   -- stylua: ignore start
   if MODE == "Color" then
+    local last_color = nil
     if colors[1] then
       if res.c then transform = transform.."\\c"..colors[1] end
       if res.c2 then transform = transform.."\\2c"..colors[1] end
       if res.c3 then transform = transform.."\\3c"..colors[1] end
       if res.c4 then transform = transform.."\\4c"..colors[1] end
+      last_color = colors[1]
     end
     for i=2, numOfFrames do
       local color = colors[i]
       -- color could be nil if the tracking point is outside video frame
-      if color then
-      transform = transform.."\\t("..makeTransformTimes(i-1)
+      -- don't add redundant transform if color is the same as last frame
+      if color and color ~= last_color then
+        transform = transform.."\\t("..makeTransformTimes(i-1)
         if res.c then transform = transform.."\\c"..color end
         if res.c2 then transform = transform.."\\2c"..color end
         if res.c3 then transform = transform.."\\3c"..color end
         if res.c4 then transform = transform.."\\4c"..color end
-      transform = transform .. ")"
+        transform = transform .. ")"
+        last_color = color
       end
     end
   end
   if MODE == "Alpha" then
+    local last_alpha = nil
     if res.all then
       res.a = false
       res.a2 = false
@@ -376,6 +381,7 @@ function colortrack(subtitles, selected_lines, active_line)
     end
     if colors[1] then
       alpha = calculateAlpha(res.startc, res.endc, assToHtmlColor(colors[1]))
+      last_alpha = alpha
       if res.all then transform = transform.."\\alpha&H"..alpha.."&" end
       if res.a then transform = transform.."\\1a&H"..alpha.."&" end
       if res.a2 then transform = transform.."\\2a&H"..alpha.."&" end
@@ -385,15 +391,19 @@ function colortrack(subtitles, selected_lines, active_line)
     for i=2, numOfFrames do
       local color = colors[i]
       -- color could be nil if the tracking point is outside video frame
+      -- don't add redundant transform if alpha is the same as last frame
       if color then
         alpha = calculateAlpha(res.startc, res.endc, assToHtmlColor(color))
-        transform = transform.."\\t("..makeTransformTimes(i-1)
-        if res.all then transform = transform.."\\alpha&H"..alpha.."&" end
-        if res.a then transform = transform.."\\1a&H"..alpha.."&" end
-        if res.a2 then transform = transform.."\\2a&H"..alpha.."&" end
-        if res.a3 then transform = transform.."\\3a&H"..alpha.."&" end
-        if res.a4 then transform = transform.."\\4a&H"..alpha.."&" end
-      transform = transform .. ")"
+        if alpha ~= last_alpha then
+          transform = transform.."\\t("..makeTransformTimes(i-1)
+          if res.all then transform = transform.."\\alpha&H"..alpha.."&" end
+          if res.a then transform = transform.."\\1a&H"..alpha.."&" end
+          if res.a2 then transform = transform.."\\2a&H"..alpha.."&" end
+          if res.a3 then transform = transform.."\\3a&H"..alpha.."&" end
+          if res.a4 then transform = transform.."\\4a&H"..alpha.."&" end
+          last_alpha = alpha
+          transform = transform .. ")"
+        end
       end
     end
   end
