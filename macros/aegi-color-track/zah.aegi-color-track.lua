@@ -245,7 +245,7 @@ end
 
 -- Main function
 function colortrack(subtitles, selected_lines, active_line)
-  MODE = "Color"
+  local MODE = "Color"
   -- Assume the whole selection is the same length
   local line = subtitles[selected_lines[1]]
   -- Start gui
