@@ -25,77 +25,22 @@
 		"ILL": "https://raw.githubusercontent.com/TypesettingTools/ILL-Aegisub-Scripts/main/DependencyControl.json"
 	},
 	"macros": {
-		"zah.pers-mo_BETA": {
-			"url": "@{baseUrl}#@{namespace}",
-			"author": "Zahuczky",
-			"name": "Aegisub-Perspective-Motion BETA",
-			"description": "Applying perspective tracking",
-			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
-			"channels": {
-				"main": {
-					"version": "0.3.1",
-					"released": "2023-03-24",
-					"default": true,
-					"files": [
-						{
-							"name": ".moon",
-							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "7d3a234d02cda7dc9ce7d7da3b4a45fe1f542f3a"
-						}
-					],
-					"requiredModules": [
-						{
-							"moduleName": "ZF.main",
-							"url": "https://github.com/TypesettingTools/zeref-Aegisub-Scripts",
-							"version": "2.2.0",
-							"feed": "https://raw.githubusercontent.com/TypesettingTools/zeref-Aegisub-Scripts/main/DependencyControl.json"
-						}
-					]
-				}
-			},
-			"changelog": {
-				"0.2.0": [
-					"Initial release"
-				],
-				"0.2.1": [
-					"Fixed DependencyControl stuffs inside my script, added conditinal use. "
-				],
-				"0.2.2": [
-					"Added different perspective calculation options. (transform for target org, transforms near center of tetragon, transforms with target ratio)"
-				],
-				"0.2.3": [
-					"More fixing to DependencyControl related stuff."
-				],
-				"0.2.4": [
-					"Adding option to calculate perspective from org centered to the middle of the plane.(EXPERIMENTAL)",
-					"Adding HELP window.",
-					"Adding meaningful error messages."
-				],
-				"0.3.0": [
-					"Unimaginable amount of improvements.",
-					"Sorting out all the dependencies"
-				],
-				"0.3.1": [
-					"Save tracking datas ambient quad to extradata"
-				]
-			}
-		},
 		"zah.aegi-color-track": {
 			"url": "@{baseUrl}#@{namespace}",
 			"author": "Zahuczky",
 			"name": "Aegisub-Color-Tracking",
 			"description": "Tracking the color from a given pixel or tracking data",
-			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/aegi-color-track/@{namespace}",
 			"channels": {
 				"main": {
-					"version": "2.0.2",
-					"released": "2023-03-24",
+					"version": "2.1.0",
+					"released": "2024-06-16",
 					"default": true,
 					"files": [
 						{
 							"name": ".lua",
 							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "2662a47b77ef3a34b5e1494dfd7cede4ba293ce4"
+							"sha1": "b3042872be02294e89c61c7503777a87291519bf"
 						}
 					],
 					"requiredModules": [
@@ -130,6 +75,9 @@
 				"2.0.2": [
 					"Fix handling of tracking data when using Aegisub built-in frame API",
 					"Refactor internal handling of timecodes"
+				],
+				"2.1.0": [
+					"Add alpha tracking mode"
 				]
 			}
 		},
@@ -138,11 +86,11 @@
 			"author": "Zahuczky, Akatsumekusa",
 			"name": "AutoClip",
 			"description": "Add clips to subtitles 𝓪𝓾𝓽𝓸𝓶𝓪𝓰𝓲𝓬𝓪𝓵𝓵𝔂",
-			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/@{namespace}",
+			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/autoclip/@{namespace}",
 			"channels": {
 				"main": {
-					"version": "2.0.6\n2.0.3",
-					"released": "2024-01-31",
+					"version": "2.0.5",
+					"released": "2023-12-20",
 					"default": true,
 					"files": [
 						{
