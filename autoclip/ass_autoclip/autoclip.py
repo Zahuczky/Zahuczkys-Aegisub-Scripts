@@ -323,7 +323,6 @@ def start(argv, args):
     global video
     
     logger.debug("Loading application")
-    # QGuiApplication.setAttribute(Qt.AA_UseOpenGLES)
 
     # Create app and engine
     # Passing argv to QCoreApplication because it enables Qt-specific options

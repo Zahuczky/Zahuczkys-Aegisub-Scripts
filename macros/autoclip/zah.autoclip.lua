@@ -1,11 +1,24 @@
 script_name = "AutoClip"
 script_description = "Add clips to subtitles 𝓪𝓾𝓽𝓸𝓶𝓪𝓰𝓲𝓬𝓪𝓵𝓵𝔂"
-script_version = "2.0.6"
+script_version = "2.1.0"
 script_author = "Zahuczky, Akatsumekusa"
 script_namespace = "zah.autoclip"
 -- Lua version number is always kept aligned with version number in python script.
 
 local last_supported_script_version = "2.0.3"
+
+-----------------------------------------------------------------------------------------------------
+-- Organisation of this file:
+-- display_configurator and display_configurator derived functions:
+--     first_time_python_with_vsrepo_win, check_python_with_vs_win, edit_config_win, etc.
+--     This is for the „configuration“ windows that let the user enter python or vsrepo path.
+-- display_runner and display_runner derived functions:
+--     first_time_dependencies_win, no_dependencies_win, etc.
+--     This is for the „execution“ windows that executes commands to install or upgrade dependencies.
+-- main functions:
+--     first_time_python_vsrepo_main, autoclip_main, edit_config_main, etc.
+--     The main logic of Lua side of AutoClip. Calls functions from previous two sections.
+-----------------------------------------------------------------------------------------------------
 
 
 
@@ -80,6 +93,7 @@ local VSREPO_IN_PATH = "vsrepo in PATH (`$ vsrepo --help`)"
 local PATH_TO_VSREPO = "Path to vsrepo.py (`$ python vsrepo.py --help`)"
 
 local default_config = {
+    ["venv_activate"] = "",
     ["python"] = "python3",
     ["vsrepo_mode"] = VSREPO_IN_PATH,
     ["vsrepo"] = "vsrepo",
@@ -99,6 +113,11 @@ local json = aconfig.json
 local validation_func = function(config)
     if type(config) ~= "table" then
         return err("Missing root table.")
+    end
+    if config["venv_activate"] == nil then
+        config["venv_activate"] = default_config["venv_activate"]
+    elseif type(config["venv_activate"]) ~= "string" then
+        return err("Invalid key \"venv_activate\".")
     end
     if config["python"] == nil then
         config["python"] = default_config["python"]
@@ -139,6 +158,7 @@ local re_newline = re.compile([[\s*(?:\n\s*)+]])
 
 local run_cmd = require("petzku.util").io.run_cmd
 
+-- Search "local.*command" for all commands in AutoClip
 local c = function(command)
     if jit.os == "Windows" then
         local i = 1
@@ -164,27 +184,59 @@ local c = function(command)
         end
         return command
 end end
+local p = function(path)
+    if jit.os == "Windows" then
+        path = string.gsub(path, "[", "`[")
+        path = string.gsub(path, "]", "`]")
+        path = string.gsub(path, "'", "''")
+    else
+        path = string.gsub(path, "'", "\\'")
+    end
+    return "'" .. path .. "'"
+end
 
 
-local dialog_welcome = adialog.new({ width = 25 })
+
+-- display_configurator and display_configurator derived functions
+local dialog_welcome = adialog.new({ width = 30 })
                               :label({ label = "Welcome to AutoClip!" })
-local dialog_python = adialog.new({ width = 25 })
-                             :label({ label = "Enter name to Python if it is in PATH or path to Python executable:" })
-                             :edit({ name = "python" })
-local dialog_vsrepo = adialog.new({ width = 25 })
+if jit.os == "Windows" then
+    local dialog_python = adialog.new({ width = 30 })
+                                 :label({ label = "Enter name to Python if it’s in PATH or under venv (`$ python3 --version`) or path to Python executable (`$ /path/to/python3.exe --version`):" })
+                                 :edit({ name = "python" })
+else
+    local dialog_python = adialog.new({ width = 30 })
+                                 :label({ label = "Enter name to Python if it’s in PATH or under venv (`$ python3 --version`) or path to Python executable (`$ /path/to/python3 --version`):" })
+                                 :edit({ name = "python" })
+end
+if jit.os == "Windows" then
+    local dialog_venv_activate = adialog.new({ width = 30 })
+                                        :label({ label = "(Leave empty unless using Python with venv) Enter path to venv activate script (`$ /path/to/Activate.ps1`):" })
+                                        :edit({ name = "venv_activate" })
+else
+    local dialog_venv_activate = adialog.new({ width = 30 })
+                                        :label({ label = "(Leave empty unless using Python with venv) Enter path to venv activate script (`$ source /path/to/activate`):" })
+                                        :edit({ name = "venv_activate" })
+end
+local dialog_vsrepo = adialog.new({ width = 30 })
                              :label({ label = "Select whether vsrepo is in PATH and enter either the name to vsrepo or path to vsrepo.py:" })
                              :dropdown({ name = "vsrepo_mode", items = { VSREPO_IN_PATH, PATH_TO_VSREPO } })
                              :edit({ name = "vsrepo" })
-local dialog_no_python_vs = adialog.new({ width = 25 })
-                                   :label({ label = "Unable to find Python with VapourSynth (`import vapoursynth`) at given name or path." })
+local dialog_no_python_with_vs do
+    dialog_no_python_with_vs = adialog.new({ width = 30 })
+    local subdialog = dialog_no_vsrepo:unlessable({ name = "venv_activate", value = "" })
+    subdialog:label({ label = "Unable to activate venv or unable to import VapourSynth (`import vapoursynth`) in given environment." })
+    local subdialog = dialog_no_vsrepo:ifable({ name = "venv_activate", value = "" })
+    subdialog:label({ label = "Unable to find Python with VapourSynth (`import vapoursynth`) at given name or path." })
+end
 local dialog_no_vsrepo do
-    dialog_no_vsrepo = adialog.new({ width = 25 })
-    local subdialog = dialog_no_vsrepo:ifable({ name = "vsrepo", value = VSREPO_IN_PATH })
+    dialog_no_vsrepo = adialog.new({ width = 30 })
+    local subdialog = dialog_no_vsrepo:ifable({ name = "vsrepo_mode", value = VSREPO_IN_PATH })
     subdialog:label({ label = "Unable to find vsrepo with given name." })
-    local subdialog = dialog_no_vsrepo:ifable({ name = "vsrepo", value = PATH_TO_VSREPO })
+    local subdialog = dialog_no_vsrepo:unlessable({ name = "vsrepo_mode", value = VSREPO_IN_PATH })
     subdialog:label({ label = "Unable to find vsrepo with given path." })
 end
-local dialog_two_warnings = adialog.new({ width = 25 })
+local dialog_two_warnings = adialog.new({ width = 30 })
                                    :label({ label = "Do you want to disable warning when the number of layers mismatches?" })
                                    :checkbox({ label = "Disable", name = "disable_layer_mismatch" })
                                    :label({ label = "Do you want to disable warning when Python script is outdated?" })
@@ -233,39 +285,53 @@ local display_verified_configurator = function(dialog, buttons, command_f)
                 return ok() end)
 end end
 
-local first_time_python_vsrepo_win = function()
-    return display_configurator(dialog_welcome:copy():join(dialog_python):join(dialog_vsrepo),
+local command_f_check_python_with_vs_win = function(data) -- XXX CHECK THIS IS RUNNED THROUGH os.execute NOT THROUGH run_cmd
+    return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
+           p(data["python"]) .. " -m 'import vapoursynth'\n"
+local command_f_check_python_with_vs_unix = function(data)
+    return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
+           p(data["python"]) .. " -m 'import vapoursynth'\n"
+local command_f_check_vsrepo_win = function(data)
+    return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
+           (data["vsrepo_mode"] == VSREPO_IN_PATH and
+            p(data["vsrepo"]) .. " --help\n" or
+            p(data["python"]) .. " " .. p(data["vsrepo"]) .. " --help\n")
+
+local first_time_python_with_vsrepo_win = function()
+    return display_configurator(dialog_welcome:copy():join(dialog_python):join(dialog_venv_activate):join(dialog_vsrepo),
                                 buttons_set_cancel)
 end
 local first_time_python_unix = function()
-    return display_configurator(dialog_welcome:copy():join(dialog_python),
+    return display_configurator(dialog_welcome:copy():join(dialog_python):join(dialog_venv_activate),
                                 buttons_set_cancel)
 end
-local check_python_with_vs = function()
-    return display_verified_configurator(dialog_no_python_vs:copy():join(dialog_python),
+local check_python_with_vs_win = function()
+    return display_verified_configurator(dialog_no_python_with_vs:copy():join(dialog_python):join(dialog_venv_activate),
                                          buttons_continue_cancel,
-                                         function(data)
-                                             return "'" .. data["python"] .. "' -c 'import vapoursynth'" end)
+                                         command_f_check_python_with_vs_win)
 end
-local check_vsrepo = function()
+local check_python_with_vs_unix = function()
+    return display_verified_configurator(dialog_no_python_with_vs:copy():join(dialog_python):join(dialog_venv_activate),
+                                         buttons_continue_cancel,
+                                         command_f_check_python_with_vs_unix)
+end
+local check_vsrepo_win = function()
     return display_verified_configurator(dialog_no_vsrepo:copy():join(dialog_vsrepo),
                                          buttons_continue_cancel,
-                                         function(data)
-                                             return data["vsrepo_mode"] == VSREPO_IN_PATH and
-                                                    "'" .. data["vsrepo"] .. "' --help" or
-                                                    "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' --help" end)
+                                         command_f_check_vsrepo_win)
 end
 local edit_config_win = function()
-    return display_configurator(dialog_python:copy():join(dialog_vsrepo):join(dialog_two_warnings),
+    return display_configurator(dialog_python:copy():join(dialog_venv_activate):join(dialog_vsrepo):join(dialog_two_warnings),
                                 buttons_apply_close)
 end
 local edit_config_unix = function()
-    return display_configurator(dialog_python:copy():join(dialog_two_warnings),
+    return display_configurator(dialog_python:copy():join(dialog_venv_activate):join(dialog_two_warnings),
                                 buttons_apply_close)
 end
 
 
 
+-- display_runner and display_runner derived functions
 local dialog_execution_error_label_resolver = {}
 dialog_execution_error_label_resolver.resolve = function(item, dialog, x, y, width)
     item = Table.copy(item)
@@ -294,7 +360,7 @@ local display_runner_with_ignore = function(dialog, buttons)
     if buttons:is_ok(button) then
         local log, status, terminate, code = run_cmd(c(result["command"]), true)
         if status then
-            return ok() -- WRONG USE E() XXX
+            return ok() -- XXX WRONG USE E() (I’ve no idea what this message meant when I left it.)
         else
             dialog = adialog.new({ width = 40 })
                             :load_data({ ["command"] = result["command"] })
@@ -359,38 +425,55 @@ local buttons_run_command_ignore_cancel = abuttons.ok("&Run Command")("Remind Me
 local buttons_run_command_cancel = abuttons.ok("&Run Command"):close("Cancel")
 
 local data_command_win = { ["command"] = function(_, data)
-                                             return "'" .. data["python"] .. "' -m ensurepip\n" .. 
-                                                    "'" .. data["python"] .. "' -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
-                                                    "'" .. data["python"] .. "' -m pip install ass-autoclip --upgrade --force-reinstall\n" ..
-                                                    (data["vsrepo_mode"] == VSREPO_IN_PATH and
-                                                     "'" .. data["vsrepo"] .. "' update\n" ..
-                                                     "'" .. data["vsrepo"] .. "' install lsmas dfttest\n" ..
-                                                     "'" .. data["vsrepo"] .. "' upgrade lsmas dfttest\n" or
-                                                     "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' update\n" ..
-                                                     "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' install lsmas dfttest\n" ..
-                                                     "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' upgrade lsmas dfttest\n") end }
+    return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
+           p(data["python"]) .. " -m ensurepip\n" .. 
+           p(data["python"]) .. " -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
+           p(data["python"]) .. " -m pip install ass-autoclip --upgrade --force-reinstall\n" ..
+           (data["vsrepo_mode"] == VSREPO_IN_PATH and
+            p(data["vsrepo"]) .. " update\n" ..
+            p(data["vsrepo"]) .. " install lsmas dfttest\n" ..
+            p(data["vsrepo"]) .. " upgrade lsmas dfttest\n" or
+            p(data["python"]) .. " " .. p(data["vsrepo"]) .. " update\n" ..
+            p(data["python"]) .. " " .. p(data["vsrepo"]) .. " install lsmas dfttest\n" ..
+            p(data["python"]) .. " " .. p(data["vsrepo"]) .. " upgrade lsmas dfttest\n") end }
 local data_command_python_unix = { ["command"] = function(_, data)
-                                                     return "'" .. data["python"] .. "' -m ensurepip\n" .. 
-                                                            "'" .. data["python"] .. "' -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
-                                                            "'" .. data["python"] .. "' -m pip install ass-autoclip --upgrade --force-reinstall\n" end }
+            return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
+                   p(data["python"]) .. " -m ensurepip\n" .. 
+                   p(data["python"]) .. " -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
+                   p(data["python"]) .. " -m pip install ass-autoclip --upgrade --force-reinstall\n" end }
 local data_command_vs_unix = { ["command"] = "lsmas (https://github.com/AkarinVS/L-SMASH-Works)\n" .. 
                                              "dfttest (https://github.com/HomeOfVapourSynthEvolution/VapourSynth-DFTTest)\n" }
 local data_command_update_win = { ["command"] = function(_, data)
-                                                    return "'" .. data["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" ..
-                                                           (data["vsrepo_mode"] == VSREPO_IN_PATH and
-                                                            "'" .. data["vsrepo"] .. "' update\n" ..
-                                                            "'" .. data["vsrepo"] .. "' install lsmas dfttest\n" ..
-                                                            "'" .. data["vsrepo"] .. "' upgrade lsmas dfttest\n" or
-                                                            "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' update\n" ..
-                                                            "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' install lsmas dfttest\n" ..
-                                                            "'" .. data["python"] .. "' '" .. data["vsrepo"] .. "' upgrade lsmas dfttest\n") end }
+           return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
+                  p(data["python"]) .. " -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" ..
+                  (data["vsrepo_mode"] == VSREPO_IN_PATH and
+                   p(data["vsrepo"]) .. " update\n" ..
+                   p(data["vsrepo"]) .. " install lsmas dfttest\n" ..
+                   p(data["vsrepo"]) .. " upgrade lsmas dfttest\n" or
+                   p(data["python"]) .. " " .. p(data["vsrepo"]) .. " update\n" ..
+                   p(data["python"]) .. " " .. p(data["vsrepo"]) .. " install lsmas dfttest\n" ..
+                   p(data["python"]) .. " " .. p(data["vsrepo"]) .. " upgrade lsmas dfttest\n") end }
 local data_command_python_update_unix = { ["command"] = function(_, data)
-                                                            return "'" .. data["python"] .. "' -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" end }
+                   return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
+                          p(data["python"]) .. " -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" end }
+
+local command_f_check_dependencies_win = function(data) -- XXX CHECK THIS IS RUNNED THROUGH os.execute NOT THROUGH run_cmd
+    return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
+           p(data["python"]) .. " -m ass_autoclip --check-dependencies\n"
+local command_f_check_dependencies_unix = function(data)
+    return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
+           p(data["python"]) .. " -m ass_autoclip --check-dependencies\n"
+local command_f_check_python_dependencies_unix = function(data)
+    return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
+           p(data["python"]) .. " -m ass_autoclip --check-python-dependencies\n"
+local command_f_check_vs_dependencies_unix = function(data)
+    return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
+           p(data["python"]) .. " -m ass_autoclip --check-vs-dependencies\n"
 
 local first_time_dependencies_win = function()
     local dialog
     local result
-    while not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-dependencies")) do
+    while not os.execute(c(command_f_check_dependencies_win(config))) do
         if not dialog then
             dialog = adialog.new({ width = 40 })
                             :join(dialog_requires_install)
@@ -407,7 +490,7 @@ end
 local first_time_python_dependencies_unix = function()
     local dialog
     local result
-    while not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-python-dependencies")) do
+    while not os.execute(c(command_f_check_python_dependencies_unix(config))) do
         if not dialog then
             dialog = adialog.new({ width = 40 })
                             :join(dialog_requires_install)
@@ -422,12 +505,12 @@ local first_time_python_dependencies_unix = function()
 end
 
 local first_time_vs_dependencies_unix = function()
-    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies")) then
+    if not os.execute(c(command_f_check_vs_dependencies_unix(config))) then
         adisplay(adialog.new({ width = 30 })
-                              :join(dialog_requires_vs_dependencies)
-                              :join(dialog_follow_install)
-                              :join(dialog_command)
-                              :load_data(data_command_vs_unix),
+                         :join(dialog_requires_vs_dependencies)
+                         :join(dialog_follow_install)
+                         :join(dialog_command)
+                         :load_data(data_command_vs_unix),
                  buttons_cancel):resolve()
         return err()
     end
@@ -437,7 +520,7 @@ end
 local no_dependencies_win = function()
     local dialog
     local result
-    while not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-dependencies")) do
+    while not os.execute(c(command_f_check_dependencies_win(config))) do
         if not dialog then
             dialog = adialog.new({ width = 40 })
                             :join(dialog_failed_to_execute)
@@ -454,7 +537,7 @@ end
 local no_python_dependencies_unix = function()
     local dialog
     local result
-    while not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-python-dependencies")) do
+    while not os.execute(c(command_f_check_python_dependencies_unix(config))) do
         if not dialog then
             dialog = adialog.new({ width = 40 })
                             :join(dialog_failed_to_execute)
@@ -469,7 +552,7 @@ local no_python_dependencies_unix = function()
 end
 
 local no_vs_dependencies_unix = function()
-    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies")) then
+    if not os.execute(c(command_f_check_vs_dependencies_unix(config))) then
         adisplay(adialog.new({ width = 30 })
                         :join(dialog_failed_to_execute)
                         :join(dialog_follow_install)
@@ -516,11 +599,11 @@ local update_python_dependencies_unix = function()
 end
 
 local update_precheck_vs_dependencies_unix = function()
-    return os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies"))
+    return os.execute(c(command_f_check_vs_dependencies_unix(config)))
 end
 
 local update_vs_dependencies_unix = function()
-    if not os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-vs-dependencies")) then
+    if not os.execute(c(command_f_check_vs_dependencies_unix(config))) then
         adisplay(adialog.new({ width = 30 })
                         :join(dialog_update_requires_vs_dependencies)
                         :join(dialog_follow_install)
@@ -552,6 +635,7 @@ end
 
 
 
+-- main functions
 local first_time_python_vsrepo_main = function()
     if not config then
         if lfs.attributes(aconfig.config_dir .. "/zah.autoclip.json", "mode") then
@@ -564,30 +648,34 @@ local first_time_python_vsrepo_main = function()
                 :unwrap()
 
             if jit.os == "Windows" then
-                ok():andThen(first_time_python_vsrepo_win)
-                    :andThen(check_python_with_vs)
-                    :andThen(check_vsrepo)
+                ok():andThen(first_time_python_with_vsrepo_win)
+                    :andThen(check_python_with_vs_win)
+                    :andThen(check_vsrepo_win)
                     :andThen(first_time_dependencies_win)
                     :ifErr(aegisub.cancel)
             else
                 ok():andThen(first_time_python_unix)
-                    :andThen(check_python_with_vs)
+                    :andThen(check_python_with_vs_unix)
                     :andThen(first_time_python_dependencies_unix)
                     :andThen(first_time_vs_dependencies_unix)
                     :ifErr(aegisub.cancel)
 end end end end
 
 local no_dependencies_main = function()
-    if os.execute(c("'" .. config["python"] .. "' -m ass_autoclip --check-dependencies")) then
-        return "Already satisfied"
-    else
-        if jit.os == "Windows" then
-            ok():andThen(check_python_with_vs)
-                :andThen(check_vsrepo)
+    if jit.os == "Windows" then
+        if os.execute(c(command_f_check_dependencies_win(config))) then
+            return "Already satisfied"
+        else
+            ok():andThen(check_python_with_vs_win)
+                :andThen(check_vsrepo_win)
                 :andThen(no_dependencies_win)
                 :ifErr(aegisub.cancel)
+        end
+    else
+        if os.execute(c(command_f_check_dependencies_unix(config))) then
+            return "Already satisfied"
         else
-            ok():andThen(check_python_with_vs)
+            ok():andThen(check_python_with_vs_unix)
                 :andThen(no_python_dependencies_unix)
                 :andThen(no_vs_dependencies_unix)
                 :ifErr(aegisub.cancel)
@@ -644,6 +732,7 @@ local autoclip_main = function(sub, sel, act)
     local active_clip
     local clip
     for line, s, i, n in ass:iterSel() do
+        Aegi.progressCancelled()
         ass:progressLine(s, i, n)
 
         line.start_frame = aegisub.frame_from_ms(line.start_time)
@@ -745,9 +834,12 @@ local autoclip_main = function(sub, sel, act)
     end
 
     -- Run commands
+    ::run_again::
+
+    Aegi.progressCancelled()
     Aegi.progressTitle("Waiting for Python to complete")
     local output_file
-    local command
+    local command -- ↓
     local log
     local status
     local terminate
@@ -755,23 +847,21 @@ local autoclip_main = function(sub, sel, act)
     local f
     local msg
     local output
-
-    ::run_again::
     
     output_file = aegisub.decode_path("?temp/zah.autoclip." .. string.sub(tostring(math.random(10000000, 99999999)), 2) .. ".json")
-    command = "'" .. config["python"] .. "'" ..
-                      " -m ass_autoclip --input '" .. video_file .. "'" ..
-                                      " --output '" .. output_file .. "'" ..
-                        string.format(" --clip '%f %f %f %f'", clip[1], clip[2], clip[3], clip[4]) ..
-                                      " --first " .. first ..
-                                      " --last " .. last ..
-                                      " --active " .. active ..
-                                      " --supported-version " .. ((not disable_version_notify_until_next_time and not config["disable_version_notify"])
-                                                              and script_version
-                                                               or last_supported_script_version)
+    command = (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
+              p(data["python"]) .. " -m ass_autoclip --input " .. p(video_file) ..
+                                   " --output " .. p(output_file) ..
+                     string.format(" --clip '%f %f %f %f'", clip[1], clip[2], clip[3], clip[4]) ..
+                                   " --first " .. first ..
+                                   " --last " .. last ..
+                                   " --active " .. active ..
+                                   " --supported-version " .. ((not disable_version_notify_until_next_time and not config["disable_version_notify"]) and
+                                                               script_version or
+                                                               last_supported_script_version)
     log, status, terminate, code = run_cmd(c(command), true)
-    Aegi.progressCancelled()
 
+    Aegi.progressCancelled()
     Aegi.progressTitle("Parsing output from Python")
     if not status then
         if no_dependencies_main() ~= "Already satisfied" then
@@ -832,6 +922,7 @@ local autoclip_main = function(sub, sel, act)
     -- Apply the frames table to subtitle
     Aegi.progressTitle("Writing clips to lines")
     for line, s, i, n in ass:iterSel() do
+        Aegi.progressCancelled()
         ass:progressLine(s, i, n)
 
         ass:removeLine(line, s)
