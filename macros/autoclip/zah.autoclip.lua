@@ -849,7 +849,12 @@ local autoclip_main = function(sub, sel, act)
     local output
     
     output_file = aegisub.decode_path("?temp/zah.autoclip." .. string.sub(tostring(math.random(10000000, 99999999)), 2) .. ".json")
-    command = (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
+    if jit.os == "Windows" then
+        command = data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or ""
+    else
+        command = data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or ""
+    end
+    command = command ..
               p(data["python"]) .. " -m ass_autoclip --input " .. p(video_file) ..
                                    " --output " .. p(output_file) ..
                      string.format(" --clip '%f %f %f %f'", clip[1], clip[2], clip[3], clip[4]) ..
