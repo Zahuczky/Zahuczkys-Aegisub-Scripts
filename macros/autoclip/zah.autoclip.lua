@@ -190,7 +190,7 @@ local p = function(path)
         path = string.gsub(path, "]", "`]")
         path = string.gsub(path, "'", "''")
     else
-        path = string.gsub(path, "'", "\\'")
+        path = string.gsub(path, "'", "'\\''")
     end
     return "'" .. path .. "'"
 end
