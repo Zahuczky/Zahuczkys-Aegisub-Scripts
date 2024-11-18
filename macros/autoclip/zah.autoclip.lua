@@ -90,7 +90,8 @@ local outcome = require("aka.outcome")
 local ok, err = outcome.ok, outcome.err
 
 local VSREPO_IN_PATH = "vsrepo in PATH (`$ vsrepo --help`)"
-local PATH_TO_VSREPO = "Path to vsrepo.py (`$ python vsrepo.py --help`)"
+local PATH_TO_VSREPO_OLD = "Path to vsrepo.py (`$ python vsrepo.py --help`)"
+local PATH_TO_VSREPO = "Path to vsrepo.py (`$ python /path/to/vsrepo.py --help`)"
 
 local default_config = {
     ["venv_activate"] = "",
@@ -126,6 +127,8 @@ local validation_func = function(config)
     end
     if config["vsrepo_mode"] == nil then
         config["vsrepo_mode"] = default_config["vsrepo_mode"]
+    elseif config["vsrepo_mode"] == PATH_TO_VSREPO_OLD then
+        config["vsrepo_mode"] = PATH_TO_VSREPO
     elseif config["vsrepo_mode"] ~= VSREPO_IN_PATH and config["vsrepo_mode"] ~= PATH_TO_VSREPO then
         return err("Invalid key \"vsrepo_mode\".")
     end
@@ -156,7 +159,10 @@ local disable_version_notify_until_next_time = false
 local re = require("aegisub.re")
 local re_newline = re.compile([[\s*(?:\n\s*)+]])
 
-local run_cmd = require("petzku.util").io.run_cmd
+local putil = require("petzku.util")
+local run_cmd = function(command)
+    return putil.io.run_cmd(command, true)
+end
 
 -- Search "local.*command" for all commands in AutoClip
 local c = function(command)
@@ -196,47 +202,47 @@ end
 
 
 -- display_configurator and display_configurator derived functions
-local dialog_welcome = adialog.new({ width = 30 })
+local dialog_welcome = adialog.new({ width = 50 })
                               :label({ label = "Welcome to AutoClip!" })
 local dialog_python do
     if jit.os == "Windows" then
-        dialog_python = adialog.new({ width = 30 })
+        dialog_python = adialog.new({ width = 50 })
                                      :label({ label = "Enter name to Python if it’s in PATH or under venv (`$ python3 --version`) or path to Python executable (`$ /path/to/python3.exe --version`):" })
                                      :edit({ name = "python" })
     else
-        dialog_python = adialog.new({ width = 30 })
+        dialog_python = adialog.new({ width = 50 })
                                      :label({ label = "Enter name to Python if it’s in PATH or under venv (`$ python3 --version`) or path to Python executable (`$ /path/to/python3 --version`):" })
                                      :edit({ name = "python" })
 end end
 local dialog_venv_activate do
     if jit.os == "Windows" then
-        dialog_venv_activate = adialog.new({ width = 30 })
+        dialog_venv_activate = adialog.new({ width = 50 })
                                             :label({ label = "(Leave empty unless using Python with venv) Enter path to venv activate script (`$ /path/to/Activate.ps1`):" })
                                             :edit({ name = "venv_activate" })
     else
-        dialog_venv_activate = adialog.new({ width = 30 })
+        dialog_venv_activate = adialog.new({ width = 50 })
                                             :label({ label = "(Leave empty unless using Python with venv) Enter path to venv activate script (`$ source /path/to/activate`):" })
                                             :edit({ name = "venv_activate" })
 end end
-local dialog_vsrepo = adialog.new({ width = 30 })
+local dialog_vsrepo = adialog.new({ width = 50 })
                              :label({ label = "Select whether vsrepo is in PATH and enter either the name to vsrepo or path to vsrepo.py:" })
                              :dropdown({ name = "vsrepo_mode", items = { VSREPO_IN_PATH, PATH_TO_VSREPO } })
                              :edit({ name = "vsrepo" })
 local dialog_no_vsrepo do
-    dialog_no_vsrepo = adialog.new({ width = 30 })
+    dialog_no_vsrepo = adialog.new({ width = 50 })
     local subdialog = dialog_no_vsrepo:ifable({ name = "vsrepo_mode", value = VSREPO_IN_PATH })
     subdialog:label({ label = "Unable to find vsrepo with given name." })
     local subdialog = dialog_no_vsrepo:unlessable({ name = "vsrepo_mode", value = VSREPO_IN_PATH })
     subdialog:label({ label = "Unable to find vsrepo with given path." })
 end
 local dialog_no_python_with_vs do
-    dialog_no_python_with_vs = adialog.new({ width = 30 })
+    dialog_no_python_with_vs = adialog.new({ width = 50 })
     local subdialog = dialog_no_vsrepo:unlessable({ name = "venv_activate", value = "" })
     subdialog:label({ label = "Unable to activate venv or unable to import VapourSynth (`import vapoursynth`) in given environment." })
     local subdialog = dialog_no_vsrepo:ifable({ name = "venv_activate", value = "" })
     subdialog:label({ label = "Unable to find Python with VapourSynth (`import vapoursynth`) at given name or path." })
 end
-local dialog_two_warnings = adialog.new({ width = 30 })
+local dialog_two_warnings = adialog.new({ width = 50 })
                                    :label({ label = "Do you want to disable warning when the number of layers mismatches?" })
                                    :checkbox({ label = "Disable", name = "disable_layer_mismatch" })
                                    :label({ label = "Do you want to disable warning when Python script is outdated?" })
@@ -262,14 +268,14 @@ local display_configurator = function(dialog, buttons)
         return err("[zah.autoclip] Operation cancelled by user")
 end end
 local display_verified_configurator = function(dialog, buttons, command_f)
-    if os.execute(c(command_f(config))) then
+    if table.pack(run_cmd(c(command_f(config))))[2] then
         return ok("Already satisfied")
     else
         return adisplay(dialog:load_data(config),
                         buttons)
             :repeatUntil(function(button, result)
                 setmetatable(result, { __index = config })
-                if os.execute(c(command_f(result))) then
+                if table.pack(run_cmd(c(command_f(result))))[2] then
                     return ok(result)
                 else
                     return err(result)
@@ -285,13 +291,13 @@ local display_verified_configurator = function(dialog, buttons, command_f)
                 return ok() end)
 end end
 
-local command_f_check_python_with_vs_win = function(data) -- XXX CHECK THIS IS RUNNED THROUGH os.execute NOT THROUGH run_cmd
+local command_f_check_python_with_vs_win = function(data)
     return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
-           p(data["python"]) .. " -m 'import vapoursynth'\n"
+           p(data["python"]) .. " -c 'import vapoursynth'\n"
 end
 local command_f_check_python_with_vs_unix = function(data)
     return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
-           p(data["python"]) .. " -m 'import vapoursynth'\n"
+           p(data["python"]) .. " -c 'import vapoursynth'\n"
 end
 local command_f_check_vsrepo_win = function(data)
     return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
@@ -350,9 +356,9 @@ dialog_execution_error_label_resolver.resolve = function(item, dialog, x, y, wid
     table.insert(dialog, item)
     return item.y + 1
 end
-local dialog_click_run_again = adialog.new({ width = 40 })
+local dialog_click_run_again = adialog.new({ width = 50 })
                                       :label({ label = "You can edit the command below and click „Run Again“ to retry." })
-local dialog_command = adialog.new({ width = 40 })
+local dialog_command = adialog.new({ width = 50 })
                               :textbox({ height = 12, name = "command" })
 
 local buttons_run_again_cancel = abuttons.ok("&Run Again"):close("Cancel")
@@ -361,11 +367,11 @@ local display_runner_with_ignore = function(dialog, buttons)
     local button, result = adisplay(dialog:load_data(config),
                                     buttons):resolve()
     if buttons:is_ok(button) then
-        local log, status, terminate, code = run_cmd(c(result["command"]), true)
+        local log, status, terminate, code = run_cmd(c(result["command"]))
         if status then
             return ok() -- XXX WRONG USE E() (I’ve no idea what this message meant when I left it.)
         else
-            dialog = adialog.new({ width = 40 })
+            dialog = adialog.new({ width = 50 })
                             :load_data({ ["command"] = result["command"] })
                             :load_data({ ["log"] = log, ["status"] = status, ["terminate"] = terminate, ["code"] = code })
             table.insert(dialog, setmetatable({}, { __index = dialog_execution_error_label_resolver }))
@@ -375,7 +381,7 @@ local display_runner_with_ignore = function(dialog, buttons)
 
             return adisplay(dialog, buttons_run_again_cancel)
                 :repeatUntil(function(button, result)
-                    local log, status, terminate, code = run_cmd(c(result["command"]), true)
+                    local log, status, terminate, code = run_cmd(c(result["command"]))
                     if status then
                         return ok()
                     else
@@ -400,26 +406,26 @@ local display_runner_with_ignore = function(dialog, buttons)
 end end
 local display_runner = display_runner_with_ignore
 
-local dialog_requires_install = adialog.new({ width = 40 })
+local dialog_requires_install = adialog.new({ width = 50 })
                                        :label({ label = "AutoClip requires additional dependencies to be installed." })
-local dialog_click_run = adialog.new({ width = 40 })
+local dialog_click_run = adialog.new({ width = 50 })
                                 :label({ label = "Click „Run“ to execute the following commands. You may edit the command before running, or copy the command and execute it in terminal." })
-local dialog_failed_to_execute = adialog.new({ width = 40 })
+local dialog_failed_to_execute = adialog.new({ width = 50 })
                                         :label({ label = "Failed to execute AutoClip." })
-local dialog_click_run_and_reinstall = adialog.new({ width = 40 })
+local dialog_click_run_and_reinstall = adialog.new({ width = 50 })
                                               :label({ label = "Click „Run“ to execute the following commands and reinstall AutoClip. You may edit the command before running, or copy the command and execute it in terminal." })
-local dialog_out_of_date = adialog.new({ width = 40 })
+local dialog_out_of_date = adialog.new({ width = 50 })
                                   :label({ label = "AutoClip dependencies are out of date." })
-local dialog_click_run_command_and_update = adialog.new({ width = 40 })
+local dialog_click_run_command_and_update = adialog.new({ width = 50 })
                                                    :label({ label = "Click „Run Command“ to execute the following commands and update AutoClip. You may edit the command before running, or copy the command and execute it in terminal." })
-local dialog_unsupported = adialog.new({ width = 40 })
+local dialog_unsupported = adialog.new({ width = 50 })
                                   :label({ label = "AutoClip dependencies are out of date and no longer supported." })
 
-local dialog_requires_vs_dependencies = adialog.new({ width = 30 })
+local dialog_requires_vs_dependencies = adialog.new({ width = 50 })
                                                :label({ label = "AutoClip requires additional VapourSynth plugins to be installed." })
-local dialog_follow_install = adialog.new({ width = 30 })
+local dialog_follow_install = adialog.new({ width = 50 })
                                                :label({ label = "Please follow the links below and install the required plugins." })
-local dialog_update_requires_vs_dependencies = adialog.new({ width = 30 })
+local dialog_update_requires_vs_dependencies = adialog.new({ width = 50 })
                                                :label({ label = "The newly installed version requires additional VapourSynth plugins to be installed." })
 
 local buttons_run_cancel = abuttons.ok("&Run"):close("Cancel")
@@ -460,7 +466,7 @@ local data_command_python_update_unix = { ["command"] = function(_, data)
                    return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
                           p(data["python"]) .. " -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" end }
 
-local command_f_check_dependencies_win = function(data) -- XXX CHECK THIS IS RUNNED THROUGH os.execute NOT THROUGH run_cmd
+local command_f_check_dependencies_win = function(data)
     return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
            p(data["python"]) .. " -m ass_autoclip --check-dependencies\n"
 end
@@ -480,9 +486,9 @@ end
 local first_time_dependencies_win = function()
     local dialog
     local result
-    while not os.execute(c(command_f_check_dependencies_win(config))) do
+    while not table.pack(run_cmd(c(command_f_check_dependencies_win(config))))[2] do
         if not dialog then
-            dialog = adialog.new({ width = 40 })
+            dialog = adialog.new({ width = 50 })
                             :join(dialog_requires_install)
                             :join(dialog_click_run)
                             :join(dialog_command)
@@ -497,9 +503,9 @@ end
 local first_time_python_dependencies_unix = function()
     local dialog
     local result
-    while not os.execute(c(command_f_check_python_dependencies_unix(config))) do
+    while not table.pack(run_cmd(c(command_f_check_python_dependencies_unix(config))))[2] do
         if not dialog then
-            dialog = adialog.new({ width = 40 })
+            dialog = adialog.new({ width = 50 })
                             :join(dialog_requires_install)
                             :join(dialog_click_run)
                             :join(dialog_command)
@@ -512,8 +518,8 @@ local first_time_python_dependencies_unix = function()
 end
 
 local first_time_vs_dependencies_unix = function()
-    if not os.execute(c(command_f_check_vs_dependencies_unix(config))) then
-        adisplay(adialog.new({ width = 30 })
+    if not table.pack(run_cmd(c(command_f_check_vs_dependencies_unix(config))))[2] then
+        adisplay(adialog.new({ width = 50 })
                          :join(dialog_requires_vs_dependencies)
                          :join(dialog_follow_install)
                          :join(dialog_command)
@@ -527,9 +533,9 @@ end
 local no_dependencies_win = function()
     local dialog
     local result
-    while not os.execute(c(command_f_check_dependencies_win(config))) do
+    while not table.pack(run_cmd(c(command_f_check_dependencies_win(config))))[2] do
         if not dialog then
-            dialog = adialog.new({ width = 40 })
+            dialog = adialog.new({ width = 50 })
                             :join(dialog_failed_to_execute)
                             :join(dialog_click_run_and_reinstall)
                             :join(dialog_command)
@@ -544,9 +550,9 @@ end
 local no_python_dependencies_unix = function()
     local dialog
     local result
-    while not os.execute(c(command_f_check_python_dependencies_unix(config))) do
+    while not table.pack(run_cmd(c(command_f_check_python_dependencies_unix(config))))[2] do
         if not dialog then
-            dialog = adialog.new({ width = 40 })
+            dialog = adialog.new({ width = 50 })
                             :join(dialog_failed_to_execute)
                             :join(dialog_click_run_and_reinstall)
                             :join(dialog_command)
@@ -559,8 +565,8 @@ local no_python_dependencies_unix = function()
 end
 
 local no_vs_dependencies_unix = function()
-    if not os.execute(c(command_f_check_vs_dependencies_unix(config))) then
-        adisplay(adialog.new({ width = 30 })
+    if not table.pack(run_cmd(c(command_f_check_vs_dependencies_unix(config))))[2] then
+        adisplay(adialog.new({ width = 50 })
                         :join(dialog_failed_to_execute)
                         :join(dialog_follow_install)
                         :join(dialog_command)
@@ -572,7 +578,7 @@ local no_vs_dependencies_unix = function()
 end
 
 local out_of_date_dependencies_win = function()
-    local dialog = adialog.new({ width = 40 })
+    local dialog = adialog.new({ width = 50 })
                           :join(dialog_out_of_date)
                           :join(dialog_click_run_command_and_update)
                           :join(dialog_command)
@@ -581,7 +587,7 @@ local out_of_date_dependencies_win = function()
 end
 
 local out_of_date_python_dependencies_unix = function()
-    local dialog = adialog.new({ width = 40 })
+    local dialog = adialog.new({ width = 50 })
                           :join(dialog_out_of_date)
                           :join(dialog_click_run_command_and_update)
                           :join(dialog_command)
@@ -590,7 +596,7 @@ local out_of_date_python_dependencies_unix = function()
 end
 
 local update_dependencies_win = function()
-    local dialog = adialog.new({ width = 40 })
+    local dialog = adialog.new({ width = 50 })
                           :join(dialog_click_run)
                           :join(dialog_command)
                           :load_data(data_command_update_win)
@@ -598,7 +604,7 @@ local update_dependencies_win = function()
 end
 
 local update_python_dependencies_unix = function()
-    local dialog = adialog.new({ width = 40 })
+    local dialog = adialog.new({ width = 50 })
                           :join(dialog_click_run)
                           :join(dialog_command)
                           :load_data(data_command_python_update_unix)
@@ -606,12 +612,12 @@ local update_python_dependencies_unix = function()
 end
 
 local update_precheck_vs_dependencies_unix = function()
-    return os.execute(c(command_f_check_vs_dependencies_unix(config)))
+    return table.pack(run_cmd(c(command_f_check_vs_dependencies_unix(config))))[2]
 end
 
 local update_vs_dependencies_unix = function()
-    if not os.execute(c(command_f_check_vs_dependencies_unix(config))) then
-        adisplay(adialog.new({ width = 30 })
+    if not table.pack(run_cmd(c(command_f_check_vs_dependencies_unix(config))))[2] then
+        adisplay(adialog.new({ width = 50 })
                         :join(dialog_update_requires_vs_dependencies)
                         :join(dialog_follow_install)
                         :join(dialog_command)
@@ -623,7 +629,7 @@ local update_vs_dependencies_unix = function()
 end
 
 local unsupported_dependencies_win = function()
-    local dialog = adialog.new({ width = 40 })
+    local dialog = adialog.new({ width = 50 })
                           :join(dialog_unsupported)
                           :join(dialog_click_run_command_and_update)
                           :join(dialog_command)
@@ -632,7 +638,7 @@ local unsupported_dependencies_win = function()
 end
 
 local unsupported_python_dependencies_unix = function()
-    local dialog = adialog.new({ width = 40 })
+    local dialog = adialog.new({ width = 50 })
                           :join(dialog_unsupported)
                           :join(dialog_click_run_command_and_update)
                           :join(dialog_command)
@@ -670,7 +676,7 @@ end end end end
 
 local no_dependencies_main = function()
     if jit.os == "Windows" then
-        if os.execute(c(command_f_check_dependencies_win(config))) then
+        if table.pack(run_cmd(c(command_f_check_dependencies_win(config))))[2] then
             return "Already satisfied"
         else
             ok():andThen(check_python_with_vs_win)
@@ -679,7 +685,7 @@ local no_dependencies_main = function()
                 :ifErr(aegisub.cancel)
         end
     else
-        if os.execute(c(command_f_check_dependencies_unix(config))) then
+        if table.pack(run_cmd(c(command_f_check_dependencies_unix(config))))[2] then
             return "Already satisfied"
         else
             ok():andThen(check_python_with_vs_unix)
@@ -872,7 +878,7 @@ local autoclip_main = function(sub, sel, act)
                                      " --supported-version " .. ((not disable_version_notify_until_next_time and not config["disable_version_notify"]) and
                                                                  script_version or
                                                                  last_supported_script_version)
-    log, status, terminate, code = run_cmd(c(command), true)
+    log, status, terminate, code = run_cmd(c(command))
 
     Aegi.progressCancelled()
     Aegi.progressTitle("Parsing output from Python")
