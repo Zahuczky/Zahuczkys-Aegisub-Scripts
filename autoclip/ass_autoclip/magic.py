@@ -167,12 +167,18 @@ class Video:
                         else:
                             f.write(" m")
 
+                        # The start is set to x because ski output always starts from bottom right corner,
+                        # and thus the first point after start is always the one to the left of the start
+                        # ^ This is the note I made before. Apparently it isn't. So this flipped value
+                        # will be set to True if it isn't clockwise.
+                        if contour[0, 1] == contour[1, 1]:
+                            flipped = False
+                        else:
+                            flipped = True
 
                         # Simplify the clip similar to Shape Simplify in zf.EverythingShape
                         to_write_x = None
                         to_write_y = None
-                        # The start is set to x because ski output always starts from bottom right corner,
-                        # and thus the first point after start is always the one to the left of the start
                         prev_axis = None
                         def simplified_write(x, y):
                             nonlocal to_write_x
@@ -224,7 +230,7 @@ class Video:
                             # Bottom right corners
                             elif (prev_x == x + 1 and prev_y + 1 == y) or \
                                  (prev_x + 1 == x and prev_y == y + 1):
-                                simplified_write(x + 1, y)
+                                simplified_write(max(prev_x, x), max(prev_y, y))
                                 simplified_write(x, y)
                             # Regular point
                             else:

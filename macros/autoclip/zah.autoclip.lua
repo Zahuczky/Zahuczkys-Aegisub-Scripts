@@ -186,8 +186,6 @@ local c = function(command)
 end end
 local p = function(path)
     if jit.os == "Windows" then
-        path = string.gsub(path, "[", "`[")
-        path = string.gsub(path, "]", "`]")
         path = string.gsub(path, "'", "''")
     else
         path = string.gsub(path, "'", "'\\''")
@@ -200,41 +198,43 @@ end
 -- display_configurator and display_configurator derived functions
 local dialog_welcome = adialog.new({ width = 30 })
                               :label({ label = "Welcome to AutoClip!" })
-if jit.os == "Windows" then
-    local dialog_python = adialog.new({ width = 30 })
-                                 :label({ label = "Enter name to Python if it’s in PATH or under venv (`$ python3 --version`) or path to Python executable (`$ /path/to/python3.exe --version`):" })
-                                 :edit({ name = "python" })
-else
-    local dialog_python = adialog.new({ width = 30 })
-                                 :label({ label = "Enter name to Python if it’s in PATH or under venv (`$ python3 --version`) or path to Python executable (`$ /path/to/python3 --version`):" })
-                                 :edit({ name = "python" })
-end
-if jit.os == "Windows" then
-    local dialog_venv_activate = adialog.new({ width = 30 })
-                                        :label({ label = "(Leave empty unless using Python with venv) Enter path to venv activate script (`$ /path/to/Activate.ps1`):" })
-                                        :edit({ name = "venv_activate" })
-else
-    local dialog_venv_activate = adialog.new({ width = 30 })
-                                        :label({ label = "(Leave empty unless using Python with venv) Enter path to venv activate script (`$ source /path/to/activate`):" })
-                                        :edit({ name = "venv_activate" })
-end
+local dialog_python do
+    if jit.os == "Windows" then
+        dialog_python = adialog.new({ width = 30 })
+                                     :label({ label = "Enter name to Python if it’s in PATH or under venv (`$ python3 --version`) or path to Python executable (`$ /path/to/python3.exe --version`):" })
+                                     :edit({ name = "python" })
+    else
+        dialog_python = adialog.new({ width = 30 })
+                                     :label({ label = "Enter name to Python if it’s in PATH or under venv (`$ python3 --version`) or path to Python executable (`$ /path/to/python3 --version`):" })
+                                     :edit({ name = "python" })
+end end
+local dialog_venv_activate do
+    if jit.os == "Windows" then
+        dialog_venv_activate = adialog.new({ width = 30 })
+                                            :label({ label = "(Leave empty unless using Python with venv) Enter path to venv activate script (`$ /path/to/Activate.ps1`):" })
+                                            :edit({ name = "venv_activate" })
+    else
+        dialog_venv_activate = adialog.new({ width = 30 })
+                                            :label({ label = "(Leave empty unless using Python with venv) Enter path to venv activate script (`$ source /path/to/activate`):" })
+                                            :edit({ name = "venv_activate" })
+end end
 local dialog_vsrepo = adialog.new({ width = 30 })
                              :label({ label = "Select whether vsrepo is in PATH and enter either the name to vsrepo or path to vsrepo.py:" })
                              :dropdown({ name = "vsrepo_mode", items = { VSREPO_IN_PATH, PATH_TO_VSREPO } })
                              :edit({ name = "vsrepo" })
-local dialog_no_python_with_vs do
-    dialog_no_python_with_vs = adialog.new({ width = 30 })
-    local subdialog = dialog_no_vsrepo:unlessable({ name = "venv_activate", value = "" })
-    subdialog:label({ label = "Unable to activate venv or unable to import VapourSynth (`import vapoursynth`) in given environment." })
-    local subdialog = dialog_no_vsrepo:ifable({ name = "venv_activate", value = "" })
-    subdialog:label({ label = "Unable to find Python with VapourSynth (`import vapoursynth`) at given name or path." })
-end
 local dialog_no_vsrepo do
     dialog_no_vsrepo = adialog.new({ width = 30 })
     local subdialog = dialog_no_vsrepo:ifable({ name = "vsrepo_mode", value = VSREPO_IN_PATH })
     subdialog:label({ label = "Unable to find vsrepo with given name." })
     local subdialog = dialog_no_vsrepo:unlessable({ name = "vsrepo_mode", value = VSREPO_IN_PATH })
     subdialog:label({ label = "Unable to find vsrepo with given path." })
+end
+local dialog_no_python_with_vs do
+    dialog_no_python_with_vs = adialog.new({ width = 30 })
+    local subdialog = dialog_no_vsrepo:unlessable({ name = "venv_activate", value = "" })
+    subdialog:label({ label = "Unable to activate venv or unable to import VapourSynth (`import vapoursynth`) in given environment." })
+    local subdialog = dialog_no_vsrepo:ifable({ name = "venv_activate", value = "" })
+    subdialog:label({ label = "Unable to find Python with VapourSynth (`import vapoursynth`) at given name or path." })
 end
 local dialog_two_warnings = adialog.new({ width = 30 })
                                    :label({ label = "Do you want to disable warning when the number of layers mismatches?" })
@@ -288,14 +288,17 @@ end end
 local command_f_check_python_with_vs_win = function(data) -- XXX CHECK THIS IS RUNNED THROUGH os.execute NOT THROUGH run_cmd
     return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
            p(data["python"]) .. " -m 'import vapoursynth'\n"
+end
 local command_f_check_python_with_vs_unix = function(data)
     return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
            p(data["python"]) .. " -m 'import vapoursynth'\n"
+end
 local command_f_check_vsrepo_win = function(data)
     return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
            (data["vsrepo_mode"] == VSREPO_IN_PATH and
             p(data["vsrepo"]) .. " --help\n" or
             p(data["python"]) .. " " .. p(data["vsrepo"]) .. " --help\n")
+end
 
 local first_time_python_with_vsrepo_win = function()
     return display_configurator(dialog_welcome:copy():join(dialog_python):join(dialog_venv_activate):join(dialog_vsrepo),
@@ -460,15 +463,19 @@ local data_command_python_update_unix = { ["command"] = function(_, data)
 local command_f_check_dependencies_win = function(data) -- XXX CHECK THIS IS RUNNED THROUGH os.execute NOT THROUGH run_cmd
     return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
            p(data["python"]) .. " -m ass_autoclip --check-dependencies\n"
+end
 local command_f_check_dependencies_unix = function(data)
     return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
            p(data["python"]) .. " -m ass_autoclip --check-dependencies\n"
+end
 local command_f_check_python_dependencies_unix = function(data)
     return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
            p(data["python"]) .. " -m ass_autoclip --check-python-dependencies\n"
+end
 local command_f_check_vs_dependencies_unix = function(data)
     return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
            p(data["python"]) .. " -m ass_autoclip --check-vs-dependencies\n"
+end
 
 local first_time_dependencies_win = function()
     local dialog
@@ -850,20 +857,21 @@ local autoclip_main = function(sub, sel, act)
     
     output_file = aegisub.decode_path("?temp/zah.autoclip." .. string.sub(tostring(math.random(10000000, 99999999)), 2) .. ".json")
     if jit.os == "Windows" then
-        command = data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or ""
+        command = config["venv_activate"] ~= "" and p(config["venv_activate"]) .. "\n" or ""
     else
-        command = data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or ""
+        command = config["venv_activate"] ~= "" and "source " .. p(config["venv_activate"]) .. "\n" or ""
     end
     command = command ..
-              p(data["python"]) .. " -m ass_autoclip --input " .. p(video_file) ..
-                                   " --output " .. p(output_file) ..
-                     string.format(" --clip '%f %f %f %f'", clip[1], clip[2], clip[3], clip[4]) ..
-                                   " --first " .. first ..
-                                   " --last " .. last ..
-                                   " --active " .. active ..
-                                   " --supported-version " .. ((not disable_version_notify_until_next_time and not config["disable_version_notify"]) and
-                                                               script_version or
-                                                               last_supported_script_version)
+              p(config["python"]) .. " -m ass_autoclip" ..
+                                     " --input " .. p(video_file) ..
+                                     " --output " .. p(output_file) ..
+                       string.format(" --clip '%f %f %f %f'", clip[1], clip[2], clip[3], clip[4]) ..
+                                     " --first " .. first ..
+                                     " --last " .. last ..
+                                     " --active " .. active ..
+                                     " --supported-version " .. ((not disable_version_notify_until_next_time and not config["disable_version_notify"]) and
+                                                                 script_version or
+                                                                 last_supported_script_version)
     log, status, terminate, code = run_cmd(c(command), true)
 
     Aegi.progressCancelled()

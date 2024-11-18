@@ -7,16 +7,15 @@
 ### Recommended installation procedure (not following these may lead to errors)
 
 - **Prerequisites**
-  - Install Python 3.11
-    - At the time of writing, vapoursynth doesn't support 3.12. Earlier versions going back to 3.8 may work, but the latest version was only validated on 3.11.7
+  - Install Python 3.12
     - It is highly recommended to install Python for all users. (configurable in the installer on Windows)
   - Install Vapoursynth from here: https://github.com/vapoursynth/vapoursynth/releases
     - Installation through pip may lead to problems, so it's recommended to use the installers from the link above unless you know what you're doing.
     - Recommended to also install for all users. (configurable in the installer on Windows)
 
 - **Installing the Aegisub script** 
-  - Install AutoClip from DependencyControl. (recommended) 
-  - If you prefer to manually install AutoClip, AutoClip's direct dependencies are [`ILL.ILL`](https://github.com/TypesettingTools/ILL-Aegisub-Scripts), [`aka.config`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), [`aka.outcome`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), [`aka.unsemantic`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), and [`petzku.util`](https://github.com/petzku/Aegisub-Scripts).  
+  - Install AutoClip from DependencyControl. (recommended)  
+  - If you prefer to manually install AutoClip, AutoClip's direct dependencies are [`ILL.ILL`](https://github.com/TypesettingTools/ILL-Aegisub-Scripts), [`aka.uikit`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), [`aka.config`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), [`aka.outcome`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts), [`petzku.util`](https://github.com/petzku/Aegisub-Scripts), and [`aka.unsemantic`](https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts).  
 
 - **First-time Setup**
   - When you start Autoclip from Aegisub for the first time, a setup wizard is shown, follow the steps, and always check whether the settings match your system.
@@ -39,12 +38,9 @@
 * *AutoClip is released by Zahuczky and Akatsumekusa under [BSD 3-Clause License](LICENSE).*  
 * *AutoClip uses Noto Sans Display Medium in the UI. Noto Sans Display is released by Google under [SIL OFL 1.1 License](ass_autoclip/assets/LICENSE.OFL.txt).*  
 
-### Known bugs
-
-- AutoClip UI shows nested clips but nested clips don't work.
-
 ### TODO
 
+- ~~AutoClip UI shows nested clips but nested clips don't work.~~ I never remembered fixing this bug but it seems that it has fixed itself somehow? Available in 2.1.0.  
 - Handle moving signs/tracking data for those  
 - More sliders (probably a bunch of other VS filters to fine-tune the clip area)  
 - ~~Simplifying the clips to curves and such.~~  
