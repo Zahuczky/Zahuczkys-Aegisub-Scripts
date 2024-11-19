@@ -169,12 +169,8 @@ class Video:
 
                         # The start is set to x because ski output always starts from bottom right corner,
                         # and thus the first point after start is always the one to the left of the start
-                        # ^ This is the note I made before. Apparently it isn't. So this flipped value
-                        # will be set to True if it isn't clockwise.
-                        if contour[0, 1] == contour[1, 1]:
-                            flipped = False
-                        else:
-                            flipped = True
+                        # ^ This is the note I made before, and it is completely wrong.
+                        # ^ find_contours naturally arranged nested contour in alternating direction.
 
                         # Simplify the clip similar to Shape Simplify in zf.EverythingShape
                         to_write_x = None

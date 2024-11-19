@@ -237,9 +237,9 @@ local dialog_no_vsrepo do
 end
 local dialog_no_python_with_vs do
     dialog_no_python_with_vs = adialog.new({ width = 50 })
-    local subdialog = dialog_no_vsrepo:unlessable({ name = "venv_activate", value = "" })
+    local subdialog = dialog_no_python_with_vs:unlessable({ name = "venv_activate", value = "" })
     subdialog:label({ label = "Unable to activate venv or unable to import VapourSynth (`import vapoursynth`) in given environment." })
-    local subdialog = dialog_no_vsrepo:ifable({ name = "venv_activate", value = "" })
+    local subdialog = dialog_no_python_with_vs:ifable({ name = "venv_activate", value = "" })
     subdialog:label({ label = "Unable to find Python with VapourSynth (`import vapoursynth`) at given name or path." })
 end
 local dialog_two_warnings = adialog.new({ width = 50 })
