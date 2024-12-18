@@ -59,19 +59,16 @@ local DepCtrl = require("l0.DependencyControl")({
             "lfs",
         },
         {
-            "petzku.util",
-            version = "0.4.0",
-            url = "https://github.com/petzku/Aegisub-Scripts",
-            feed = "https://raw.githubusercontent.com/petzku/Aegisub-Scripts/master/DependencyControl.json"
+            "aka.command",
+            version = "1.0.0",
+            url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
+            feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
         },
         {
             "aka.unsemantic",
             version = "1.1.0",
             url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
             feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
-        },
-        {
-            "aegisub.re"
         }
     }
 })
@@ -156,48 +153,11 @@ local lfs = require("lfs")
 local V = require("aka.unsemantic").V
 local disable_version_notify_until_next_time = false
 
-local re = require("aegisub.re")
-local re_newline = re.compile([[\s*(?:\n\s*)+]])
-
-local putil = require("petzku.util")
-local run_cmd = function(command)
-    return putil.io.run_cmd(command, true)
-end
-
--- Search "local.*command" for all commands in AutoClip
-local c = function(command)
-    if jit.os == "Windows" then
-        local i = 1
-        for chunks in re_newline:gsplit(command, true) do
-            if i == 1 then
-                command = "try { & " .. chunks
-            else
-                command = command .. " ; if ($LASTEXITCODE -eq 0) {& " .. chunks .. "}"
-            end
-            i = i + 1
-        end
-        command = command .. " ; exit $LASTEXITCODE } catch { exit 1 }"
-        return "powershell -Command \"" .. command .. "\""
-    else
-        local i = 1
-        for chunks in re_newline:gsplit(command, true) do
-            if i == 1 then
-                command = chunks
-            else
-                command = command .. " && " .. chunks
-            end
-            i = i + 1
-        end
-        return command
-end end
-local p = function(path)
-    if jit.os == "Windows" then
-        path = string.gsub(path, "'", "''")
-    else
-        path = string.gsub(path, "'", "'\\''")
-    end
-    return "'" .. path .. "'"
-end
+local acommand = require("aka.command")
+local check_cmd_c = acommand.check_cmd_c
+local run_cmd_c = acommand.run_cmd_c
+local c = acommand.c
+local p = acommand.p
 
 
 
@@ -268,14 +228,14 @@ local display_configurator = function(dialog, buttons)
         return err("[zah.autoclip] Operation cancelled by user")
 end end
 local display_verified_configurator = function(dialog, buttons, command_f)
-    if table.pack(run_cmd(c(command_f(config))))[2] then
+    if check_cmd_c(command_f(config)) then
         return ok("Already satisfied")
     else
         return adisplay(dialog:load_data(config),
                         buttons)
             :repeatUntil(function(button, result)
                 setmetatable(result, { __index = config })
-                if table.pack(run_cmd(c(command_f(result))))[2] then
+                if check_cmd_c(command_f(result)) then
                     return ok(result)
                 else
                     return err(result)
@@ -367,7 +327,7 @@ local display_runner_with_ignore = function(dialog, buttons)
     local button, result = adisplay(dialog:load_data(config),
                                     buttons):resolve()
     if buttons:is_ok(button) then
-        local log, status, terminate, code = run_cmd(c(result["command"]))
+        local log, status, terminate, code = run_cmd_c(result["command"])
         if status then
             return ok() -- XXX WRONG USE E() (I’ve no idea what this message meant when I left it.)
         else
@@ -381,7 +341,7 @@ local display_runner_with_ignore = function(dialog, buttons)
 
             return adisplay(dialog, buttons_run_again_cancel)
                 :repeatUntil(function(button, result)
-                    local log, status, terminate, code = run_cmd(c(result["command"]))
+                    local log, status, terminate, code = run_cmd_c(result["command"])
                     if status then
                         return ok()
                     else
@@ -486,7 +446,7 @@ end
 local first_time_dependencies_win = function()
     local dialog
     local result
-    while not table.pack(run_cmd(c(command_f_check_dependencies_win(config))))[2] do
+    while not check_cmd_c(command_f_check_dependencies_win(config)) do
         if not dialog then
             dialog = adialog.new({ width = 50 })
                             :join(dialog_requires_install)
@@ -503,7 +463,7 @@ end
 local first_time_python_dependencies_unix = function()
     local dialog
     local result
-    while not table.pack(run_cmd(c(command_f_check_python_dependencies_unix(config))))[2] do
+    while not check_cmd_c(command_f_check_python_dependencies_unix(config)) do
         if not dialog then
             dialog = adialog.new({ width = 50 })
                             :join(dialog_requires_install)
@@ -518,7 +478,7 @@ local first_time_python_dependencies_unix = function()
 end
 
 local first_time_vs_dependencies_unix = function()
-    if not table.pack(run_cmd(c(command_f_check_vs_dependencies_unix(config))))[2] then
+    if not check_cmd_c(command_f_check_vs_dependencies_unix(config)) then
         adisplay(adialog.new({ width = 50 })
                          :join(dialog_requires_vs_dependencies)
                          :join(dialog_follow_install)
@@ -533,7 +493,7 @@ end
 local no_dependencies_win = function()
     local dialog
     local result
-    while not table.pack(run_cmd(c(command_f_check_dependencies_win(config))))[2] do
+    while not check_cmd_c(command_f_check_dependencies_win(config)) do
         if not dialog then
             dialog = adialog.new({ width = 50 })
                             :join(dialog_failed_to_execute)
@@ -550,7 +510,7 @@ end
 local no_python_dependencies_unix = function()
     local dialog
     local result
-    while not table.pack(run_cmd(c(command_f_check_python_dependencies_unix(config))))[2] do
+    while not check_cmd_c(command_f_check_python_dependencies_unix(config)) do
         if not dialog then
             dialog = adialog.new({ width = 50 })
                             :join(dialog_failed_to_execute)
@@ -565,7 +525,7 @@ local no_python_dependencies_unix = function()
 end
 
 local no_vs_dependencies_unix = function()
-    if not table.pack(run_cmd(c(command_f_check_vs_dependencies_unix(config))))[2] then
+    if not check_cmd_c(command_f_check_vs_dependencies_unix(config)) then
         adisplay(adialog.new({ width = 50 })
                         :join(dialog_failed_to_execute)
                         :join(dialog_follow_install)
@@ -612,11 +572,11 @@ local update_python_dependencies_unix = function()
 end
 
 local update_precheck_vs_dependencies_unix = function()
-    return table.pack(run_cmd(c(command_f_check_vs_dependencies_unix(config))))[2]
+    return check_cmd_c(command_f_check_vs_dependencies_unix(config))
 end
 
 local update_vs_dependencies_unix = function()
-    if not table.pack(run_cmd(c(command_f_check_vs_dependencies_unix(config))))[2] then
+    if not check_cmd_c(command_f_check_vs_dependencies_unix(config)) then
         adisplay(adialog.new({ width = 50 })
                         :join(dialog_update_requires_vs_dependencies)
                         :join(dialog_follow_install)
@@ -676,7 +636,7 @@ end end end end
 
 local no_dependencies_main = function()
     if jit.os == "Windows" then
-        if table.pack(run_cmd(c(command_f_check_dependencies_win(config))))[2] then
+        if check_cmd_c(command_f_check_dependencies_win(config)) then
             return "Already satisfied"
         else
             ok():andThen(check_python_with_vs_win)
@@ -685,7 +645,7 @@ local no_dependencies_main = function()
                 :ifErr(aegisub.cancel)
         end
     else
-        if table.pack(run_cmd(c(command_f_check_dependencies_unix(config))))[2] then
+        if check_cmd_c(command_f_check_dependencies_unix(config)) then
             return "Already satisfied"
         else
             ok():andThen(check_python_with_vs_unix)
@@ -878,7 +838,7 @@ local autoclip_main = function(sub, sel, act)
                                      " --supported-version " .. ((not disable_version_notify_until_next_time and not config["disable_version_notify"]) and
                                                                  script_version or
                                                                  last_supported_script_version)
-    log, status, terminate, code = run_cmd(c(command))
+    log, status, terminate, code = run_cmd_c(command)
 
     Aegi.progressCancelled()
     Aegi.progressTitle("Parsing output from Python")
