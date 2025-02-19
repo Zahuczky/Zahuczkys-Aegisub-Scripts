@@ -906,7 +906,7 @@ local autoclip_main = function(sub, sel, act)
 
         ass:removeLine(line, s)
         -- Internal ILL value, may break
-        line.isShape = false
+        -- line.isShape = false -- This is no longer needed following updates in ILL.ILL
         Line.process(ass, line)
         line.text.tagsBlocks[1]:remove("clip")
 
