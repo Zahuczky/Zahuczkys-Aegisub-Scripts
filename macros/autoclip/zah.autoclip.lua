@@ -1,6 +1,6 @@
 script_name = "AutoClip"
 script_description = "Add clips to subtitles 𝓪𝓾𝓽𝓸𝓶𝓪𝓰𝓲𝓬𝓪𝓵𝓵𝔂"
-script_version = "2.1.0"
+script_version = "2.1.1"
 script_author = "Zahuczky, Akatsumekusa"
 script_namespace = "zah.autoclip"
 -- Lua version number is always kept aligned with version number in python script.
@@ -23,12 +23,6 @@ local last_supported_script_version = "2.0.3"
 
 
 local DepCtrl = require("l0.DependencyControl")({
-    name = script_name,
-    description = script_description,
-    version = script_version,
-    author = script_author,
-    moduleName = script_namespace,
-    url = "https://github.com/Zahuczky/Zahuczkys-Aegisub-Scripts",
     feed = "https://raw.githubusercontent.com/Zahuczky/Zahuczkys-Aegisub-Scripts/main/DependencyControl.json",
     {
         {
@@ -77,7 +71,7 @@ DepCtrl:requireModules()
 
 
 local ILL = require("ILL.ILL")
-local Aegi, Ass, Line, Table = ILL.Aegi, ILL.Ass, ILL.Line, ILL.Table
+local Aegi, Ass, Line, Path, Table = ILL.Aegi, ILL.Ass, ILL.Line, ILL.Path, ILL.Table
 
 local uikit = require("aka.uikit")
 local adialog, abuttons, adisplay = uikit.dialog, uikit.buttons, uikit.display
@@ -95,7 +89,7 @@ local default_config = {
     ["python"] = "python3",
     ["vsrepo_mode"] = VSREPO_IN_PATH,
     ["vsrepo"] = "vsrepo",
-    ["disable_layer_mismatch"] = false,
+    -- ["disable_layer_mismatch"] = false,
     ["disable_version_notify"] = false
 }
 
@@ -134,11 +128,11 @@ local validation_func = function(config)
     elseif type(config["vsrepo"]) ~= "string" then
         return err("Invalid key \"vsrepo\".")
     end
-    if config["disable_layer_mismatch"] == nil then
-        config["disable_layer_mismatch"] = default_config["disable_layer_mismatch"]
-    elseif type(config["disable_layer_mismatch"]) ~= "boolean" then
-        return err("Invalid key \"disable_layer_mismatch\".")
-    end
+    -- if config["disable_layer_mismatch"] == nil then
+    --     config["disable_layer_mismatch"] = default_config["disable_layer_mismatch"]
+    -- elseif type(config["disable_layer_mismatch"]) ~= "boolean" then
+    --     return err("Invalid key \"disable_layer_mismatch\".")
+    -- end
     if config["disable_version_notify"] == nil then
         config["disable_version_notify"] = default_config["disable_version_notify"]
     elseif type(config["disable_version_notify"]) ~= "boolean" then
@@ -203,8 +197,8 @@ local dialog_no_python_with_vs do
     subdialog:label({ label = "Unable to find Python with VapourSynth (`import vapoursynth`) at given name or path." })
 end
 local dialog_two_warnings = adialog.new({ width = 50 })
-                                   :label({ label = "Do you want to disable warning when the number of layers mismatches?" })
-                                   :checkbox({ label = "Disable", name = "disable_layer_mismatch" })
+                                   -- :label({ label = "Do you want to disable warning when the number of layers mismatches?" })
+                                   -- :checkbox({ label = "Disable", name = "disable_layer_mismatch" })
                                    :label({ label = "Do you want to disable warning when Python script is outdated?" })
                                    :checkbox({ label = "Disable", name = "disable_version_notify" })
 
@@ -397,31 +391,32 @@ local data_command_win = { ["command"] = function(_, data)
     return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
            p(data["python"]) .. " -m ensurepip\n" .. 
            p(data["python"]) .. " -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
-           p(data["python"]) .. " -m pip install ass-autoclip --upgrade --force-reinstall\n" ..
+           p(data["python"]) .. " -m pip install ass-autoclip --upgrade --force-reinstall --no-deps\n" ..
            (data["vsrepo_mode"] == VSREPO_IN_PATH and
             p(data["vsrepo"]) .. " update\n" ..
-            p(data["vsrepo"]) .. " install lsmas dfttest\n" ..
-            p(data["vsrepo"]) .. " upgrade lsmas dfttest\n" or
+            p(data["vsrepo"]) .. " install lsmas dfttest rgvs\n" ..
+            p(data["vsrepo"]) .. " upgrade lsmas dfttest rgvs\n" or
             p(data["python"]) .. " " .. p(data["vsrepo"]) .. " update\n" ..
-            p(data["python"]) .. " " .. p(data["vsrepo"]) .. " install lsmas dfttest\n" ..
-            p(data["python"]) .. " " .. p(data["vsrepo"]) .. " upgrade lsmas dfttest\n") end }
+            p(data["python"]) .. " " .. p(data["vsrepo"]) .. " install lsmas dfttest rgvs\n" ..
+            p(data["python"]) .. " " .. p(data["vsrepo"]) .. " upgrade lsmas dfttest rgvs\n") end }
 local data_command_python_unix = { ["command"] = function(_, data)
             return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
                    p(data["python"]) .. " -m ensurepip\n" .. 
                    p(data["python"]) .. " -m pip install numpy PySide6 scikit-image --upgrade --upgrade-strategy eager\n" .. 
-                   p(data["python"]) .. " -m pip install ass-autoclip --upgrade --force-reinstall\n" end }
-local data_command_vs_unix = { ["command"] = "lsmas (https://github.com/AkarinVS/L-SMASH-Works)\n" .. 
-                                             "dfttest (https://github.com/HomeOfVapourSynthEvolution/VapourSynth-DFTTest)\n" }
+                   p(data["python"]) .. " -m pip install ass-autoclip --upgrade --force-reinstall --no-deps\n" end }
+local data_command_vs_unix = { ["command"] = "lsmas (https://aur.archlinux.org/packages/vapoursynth-plugin-lsmashsource-git)\n" .. 
+                                             "dfttest (https://aur.archlinux.org/packages/vapoursynth-plugin-dfttest-git)\n" .. 
+                                             "rgvs (https://aur.archlinux.org/packages/vapoursynth-plugin-removegrain-git)\n" }
 local data_command_update_win = { ["command"] = function(_, data)
            return (data["venv_activate"] ~= "" and p(data["venv_activate"]) .. "\n" or "") ..
                   p(data["python"]) .. " -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" ..
                   (data["vsrepo_mode"] == VSREPO_IN_PATH and
                    p(data["vsrepo"]) .. " update\n" ..
-                   p(data["vsrepo"]) .. " install lsmas dfttest\n" ..
-                   p(data["vsrepo"]) .. " upgrade lsmas dfttest\n" or
+                   p(data["vsrepo"]) .. " install lsmas dfttest rgvs\n" ..
+                   p(data["vsrepo"]) .. " upgrade lsmas dfttest rgvs\n" or
                    p(data["python"]) .. " " .. p(data["vsrepo"]) .. " update\n" ..
-                   p(data["python"]) .. " " .. p(data["vsrepo"]) .. " install lsmas dfttest\n" ..
-                   p(data["python"]) .. " " .. p(data["vsrepo"]) .. " upgrade lsmas dfttest\n") end }
+                   p(data["python"]) .. " " .. p(data["vsrepo"]) .. " install lsmas dfttest rgvs\n" ..
+                   p(data["python"]) .. " " .. p(data["vsrepo"]) .. " upgrade lsmas dfttest rgvs\n") end }
 local data_command_python_update_unix = { ["command"] = function(_, data)
                    return (data["venv_activate"] ~= "" and "source " .. p(data["venv_activate"]) .. "\n" or "") ..
                           p(data["python"]) .. " -m pip install ass-autoclip --upgrade --upgrade-strategy eager\n" end }
@@ -684,26 +679,12 @@ local unsupported_dependencies_main = function()
                 :ifErr(aegisub.cancel)
 end end end
 
-local autoclip_main = function(sub, sel, act)
-    first_time_python_vsrepo_main()
-
-    local ass = Ass(sub, sel, act)
-
-    local project_props = aegisub.project_properties()
-    if not project_props.video_file or project_props.video_file == "" then
-        aegisub.debug.out("[zah.autoclip] AutoClip requires a video to be loaded for clipping.\n")
-        aegisub.cancel()
-    end
-    local video_file = project_props.video_file
-
-    -- Grab frame and clip information and check frame continuity across subtitle lines
-    Aegi.progressTitle("Gathering frame information")
-    local active = project_props.video_position
-    local frames = {}
+local clip_gather_main = function(ass)
     local first
     local last
-    local active_clip
-    local clip
+    local active = aegisub.project_properties().video_position
+    local active_clip = err("Not found")
+    local clip = err("Not found")
     for line, s, i, n in ass:iterSel() do
         Aegi.progressCancelled()
         ass:progressLine(s, i, n)
@@ -719,35 +700,152 @@ local autoclip_main = function(sub, sel, act)
             last = last >= line.end_frame and last or line.end_frame
         end
 
+        Line.process(ass, line)
+        if type(line.data["clip"]) == "table" then
+            if line.start_frame <= active and active < line.end_frame then
+                if active_clip:isErr() and active_clip:unwrapErr() == "Not found" then
+                    active_clip = ok(line.data["clip"])
+                elseif active_clip:isOk() then
+                    if not (line.data["clip"][1] == active_clip:unwrap()[1] and
+                            line.data["clip"][2] == active_clip:unwrap()[2] and
+                            line.data["clip"][3] == active_clip:unwrap()[3] and
+                            line.data["clip"][4] == active_clip:unwrap()[4]) then
+                        active_clip = err("Multiple")
+            end end end
+                
+            if clip:isErr() and clip:unwrapErr() == "Not found" then
+                clip = line.data["clip"]
+            elseif clip:isOk() then
+                if not (line.data["clip"][1] == clip:unwrap()[1] and
+                        line.data["clip"][2] == clip:unwrap()[2] and
+                        line.data["clip"][3] == clip:unwrap()[3] and
+                        line.data["clip"][4] == clip:unwrap()[4]) then
+                    clip = err("Multiple")
+    end end end end
+    return first, last, active, active_clip, clip
+end
+
+local clip_set = err("Not set")
+local clip_set_first
+local clip_set_last
+local clip_set_main = function(sub, sel, act)
+    first_time_python_vsrepo_main()
+
+    local ass = Ass(sub, sel, act)
+
+    Aegi.progressTitle("Gathering clip information")
+    local first, last, active, active_clip, clip = clip_gather_main(ass)
+    local act_clip = err("Not found")
+    local act_line = Line.process(sub[act])
+    if act_line.data["clip"] == "table" then
+        act_clip = ok(act_line.data["clip"])
+    end
+
+    if active_clip:isOk() then
+        if act_clip:isOk() then
+            if act_clip:unwrap()[1] == active_clip:unwrap()[1] and
+               act_clip:unwrap()[2] == active_clip:unwrap()[2] and
+               act_clip:unwrap()[3] == active_clip:unwrap()[3] and
+               act_clip:unwrap()[4] == active_clip:unwrap()[4] then
+                clip = act_clip
+            else
+                local dialog = adialog.new({ width = 50 })
+                                      :label({ label = "A rect clip is found on the active line." })
+                                      :label({ label = "However, a single different rect clip is found on lines containing the frame at video seek head." })
+                                      :label({ label = "Select either rect clip to set as active area for AutoClipping, or unset the rect clip that's been set previously." })
+                local buttons = abuttons.new()
+                                        :ok("Set Clip On The &Active Line")
+                                        :extra("Set Clip On Line&s At Video Seek Head")
+                                        :extra("Unset Previously Set &Clip")
+                                        :cancel("Cancel")
+                local b = adisplay(dialog, buttons):resolve()
+                if buttons:is_ok(b) then
+                    clip = act_clip
+                elseif b == "Set Clip On Line&s At Video Seek Head" then
+                    clip = active_clip
+                elseif b == "Unset Previously Set &Clip" then
+                    clip = err("Explicit unset")
+                else
+                    aegisub.cancel()
+            end end
+        else
+            clip = active_clip
+        end
+    elseif active_clip:isErr() and active_clip:unwrapErr() == "Multiple" then
+        if act_clip:isOk() then
+            local dialog = adialog.new({ width = 50 })
+                                  :label({ label = "A rect clip is found on the active line." })
+                                  :label({ label = "However, multiple different rect clip are found on lines containing the frame at video seek head." })
+                                  :label({ label = "Select either to set the rect clip as active area for AutoClipping, or to unset the rect clip that's been set previously." })
+            local buttons = abuttons.new()
+                                    :ok("Set Clip On The &Active Line")
+                                    :extra("Unset Previously Set &Clip")
+                                    :cancel("Cancel")
+            local b = adisplay(dialog, buttons):resolve()
+            if buttons:is_ok(b) then
+                clip = act_clip
+            elseif b == "Unset Previously Set &Clip" then
+                clip = err("Explicit unset")
+            else
+                aegisub.cancel()
+            end
+        else
+            aegisub.debug.out("[zah.autoclip] No rect clips found on the active line while multiple different rect clips are found on lines containing the frame at video seek head.\n")
+            aegisub.debug.out("[zah.autoclip] Unsetting the rect clip that's been set previously.\n")
+        end
+    else
+        if act_clip then
+            clip = act_clip
+        elseif clip:isErr() and clip:unwrapErr() == "Multiple" then
+            aegisub.debug.out("[zah.autoclip] No rect clips are found on the active line or on lines containing the frame at video seek head, while multiple different rect clip are found on other selected lines.\n")
+            aegisub.debug.out("[zah.autoclip] Unsetting previously set rect clip.\n")
+    end end
+    if clip:isOk() then
+        clip_set = clip
+        clip_set_first = first
+        clip_set_last = last
+    else
+        clip_set = err("Not set")
+        clip_set_first = nil
+        clip_set_last = nil
+end end
+
+local autoclip_main = function(sub, sel, act)
+    first_time_python_vsrepo_main()
+
+    local ass = Ass(sub, sel, act)
+
+    local video_file = aegisub.project_properties().video_file
+    if not video_file or video_file == "" then
+        aegisub.debug.out("[zah.autoclip] AutoClip requires a video to be loaded for clipping.\n")
+        aegisub.cancel()
+    end
+
+    -- Grab frame and clip information and check frame continuity across subtitle lines
+    Aegi.progressTitle("Gathering frame information")
+    local first, last, active, active_clip, clip = clip_gather_main(ass)
+    -- true: Yes, available
+    -- falsy: No, not available
+    -- "Possible": Possible, not sure
+    local clip_set_available
+    if clip_set:isErr() and clip_set:unwrapErr() == "Not set" then
+        clip_set_available = err("Not available")
+    elseif last > clip_set_first and first < clip_set_last then
+        clip_set_available = clip_set
+    elseif last < clip_set_first - 240 or first > clip_set_last + 240 then
+        clip_set_available = err("Not available")
+    else
+        clip_set_available = err("Near range")
+    end
+
+    local frames = {}
+    for line, s, i, n in ass:iterSel() do
         for j = line.start_frame, line.end_frame - 1 do
             if not frames[j] then
                 frames[j] = 1
             else
                 frames[j] = frames[j] + 1
-        end end
-
-        Line.process(ass, line)
-        if type(line.data["clip"]) == "table" then
-            if line.start_frame <= active and active < line.end_frame then
-                if active_clip == nil then
-                    active_clip = line.data["clip"]
-                elseif type(active_clip) == "table" then
-                    if not (line.data["clip"][1] == active_clip[1] and
-                            line.data["clip"][2] == active_clip[2] and
-                            line.data["clip"][3] == active_clip[3] and
-                            line.data["clip"][4] == active_clip[4]) then
-                        active_clip = false
-            end end end
-                
-            if clip == nil then
-                clip = line.data["clip"]
-            elseif type(clip) == "table" then
-                if not (line.data["clip"][1] == clip[1] and
-                        line.data["clip"][2] == clip[2] and
-                        line.data["clip"][3] == clip[3] and
-                        line.data["clip"][4] == clip[4]) then
-                    clip = false
-    end end end end
+    end end end
 
     -- Check frame continuity
     local head
@@ -755,25 +853,25 @@ local autoclip_main = function(sub, sel, act)
         if not frames[i] then
             for j = i, last - 1 do
                 if frames[j] then
-                    aegisub.debug.out("[zah.autoclip] Selected lines must be time continuous.\n")
+                    aegisub.debug.out("[zah.autoclip] Selected lines aren't time continuous.\n")
                     aegisub.debug.out("[zah.autoclip] The earliest frame in the selected line is frame " .. tostring(first) .. ", and the latest frame is frame " .. tostring(last - 1) .. ".\n")
                     if i ~= j - 1 then
-                        aegisub.debug.out("[zah.autoclip] There is at least one gap from frame " .. tostring(i) .. " to frame " .. tostring(j - 1) .. " that no lines in the selection covers.\n")
+                        aegisub.debug.out("[zah.autoclip] There is a gap from frame " .. tostring(i) .. " to frame " .. tostring(j - 1) .. " that no lines in the selection covers.\n")
                     else
-                        aegisub.debug.out("[zah.autoclip] There is at least one gap at frame " .. tostring(i) .. " that no lines in the selection covers.\n")
+                        aegisub.debug.out("[zah.autoclip] There is a gap at frame " .. tostring(i) .. " that no lines in the selection covers.\n")
                     end
-                    aegisub.cancel()
+                    aegisub.debug.out("[zah.autoclip] AutoClip will continue but please manually confirm the result after run.\n")
             end end
-        elseif not config["disable_layer_mismatch"] then
-            if head == nil then
-                head = frames[i]
-            elseif head ~= false and head ~= frames[i] then
-                aegisub.debug.out("[zah.autoclip] Number of layers mismatches.\n")
-                aegisub.debug.out("[zah.autoclip] There are " .. tostring(head) .. " layers on frame " .. tostring(i - 1) .. ", but there are " .. tostring(frames[i]) .. " layers on frame " .. tostring(i) .. ".\n")
-                aegisub.debug.out("[zah.autoclip] If this is intentional and you want to silence this warning, you can disable it in „AutoClip > Configure AutoClip“.\n")
-                aegisub.debug.out("[zah.autoclip] Continuing.\n")
-                head = false
-    end end end
+        -- elseif not config["disable_layer_mismatch"] then
+            -- if head == nil then
+            --     head = frames[i]
+            -- elseif head ~= false and head ~= frames[i] then
+            --     aegisub.debug.out("[zah.autoclip] Number of layers mismatches.\n")
+            --     aegisub.debug.out("[zah.autoclip] There are " .. tostring(head) .. " layers on frame " .. tostring(i - 1) .. ", but there are " .. tostring(frames[i]) .. " layers on frame " .. tostring(i) .. ".\n")
+            --     aegisub.debug.out("[zah.autoclip] If this is intentional and you want to silence this warning, you can disable it in „AutoClip > Configure AutoClip“.\n")
+            --     aegisub.debug.out("[zah.autoclip] Continuing.\n")
+            --     head = false
+    end end -- end
 
     -- Make sure active is inside [first:last]
     if not (first <= active and active < last) then
@@ -783,28 +881,91 @@ local autoclip_main = function(sub, sel, act)
         aegisub.cancel()
     end
 
-    if active_clip == false then
-        aegisub.debug.out("[zah.autoclip] Multiple different rect clips found on lines containing the frame at video seek head.\n")
-        aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
-        aegisub.debug.out("[zah.autoclip] AutoClip by default takes this clip from lines containing the frame at video seek head. AutoClip expects one unique rect clip on the lines.\n")
-        aegisub.cancel()
-    end
-    -- Check active_clip and set to clip
-    if active_clip then
-        clip = active_clip
-    else
-        if clip == nil then
-            aegisub.debug.out("[zah.autoclip] No rect clips found in selected lines.\n")
+    -- Set clip
+    if active_clip:isOk() then
+        if clip_set_available:isOk() then
+            clip = clip_set
+        elseif clip_set_available:isErr() and clip_set_available:unwrapErr() == "Near range" then
+            local dialog = adialog.new({ width = 50 })
+                                  :label({ label = "A rect clip is found on lines containing the frame at video seek head." })
+                                  :label({ label = "For information, selected lines start at frame " .. tostring(first) .. " and end at frame " .. tostring(last - 1) .. "." })
+                                  :label({ label = "However, a rect clip has previously been set for range from frame " .. tostring(clip_set_first) .. " to frame " .. tostring(clip_set_last - 1) .. "." })
+                                  :label({ label = "Select either to use the rect clip in the lines containing the frame at video seek head, or to use the rect clip that's been set previously." })
+            local buttons = abuttons.new()
+                                    :ok("Use Clip On Line&s At Video Seek Head")
+                                    :extra("Use Previously Set &Clip")
+                                    :cancel("Cancel")
+            local b = adisplay(dialog, buttons):resolve()
+            if buttons:is_ok(b) then
+                clip = active_clip
+            elseif b == "Use Previously Set &Clip" then
+                clip = clip_set
+            else
+                aegisub.cancel()
+            end
+        else
+            clip = active_clip
+        end
+    elseif active_clip:isErr() and active_clip:unwrapErr() == "Multiple" then
+        if clip_set_available:isOk() then
+            clip = clip_set
+        elseif clip_set_available:isErr() and clip_set_available:unwrapErr() == "Near range" then
+            aegisub.debug.out("[zah.autoclip] Multiple different rect clips found on lines containing the frame at video seek head.\n")
+            aegisub.debug.out("[zah.autoclip] For information, selected lines start at frame " .. tostring(first) .. " and end at frame " .. tostring(last - 1) .. ".\n")
+            aegisub.debug.out("[zah.autoclip] However, a rect clip has previously been set for range from frame " .. tostring(clip_set_first) .. " to frame " .. tostring(clip_set_last - 1) .. ".\n")
+            aegisub.debug.out("[zah.autoclip] AutoClip will proceed with the rect clip that's previously been set.\n")
+            aegisub.debug.out("[zah.autoclip] To use the rect clip on lines containing the frame at video seek head, make sure there's only one unique rect clip on lines containing the frame at video seek head.\n")
+            clip = clip_set
+        else
+            aegisub.debug.out("[zah.autoclip] Multiple different rect clips found on lines containing the frame at video seek head.\n")
             aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
-            aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallbacks and checks for clips in every lines in the selection.\n")
-            aegisub.cancel()
-        elseif clip == false then
-            aegisub.debug.out("[zah.autoclip] No rect clip found in lines containing the frame at video seek head, and there are multiple different rect clips found on other selected line.\n")
-            aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
-            aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallbacks and checks for clips in every lines in the selection.\n")
+            aegisub.debug.out("[zah.autoclip] AutoClip by default takes this clip from lines containing the frame at video seek head. AutoClip expects one unique rect clip on the lines.\n")
+            aegisub.debug.out("[zah.autoclip] To run AutoClip on top of existing clips and merge the incoming clips from AutoClipping with existing clips, set the active area using „AutoClip > Set Active Area“.\n")
             aegisub.cancel()
         end
-    end
+    else
+        if clip_set_available:isOk() then
+            clip = clip_set
+        elseif clip_set_available:isErr() and clip_set_available:unwrapErr() == "Near range" then
+            if clip:isOk() then
+                local dialog = adialog.new({ width = 50 })
+                                      :label({ label = "A rect clip is found on selected lines." })
+                                      :label({ label = "For information, selected lines start at frame " .. tostring(first) .. " and end at frame " .. tostring(last - 1) .. "." })
+                                      :label({ label = "However, a rect clip has previously been set for range from frame " .. tostring(clip_set_first) .. " to frame " .. tostring(clip_set_last - 1) .. "." })
+                                      :label({ label = "Select either to use the rect clip in the selected lines, or to use the rect clip that's been set previously." })
+                local buttons = abuttons.new()
+                                        :ok("Use Clip In &Selected Lines")
+                                        :extra("Use Previously Set &Clip")
+                                        :cancel("Cancel")
+                local b = adisplay(dialog, buttons):resolve()
+                if b == "Use Previously Set &Clip" then
+                    clip = clip_set
+                elseif buttons:is_cancel(b) then
+                    aegisub.cancel()
+                end
+            elseif clip:isErr() and clip:unwrapErr() == "Multiple" then
+                aegisub.debug.out("[zah.autoclip] No rect clip found in lines containing the frame at video seek head, and there are multiple different rect clips found on other selected line.\n")
+                aegisub.debug.out("[zah.autoclip] For information, selected lines start at frame " .. tostring(first) .. " and end at frame " .. tostring(last - 1) .. ".\n")
+                aegisub.debug.out("[zah.autoclip] However, a rect clip has previously been set for range from frame " .. tostring(clip_set_first) .. " to frame " .. tostring(clip_set_last - 1) .. ".\n")
+                aegisub.debug.out("[zah.autoclip] AutoClip will proceed with the rect clip that's previously been set.\n")
+                aegisub.debug.out("[zah.autoclip] To use the rect clip in the selected lines, make sure there's only one unique rect clip in the selected lines.\n")
+                clip = clip_set
+            else
+                clip = clip_set
+            end
+        else
+            if clip:isErr() and clip:unwrapErr() == "Multiple" then
+                aegisub.debug.out("[zah.autoclip] No rect clip found in lines containing the frame at video seek head, and there are multiple different rect clips found on other selected line.\n")
+                aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
+                aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallbacks and checks for clips in every lines in the selection.\n")
+                aegisub.cancel()
+            elseif clip:isErr() then
+                aegisub.debug.out("[zah.autoclip] No rect clips found in selected lines.\n")
+                aegisub.debug.out("[zah.autoclip] AutoClip requires a rect clip to be set for the area it will be active.\n")
+                aegisub.debug.out("[zah.autoclip] AutoClip first checks if such clip exists on lines containing the frame at video seek head, otherwise it fallbacks and checks for clips in every lines in the selection.\n")
+                aegisub.cancel()
+    end end end
+    clip = clip:unwrap()
 
     -- Run commands
     ::run_again::
@@ -897,23 +1058,92 @@ local autoclip_main = function(sub, sel, act)
         aegisub.debug.out("[zah.autoclip] Output file contains more frames than expected.\n")
         aegisub.debug.out("[zah.autoclip] AutoClip will continue but please manually confirm the result after run.\n")
     end
+    for i, v in ipairs(frames) do
+        frames[i] = Path(v)
+    end
 
     -- Apply the frames table to subtitle
     Aegi.progressTitle("Writing clips to lines")
+    local layer_operations = {}
+    local frame = aegisub.get_frame(active)
     for line, s, i, n in ass:iterSel() do
         Aegi.progressCancelled()
         ass:progressLine(s, i, n)
 
         ass:removeLine(line, s)
+
         -- Internal ILL value, may break
         -- line.isShape = false -- This is no longer needed following updates in ILL.ILL
         Line.process(ass, line)
-        line.text.tagsBlocks[1]:remove("clip")
-
         Line.callBackFBF(ass, line, function(line_, i_, end_frame)
             if frames[aegisub.frame_from_ms(line_.start_time) - first + 1] then
-                line_.text.tagsBlocks[1]:insert("\\iclip(" .. frames[aegisub.frame_from_ms(line_.start_time) - first + 1] .. ")")
-            end
+                local clippy
+                if line_.data["clip"] and
+                   type(line_.data["clip"]) == "table" and
+                   line_.data["clip"][1] == clip[1] and
+                   line_.data["clip"][2] == clip[2] and
+                   line_.data["clip"][3] == clip[3] and
+                   line_.data["clip"][4] == clip[4] then
+                elseif line_.data["clip"] then
+                    if line_.data["isIclip"] then
+                        clippy = Path(line_.data["clip"])
+                    else
+                        local clipping_clippy = Path(line_.data["clip"])
+                        local l, t, r, b = clipping_clippy:boundingBox()
+                        clippy = Path({ math.min(0, l), math.min(0, t), math.max(frame:width(), r), math.max(frame:height(), b) })
+                        clippy:difference(clipping_clippy)
+                end end
+                if line_.data["clip"] then
+                    line_.text.tagsBlocks[1]:remove("clip", "iclip")
+                end
+
+                if clippy then
+                    if not layer_operations[line_.layer] then
+                        local dialog = adialog.new({ width = 50 })
+                                              :label({ label = "A clip is found on lines with layer " .. line_.layer })
+                                              :label({ label = "Select either to replace existing clips with incoming clips, or to merge the existing clips with incoming clips" })
+                        local buttons = abuttons.extra("Replace Existing Clip With AutoClip")
+                                                :extra("Apply AutoClip In Additional To Existing Clipping (iclip OR)")
+                                                :extra("Apply AutoClip To Existing Clip (iclip Subtract)")
+                                                :extra("Apply Existing Clip To AutoClip (iclip Subtract)")
+                                                :extra("Apply iclip AND")
+                                                :extra("Apply iclip XOR")
+                                                :extra("Skip The Layer")
+                                                :extra("Cancel AutoClip")
+                        local b = adisplay(dialog, buttons):resolve()
+                        if b == "Cancel AutoClip" then
+                            aegisub.cancel()
+                        end
+                        layer_operations[line_.layer] = b
+                    end
+                    if layer_operations[line_.layer] == "Replace Existing Clip With AutoClip" then
+                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. frames[aegisub.frame_from_ms(line_.start_time) - first + 1]:export() .. ")")
+                    elseif layer_operations[line_.layer] == "Apply AutoClip In Additional To Existing Clipping (iclip OR)" then
+                        local clip = Table.copy(clippy)
+                        clip:unite(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                    elseif layer_operations[line_.layer] == "Apply AutoClip To Existing Clip (iclip Subtract)" then
+                        local clip = Table.copy(clippy)
+                        clip:difference(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                    elseif layer_operations[line_.layer] == "Apply Existing Clip To AutoClip (iclip Subtract)" then
+                        local clip = Table.copy(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                        clip:difference(clippy)
+                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                    elseif layer_operations[line_.layer] == "Apply iclip AND" then
+                        local clip = Table.copy(clippy)
+                        clip:intersect(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                    elseif layer_operations[line_.layer] == "Apply iclip XOR" then
+                        local clip = Table.copy(clippy)
+                        clip:exclude(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                    elseif layer_operations[line_.layer] == "Skip The Layer" then
+                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clippy:export() .. ")")
+                    end
+                else
+                    line_.text.tagsBlocks[1]:insert("\\iclip(" .. frames[aegisub.frame_from_ms(line_.start_time) - first + 1]:export() .. ")")
+            end end
             ass:insertLine(line_, s) end)
     end
 
@@ -951,6 +1181,7 @@ end end
 
 DepCtrl:registerMacros({
     { "AutoClip", script_description, autoclip_main },
+    { "Set or Unset Active Area", "Set active area for AutoClipping. This is only needed in the case where there would be existing clips on the lines to be merged with the incoming clips from AutoClipping", clip_set_main},
     { "Update Dependencies", "Update AutoClip dependencies", update_dependencies_main },
     { "Configure AutoClip", "Configure AutoClip", edit_config_main }
 })

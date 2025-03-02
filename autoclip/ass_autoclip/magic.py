@@ -26,11 +26,11 @@ class Video:
         if diff_clips.format.subsampling_h and diff_clips.format.subsampling_w:
             # Thanks Zewia for recommending core.resize
             diff_clips = diff_clips.resize.Bicubic(format=vs.YUV420P16, range_in=vs.RANGE_LIMITED, range=vs.RANGE_FULL) \
-                                   .dfttest.DFTTest() \
+                                   .dfttest.DFTTest(sigma=6.0) \
                                    .resize.Bicubic(format=vs.YUV444P16, matrix_in=vs.MATRIX_BT709, matrix=vs.MATRIX_BT709, transfer_in=vs.TRANSFER_BT709, transfer=vs.TRANSFER_LINEAR)
         else:
             diff_clips = diff_clips.resize.Bicubic(format=vs.YUV444P16, range_in=vs.RANGE_LIMITED, range=vs.RANGE_FULL) \
-                                   .dfttest.DFTTest() \
+                                   .dfttest.DFTTest(sigma=6.0) \
                                    .resize.Bicubic(matrix_in=vs.MATRIX_BT709, matrix=vs.MATRIX_BT709, transfer_in=vs.TRANSFER_BT709, transfer=vs.TRANSFER_LINEAR)
         diff_clips = diff_clips.std.SplitPlanes()
         for i in range(3):
@@ -78,6 +78,7 @@ class Video:
                     self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
                                                         f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 255 0 ?", \
                                                         format = vs.GRAY8) \
+                                              .rgvs.RemoveGrain(mode=3) \
                                               .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
 
                     self.diff_clip2_settings[i] = settings
@@ -138,7 +139,8 @@ class Video:
                         self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
                                                             f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 255 0 ?", \
                                                                 format=vs.GRAY8) \
-                                                    .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
+                                                  .rgvs.RemoveGrain(mode=3) \
+                                                  .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
 
                         self.diff_clip2_settings[i] = settings
                         break
