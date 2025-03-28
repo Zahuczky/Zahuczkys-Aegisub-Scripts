@@ -840,6 +840,9 @@ local autoclip_main = function(sub, sel, act)
 
     local frames = {}
     for line, s, i, n in ass:iterSel() do
+        line.start_frame = aegisub.frame_from_ms(line.start_time)
+        line.end_frame = aegisub.frame_from_ms(line.end_time)
+        
         for j = line.start_frame, line.end_frame - 1 do
             if not frames[j] then
                 frames[j] = 1
