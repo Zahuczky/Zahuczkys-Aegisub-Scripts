@@ -714,7 +714,7 @@ local clip_gather_main = function(ass)
             end end end
                 
             if clip:isErr() and clip:unwrapErr() == "Not found" then
-                clip = line.data["clip"]
+                clip = ok(line.data["clip"])
             elseif clip:isOk() then
                 if not (line.data["clip"][1] == clip:unwrap()[1] and
                         line.data["clip"][2] == clip:unwrap()[2] and
