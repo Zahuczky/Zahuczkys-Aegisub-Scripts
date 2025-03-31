@@ -1075,8 +1075,8 @@ local autoclip_main = function(sub, sel, act)
 
         ass:removeLine(line, s)
 
-        -- Internal ILL value, may break
-        -- line.isShape = false -- This is no longer needed following updates in ILL.ILL
+        -- Internal ILL value; May break
+        line.isShape = false
         Line.process(ass, line)
         Line.callBackFBF(ass, line, function(line_, i_, end_frame)
             if frames[aegisub.frame_from_ms(line_.start_time) - first + 1] then
