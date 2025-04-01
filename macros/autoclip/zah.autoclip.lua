@@ -736,7 +736,7 @@ local clip_set_main = function(sub, sel, act)
     Aegi.progressTitle("Gathering clip information")
     local first, last, active, active_clip, clip = clip_gather_main(ass)
     local act_clip = err("Not found")
-    local act_line = Line.process(sub[act])
+    local act_line = Line.process(ass, sub[act])
     if act_line.data["clip"] == "table" then
         act_clip = ok(act_line.data["clip"])
     end
@@ -794,7 +794,7 @@ local clip_set_main = function(sub, sel, act)
             aegisub.debug.out("[zah.autoclip] Unsetting the rect clip that's been set previously.\n")
         end
     else
-        if act_clip then
+        if act_clip:isOk() then
             clip = act_clip
         elseif clip:isErr() and clip:unwrapErr() == "Multiple" then
             aegisub.debug.out("[zah.autoclip] No rect clips are found on the active line or on lines containing the frame at video seek head, while multiple different rect clip are found on other selected lines.\n")
@@ -824,9 +824,15 @@ local autoclip_main = function(sub, sel, act)
     -- Grab frame and clip information and check frame continuity across subtitle lines
     Aegi.progressTitle("Gathering frame information")
     local first, last, active, active_clip, clip = clip_gather_main(ass)
-    -- true: Yes, available
-    -- falsy: No, not available
-    -- "Possible": Possible, not sure
+
+    -- Make sure active is inside [first:last]
+    if not (first <= active and active < last) then
+        aegisub.debug.out("[zah.autoclip] Video seek head outside the range of selected lines.\n")
+        aegisub.debug.out("[zah.autoclip] The selected lines start at frame " .. tostring(first) .. " and end at frame " .. tostring(last - 1) .. " but video seek head is at frame " .. tostring(active) .. ".\n")
+        aegisub.debug.out("[zah.autoclip] AutoClip uses video seek head as the reference frame and also by default takes the clipping area from lines containing video seek head.\n")
+        aegisub.cancel()
+    end
+    
     local clip_set_available
     if clip_set:isErr() and clip_set:unwrapErr() == "Not set" then
         clip_set_available = err("Not available")
@@ -836,52 +842,6 @@ local autoclip_main = function(sub, sel, act)
         clip_set_available = err("Not available")
     else
         clip_set_available = err("Near range")
-    end
-
-    local frames = {}
-    for line, s, i, n in ass:iterSel() do
-        line.start_frame = aegisub.frame_from_ms(line.start_time)
-        line.end_frame = aegisub.frame_from_ms(line.end_time)
-        
-        for j = line.start_frame, line.end_frame - 1 do
-            if not frames[j] then
-                frames[j] = 1
-            else
-                frames[j] = frames[j] + 1
-    end end end
-
-    -- Check frame continuity
-    local head
-    for i = first, last - 1 do
-        if not frames[i] then
-            for j = i, last - 1 do
-                if frames[j] then
-                    aegisub.debug.out("[zah.autoclip] Selected lines aren't time continuous.\n")
-                    aegisub.debug.out("[zah.autoclip] The earliest frame in the selected line is frame " .. tostring(first) .. ", and the latest frame is frame " .. tostring(last - 1) .. ".\n")
-                    if i ~= j - 1 then
-                        aegisub.debug.out("[zah.autoclip] There is a gap from frame " .. tostring(i) .. " to frame " .. tostring(j - 1) .. " that no lines in the selection covers.\n")
-                    else
-                        aegisub.debug.out("[zah.autoclip] There is a gap at frame " .. tostring(i) .. " that no lines in the selection covers.\n")
-                    end
-                    aegisub.debug.out("[zah.autoclip] AutoClip will continue but please manually confirm the result after run.\n")
-            end end
-        -- elseif not config["disable_layer_mismatch"] then
-            -- if head == nil then
-            --     head = frames[i]
-            -- elseif head ~= false and head ~= frames[i] then
-            --     aegisub.debug.out("[zah.autoclip] Number of layers mismatches.\n")
-            --     aegisub.debug.out("[zah.autoclip] There are " .. tostring(head) .. " layers on frame " .. tostring(i - 1) .. ", but there are " .. tostring(frames[i]) .. " layers on frame " .. tostring(i) .. ".\n")
-            --     aegisub.debug.out("[zah.autoclip] If this is intentional and you want to silence this warning, you can disable it in „AutoClip > Configure AutoClip“.\n")
-            --     aegisub.debug.out("[zah.autoclip] Continuing.\n")
-            --     head = false
-    end end -- end
-
-    -- Make sure active is inside [first:last]
-    if not (first <= active and active < last) then
-        aegisub.debug.out("[zah.autoclip] Video seek head outside the range of selected lines.\n")
-        aegisub.debug.out("[zah.autoclip] The selected lines start at frame " .. tostring(first) .. " and end at frame " .. tostring(last - 1) .. " but video seek head is at frame " .. tostring(active) .. ".\n")
-        aegisub.debug.out("[zah.autoclip] AutoClip uses video seek head as the reference frame and also by default takes the clipping area from lines containing video seek head.\n")
-        aegisub.cancel()
     end
 
     -- Set clip
@@ -969,6 +929,44 @@ local autoclip_main = function(sub, sel, act)
                 aegisub.cancel()
     end end end
     clip = clip:unwrap()
+
+    -- Check frame continuity
+    local frames = {}
+    for line, s, i, n in ass:iterSel() do
+        line.start_frame = aegisub.frame_from_ms(line.start_time)
+        line.end_frame = aegisub.frame_from_ms(line.end_time)
+        
+        for j = line.start_frame, line.end_frame - 1 do
+            if not frames[j] then
+                frames[j] = 1
+            else
+                frames[j] = frames[j] + 1
+    end end end
+
+    local head
+    for i = first, last - 1 do
+        if not frames[i] then
+            for j = i, last - 1 do
+                if frames[j] then
+                    aegisub.debug.out("[zah.autoclip] Selected lines aren't time continuous.\n")
+                    aegisub.debug.out("[zah.autoclip] The earliest frame in the selected line is frame " .. tostring(first) .. ", and the latest frame is frame " .. tostring(last - 1) .. ".\n")
+                    if i ~= j - 1 then
+                        aegisub.debug.out("[zah.autoclip] There is a gap from frame " .. tostring(i) .. " to frame " .. tostring(j - 1) .. " that no lines in the selection covers.\n")
+                    else
+                        aegisub.debug.out("[zah.autoclip] There is a gap at frame " .. tostring(i) .. " that no lines in the selection covers.\n")
+                    end
+                    aegisub.debug.out("[zah.autoclip] AutoClip will continue but please manually confirm the result after run.\n")
+            end end
+        -- elseif not config["disable_layer_mismatch"] then
+            -- if head == nil then
+            --     head = frames[i]
+            -- elseif head ~= false and head ~= frames[i] then
+            --     aegisub.debug.out("[zah.autoclip] Number of layers mismatches.\n")
+            --     aegisub.debug.out("[zah.autoclip] There are " .. tostring(head) .. " layers on frame " .. tostring(i - 1) .. ", but there are " .. tostring(frames[i]) .. " layers on frame " .. tostring(i) .. ".\n")
+            --     aegisub.debug.out("[zah.autoclip] If this is intentional and you want to silence this warning, you can disable it in „AutoClip > Configure AutoClip“.\n")
+            --     aegisub.debug.out("[zah.autoclip] Continuing.\n")
+            --     head = false
+    end end -- end
 
     -- Run commands
     ::run_again::
@@ -1092,26 +1090,23 @@ local autoclip_main = function(sub, sel, act)
                         clippy = Path(line_.data["clip"])
                     else
                         local clipping_clippy = Path(line_.data["clip"])
-                        local l, t, r, b = clipping_clippy:boundingBox()
-                        clippy = Path({ math.min(0, l), math.min(0, t), math.max(frame:width(), r), math.max(frame:height(), b) })
+                        local bounding_box = clipping_clippy:boundingBox()
+                        clippy = Path({ math.min(0, bounding_box.l), math.min(0, bounding_box.t), math.max(frame:width(), bounding_box.r), math.max(frame:height(), bounding_box.b) })
                         clippy:difference(clipping_clippy)
                 end end
-                if line_.data["clip"] then
-                    line_.text.tagsBlocks[1]:remove("clip", "iclip")
-                end
 
                 if clippy then
                     if not layer_operations[line_.layer] then
                         local dialog = adialog.new({ width = 50 })
-                                              :label({ label = "A clip is found on lines with layer " .. line_.layer })
-                                              :label({ label = "Select either to replace existing clips with incoming clips, or to merge the existing clips with incoming clips" })
-                        local buttons = abuttons.extra("Replace Existing Clip With AutoClip")
-                                                :extra("Apply AutoClip In Additional To Existing Clipping (iclip OR)")
-                                                :extra("Apply AutoClip To Existing Clip (iclip Subtract)")
-                                                :extra("Apply Existing Clip To AutoClip (iclip Subtract)")
-                                                :extra("Apply iclip AND")
-                                                :extra("Apply iclip XOR")
-                                                :extra("Skip The Layer")
+                                              :label({ label = "A clip is found on lines with layer " .. line_.layer .. "." })
+                                              :label({ label = "Select either to replace existing clips with incoming clips, or to merge the existing clips with incoming clips." })
+                        local buttons = abuttons.extra("&Replace Existing Clip With AutoClip")
+                                                :ok("Apply Auto&Clip In Additional To Existing Clipping (iclip OR)")
+                                                :extra("Apply AutoClip To Existing Clip (iclip Su&btract)")
+                                                :extra("Apply Exi&sting Clip To AutoClip (iclip Subtract)")
+                                                :extra("Apply iclip &AND")
+                                                :extra("Apply iclip &XOR")
+                                                :extra("Keep &Existing Clip")
                                                 :extra("Cancel AutoClip")
                         local b = adisplay(dialog, buttons):resolve()
                         if b == "Cancel AutoClip" then
@@ -1119,32 +1114,38 @@ local autoclip_main = function(sub, sel, act)
                         end
                         layer_operations[line_.layer] = b
                     end
-                    if layer_operations[line_.layer] == "Replace Existing Clip With AutoClip" then
-                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. frames[aegisub.frame_from_ms(line_.start_time) - first + 1]:export() .. ")")
-                    elseif layer_operations[line_.layer] == "Apply AutoClip In Additional To Existing Clipping (iclip OR)" then
-                        local clip = Table.copy(clippy)
-                        clip:unite(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
-                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
-                    elseif layer_operations[line_.layer] == "Apply AutoClip To Existing Clip (iclip Subtract)" then
-                        local clip = Table.copy(clippy)
-                        clip:difference(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
-                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
-                    elseif layer_operations[line_.layer] == "Apply Existing Clip To AutoClip (iclip Subtract)" then
-                        local clip = Table.copy(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
-                        clip:difference(clippy)
-                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
-                    elseif layer_operations[line_.layer] == "Apply iclip AND" then
-                        local clip = Table.copy(clippy)
-                        clip:intersect(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
-                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
-                    elseif layer_operations[line_.layer] == "Apply iclip XOR" then
-                        local clip = Table.copy(clippy)
-                        clip:exclude(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
-                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
-                    elseif layer_operations[line_.layer] == "Skip The Layer" then
-                        line_.text.tagsBlocks[1]:insert("\\iclip(" .. clippy:export() .. ")")
-                    end
+                    if layer_operations[line_.layer] == "Keep &Existing Clip" then
+                    else
+                        line_.text.tagsBlocks[1]:remove("clip", "iclip")
+
+                        if layer_operations[line_.layer] == "&Replace Existing Clip With AutoClip" then
+                            line_.text.tagsBlocks[1]:insert("\\iclip(" .. frames[aegisub.frame_from_ms(line_.start_time) - first + 1]:export() .. ")")
+                        elseif layer_operations[line_.layer] == "Apply Auto&Clip In Additional To Existing Clipping (iclip OR)" then
+                            local clip = clippy
+                            clip:unite(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                            line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                        elseif layer_operations[line_.layer] == "Apply AutoClip To Existing Clip (iclip Su&btract)" then
+                            local clip = clippy
+                            clip:difference(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                            line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                        elseif layer_operations[line_.layer] == "Apply Exi&sting Clip To AutoClip (iclip Subtract)" then
+                            local clip = Table.copy(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                            clip:difference(clippy)
+                            line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                        elseif layer_operations[line_.layer] == "Apply iclip &AND" then
+                            local clip = clippy
+                            clip:intersect(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                            line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                        elseif layer_operations[line_.layer] == "Apply iclip &XOR" then
+                            local clip = clippy
+                            clip:exclude(frames[aegisub.frame_from_ms(line_.start_time) - first + 1])
+                            line_.text.tagsBlocks[1]:insert("\\iclip(" .. clip:export() .. ")")
+                    end end
                 else
+                    if line_.data["clip"] then
+                        line_.text.tagsBlocks[1]:remove("clip", "iclip")
+                    end
+
                     line_.text.tagsBlocks[1]:insert("\\iclip(" .. frames[aegisub.frame_from_ms(line_.start_time) - first + 1]:export() .. ")")
             end end
             ass:insertLine(line_, s) end)
