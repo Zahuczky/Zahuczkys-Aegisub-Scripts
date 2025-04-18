@@ -89,14 +89,14 @@
 			"fileBaseUrl": "@{fileBaseUrl}/@{channel}/macros/autoclip/@{namespace}",
 			"channels": {
 				"main": {
-					"version": "2.0.5",
-					"released": "2023-12-20",
+					"version": "2.1.1",
+					"released": "205.04.18.",
 					"default": true,
 					"files": [
 						{
 							"name": ".lua",
 							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "fd9b43d3d1b1cba3ec1d0d2ed9a0b00ce34babe0"
+							"sha1": "2d3eb44d3ee0c0a31599109bd341f3e27b0b1957"
 						}
 					],
 					"requiredModules": [
