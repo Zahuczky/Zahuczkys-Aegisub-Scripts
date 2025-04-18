@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import os
 from pathlib import Path
-from PySide6.QtCore import QMutex, QObject, Property, Qt, QReadWriteLock, QRunnable, Signal, QSize, Slot, QThreadPool
+from PySide6.QtCore import QMutex, QObject, Property, QReadWriteLock, QRunnable, Signal, QSize, Slot, QThreadPool
 from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QImage
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickImageProvider
@@ -62,8 +62,8 @@ FrameCacheCleaningFrequency = 10
 FrameCacheLock = QReadWriteLock()
 
 # Loading requested frame is QThread.TimeCriticalPriority
-# Preloading frames is Qt.NormalPriority
-# Cache cleaning is Qt.HighPriority
+# Preloading frames is QThread.NormalPriority
+# Cache cleaning is QThread.HighPriority
 CacheThreadPool = QThreadPool()
 CacheThreadPool.setMaxThreadCount(threads)
 
@@ -323,7 +323,6 @@ def start(argv, args):
     global video
     
     logger.debug("Loading application")
-    # QGuiApplication.setAttribute(Qt.AA_UseOpenGLES)
 
     # Create app and engine
     # Passing argv to QCoreApplication because it enables Qt-specific options

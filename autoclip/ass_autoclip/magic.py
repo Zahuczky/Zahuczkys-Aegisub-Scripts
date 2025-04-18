@@ -26,11 +26,11 @@ class Video:
         if diff_clips.format.subsampling_h and diff_clips.format.subsampling_w:
             # Thanks Zewia for recommending core.resize
             diff_clips = diff_clips.resize.Bicubic(format=vs.YUV420P16, range_in=vs.RANGE_LIMITED, range=vs.RANGE_FULL) \
-                                   .dfttest.DFTTest() \
+                                   .dfttest.DFTTest(sigma=6.0) \
                                    .resize.Bicubic(format=vs.YUV444P16, matrix_in=vs.MATRIX_BT709, matrix=vs.MATRIX_BT709, transfer_in=vs.TRANSFER_BT709, transfer=vs.TRANSFER_LINEAR)
         else:
             diff_clips = diff_clips.resize.Bicubic(format=vs.YUV444P16, range_in=vs.RANGE_LIMITED, range=vs.RANGE_FULL) \
-                                   .dfttest.DFTTest() \
+                                   .dfttest.DFTTest(sigma=6.0) \
                                    .resize.Bicubic(matrix_in=vs.MATRIX_BT709, matrix=vs.MATRIX_BT709, transfer_in=vs.TRANSFER_BT709, transfer=vs.TRANSFER_LINEAR)
         diff_clips = diff_clips.std.SplitPlanes()
         for i in range(3):
@@ -78,6 +78,7 @@ class Video:
                     self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
                                                         f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 255 0 ?", \
                                                         format = vs.GRAY8) \
+                                              .rgvs.RemoveGrain(mode=3) \
                                               .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
 
                     self.diff_clip2_settings[i] = settings
@@ -138,7 +139,8 @@ class Video:
                         self.diff_clip2s[i] = core.std.Expr(self.diff_clips, \
                                                             f"x a - abs {math.ceil(settings.l_threshold * 65535)} >= y b - abs 2 pow z c - abs 2 pow + sqrt {math.ceil(settings.c_threshold * 65535)} >= and 255 0 ?", \
                                                                 format=vs.GRAY8) \
-                                                    .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
+                                                  .rgvs.RemoveGrain(mode=3) \
+                                                  .std.AddBorders(left=1, right=1, top=1, bottom=1, color=0)
 
                         self.diff_clip2_settings[i] = settings
                         break
@@ -167,12 +169,14 @@ class Video:
                         else:
                             f.write(" m")
 
+                        # The start is set to x because ski output always starts from bottom right corner,
+                        # and thus the first point after start is always the one to the left of the start
+                        # ^ This is the note I made before, and it is completely wrong.
+                        # ^ find_contours naturally arranged nested contour in alternating direction.
 
                         # Simplify the clip similar to Shape Simplify in zf.EverythingShape
                         to_write_x = None
                         to_write_y = None
-                        # The start is set to x because ski output always starts from bottom right corner,
-                        # and thus the first point after start is always the one to the left of the start
                         prev_axis = None
                         def simplified_write(x, y):
                             nonlocal to_write_x
@@ -224,7 +228,7 @@ class Video:
                             # Bottom right corners
                             elif (prev_x == x + 1 and prev_y + 1 == y) or \
                                  (prev_x + 1 == x and prev_y == y + 1):
-                                simplified_write(x + 1, y)
+                                simplified_write(max(prev_x, x), max(prev_y, y))
                                 simplified_write(x, y)
                             # Regular point
                             else:

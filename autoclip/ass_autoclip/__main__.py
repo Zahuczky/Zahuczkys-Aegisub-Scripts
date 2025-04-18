@@ -21,7 +21,7 @@ parser.add_argument("-i", "--input", dest="video", help="Input file (Required)",
 parser.add_argument("-o", "--output", dest="output", help="Output file (Required)", metavar="FILE", type=Path)
 parser.add_argument("-c", "--clip", dest="clip", help="Clip (Required)", metavar="CLIP", type=str)
 parser.add_argument("-f", "--first", dest="first", help="First frame (Required)", metavar="FRAME", type=int)
-parser.add_argument("-l", "--last", dest="last", help="Last fram (Required)e", metavar="FRAME", type=int)
+parser.add_argument("-l", "--last", dest="last", help="Last frame (Required)", metavar="FRAME", type=int)
 parser.add_argument("-a", "--active", dest="active", help="Current frame (Required)", metavar="FRAME", type=int)
 parser.add_argument("--supported-version", dest="supported_v", help="Last supported Version", metavar="VERSION", type=str)
 parser.add_argument("--check-dependencies", dest="check_dependencies", help="Check AutoClip dependencies and return", action="store_true")
@@ -42,13 +42,13 @@ if args.check_dependencies or args.check_python_dependencies or args.check_vs_de
         assert(importlib.util.find_spec("PySide6") != None)
         assert(importlib.util.find_spec("skimage") != None)
 
-    exit(0)
+    raise SystemExit(0)
 
 # Check version
 if args.supported_v is not None and version(__version__) < version(args.supported_v):
     with args.output.open(mode="w") as f:
         json.dump({ "current_version": __version__ }, f)
-    exit(0)
+    raise SystemExit(0)
 
 # target clip is the top left and bottom right coordinates of the clip in the format "x1 y1 x2 y2"
 # let's convert this into "width, height, x1, y1"
