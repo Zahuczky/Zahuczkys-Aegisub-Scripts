@@ -27,25 +27,25 @@ local DepCtrl = require("l0.DependencyControl")({
     {
         {
             "ILL.ILL",
-            version = "1.1.0",
+            version = "1.5.8",
             url = "https://github.com/TypesettingTools/ILL-Aegisub-Scripts",
             feed = "https://raw.githubusercontent.com/TypesettingTools/ILL-Aegisub-Scripts/main/DependencyControl.json"
         },
         {
             "aka.uikit",
-            version = "1.0.0",
+            version = "1.0.14",
             url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
             feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
         },
         {
             "aka.config",
-            version = "1.0.0",
+            version = "1.0.14",
             url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
             feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
         },
         {
             "aka.outcome",
-            version = "1.0.0",
+            version = "1.0.11",
             url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
             feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
         },
@@ -54,7 +54,7 @@ local DepCtrl = require("l0.DependencyControl")({
         },
         {
             "aka.command",
-            version = "1.0.0",
+            version = "1.0.2",
             url = "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
             feed = "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
         },
