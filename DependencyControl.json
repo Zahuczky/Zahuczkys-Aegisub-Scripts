@@ -103,19 +103,37 @@
 						{
 							"moduleName": "ILL.ILL",
 							"url": "https://github.com/TypesettingTools/ILL-Aegisub-Scripts",
-							"version": "1.1.0",
+							"version": "1.5.8",
 							"feed": "https://raw.githubusercontent.com/TypesettingTools/ILL-Aegisub-Scripts/main/DependencyControl.json"
+						},
+						{
+							"moduleName": "aka.uikit",
+							"url": "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
+							"version": "1.0.14",
+							"feed": "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
 						},
 						{
 							"moduleName": "aka.config",
 							"url": "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
-							"version": "1.0.8",
+							"version": "1.0.14",
 							"feed": "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
 						},
 						{
 							"moduleName": "aka.outcome",
 							"url": "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
-							"version": "1.0.7",
+							"version": "1.0.11",
+							"feed": "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
+						},
+						{
+							"moduleName": "aka.command",
+							"url": "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
+							"version": "1.0.2",
+							"feed": "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
+						},
+						{
+							"moduleName": "aka.unsemantic",
+							"url": "https://github.com/Akatmks/Akatsumekusa-Aegisub-Scripts",
+							"version": "1.1.0",
 							"feed": "https://raw.githubusercontent.com/Akatmks/Akatsumekusa-Aegisub-Scripts/master/DependencyControl.json"
 						}
 					]
