@@ -96,7 +96,7 @@
 						{
 							"name": ".lua",
 							"url": "@{fileBaseUrl}@{fileName}",
-							"sha1": "987aa6c6655c86905bfd189a6da26e7f08383a01"
+							"sha1": "bf10f97c0326c2b77ea6ceba1d43001c3dbad75f"
 						}
 					],
 					"requiredModules": [
