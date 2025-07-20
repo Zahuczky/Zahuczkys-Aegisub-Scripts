@@ -373,8 +373,16 @@ function colortrack(subtitles, selected_lines, active_line)
       res.a3 = false
       res.a4 = false
     end
+    local origAlpha = 0
+    local existing = line.text:match("\\alpha&H(%x%x)&")
+    if existing then
+        origAlpha = tonumber(existing, 16)
+    end
     if colors[1] then
-      alpha = calculateAlpha(res.startc, res.endc, assToHtmlColor(colors[1]))
+      --alpha = calculateAlpha(res.startc, res.endc, assToHtmlColor(colors[1]))
+      local computed = tonumber(calculateAlpha(res.startc, res.endc, assToHtmlColor(colors[i])), 16)
+      local final = math.max(origAlpha, computed)
+      alpha = string.format("%02X", final)
       if res.all then transform = transform.."\\alpha&H"..alpha.."&" end
       if res.a then transform = transform.."\\1a&H"..alpha.."&" end
       if res.a2 then transform = transform.."\\2a&H"..alpha.."&" end
@@ -385,7 +393,10 @@ function colortrack(subtitles, selected_lines, active_line)
       local color = colors[i]
       -- color could be nil if the tracking point is outside video frame
       if color then
-        alpha = calculateAlpha(res.startc, res.endc, assToHtmlColor(color))
+        --alpha = calculateAlpha(res.startc, res.endc, assToHtmlColor(color))
+        local computed = tonumber(calculateAlpha(res.startc, res.endc, assToHtmlColor(colors[i])), 16)
+        local final = math.max(origAlpha, computed)
+        alpha = string.format("%02X", final)
         transform = transform.."\\t("..makeTransformTimes(i-1)
         if res.all then transform = transform.."\\alpha&H"..alpha.."&" end
         if res.a then transform = transform.."\\1a&H"..alpha.."&" end
