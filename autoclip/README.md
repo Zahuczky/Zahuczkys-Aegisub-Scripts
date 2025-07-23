@@ -4,11 +4,12 @@
 
 ![Autoclip gif](/misc/autoclip.gif)
 
-### Recommended installation procedure (not following these may lead to errors)
+### Recommended installation procedure (not following these TO THE LETTER may lead to errors)
 
 - **Prerequisites**
   - Install Python 3.12
     - It is highly recommended to install Python for all users. (configurable in the installer on Windows)
+    - MAKE SURE that the box to add python to PATH is ticked in the installer!
   - Install Vapoursynth from here: https://github.com/vapoursynth/vapoursynth/releases
     - Installation through pip may lead to problems, so it's recommended to use the installers from the link above unless you know what you're doing.
     - Recommended to also install for all users. (configurable in the installer on Windows)
